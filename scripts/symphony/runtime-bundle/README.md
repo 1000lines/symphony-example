@@ -1,0 +1,252 @@
+# Symphony Runtime Bundle
+
+This directory supplies the personal instructions, skills and workflow used by
+the host installer in `scripts/symphony/host/`. The executable Symphony runtime
+is a separate dependency. Bundle files live outside ordinary repository skill
+discovery and are installed into the runtime user's personal Codex home.
+
+## Source and installed files
+
+`manifest.json` lists every file shipped here, the install destinations and
+owner/mode policy. Its variable names describe the installer inputs; the loader
+does not expand these strings as configuration. The four skill bodies under `skills/` are canonical; no
+matching common `.codex/skills` copies are required. The installer also stages
+`karpathy-guidelines` and `linear-graphql` from the repository's `.agents/skills`.
+The human-only `symphony-project-factory` skill is excluded from the unattended
+profile. There are no shipped executable wrappers; `45-runtime-bundle.sh`
+generates `codex-with-runtime-bundle.sh` during installation.
+
+The loader stages releases by bootstrap repository SHA, copies personal
+`AGENTS.md` and `config.toml`, links the selected skills, and writes a separate
+`runtime-bundle-manifest.json` with installed provenance. The source manifest
+contains no installed checksums. `lib.sh:sha256_tree` hashes concatenated file
+contents in sorted relative-path order; filenames determine order but are not
+themselves hashed. Shared skills have separate recorded digests and are outside
+the bundle freshness digest. Use a new source commit for a changed release:
+an already staged repository SHA is reused. These checks do not establish that
+the runtime can start or that external services are configured.
+
+## PR Label Repair
+
+The hosted workflow runs `scripts/symphony/ensure-pr-labels.mjs` from the issue
+workspace in `hooks.after_run`, preserving the ticket-start `before_run` hook.
+It reads the current owning Linear project's `project-color` and the intended
+repository's open PRs. A unique PR must have the exact issue segment in its
+Symphony branch or a Linear PR attachment; a conflicting title/branch identity
+or multiple candidates causes a failure without edits. Title-only matches are
+reported as unverified. Closed PRs and other repositories are not repaired.
+
+Configure the optional hook in an operator-owned workflow selected by
+`SYMPHONY_WORKFLOW_SOURCE`. The shipped hook is enabled and uses the issue
+workspace's basename for `--issue`; its static `--repo` argument must name the
+adopter's repository. Installer repository inputs do not substitute that text.
+
+| Input | Purpose, shape and setting location | Requiredness / default |
+| --- | --- | --- |
+| `--issue` | CLI argument, uppercase issue identifier such as `DEMO-123`; identifies the owning Linear issue. | Required for an invocation; no default. The hosted hook supplies the workspace basename. |
+| `--repo` | CLI argument, GitHub `owner/repository` string; restricts PR lookup and label writes. Set it in the operator-owned `hooks.after_run`. | Required for an invocation; no inferred repository. |
+| `LINEAR_API_TOKEN`, fallback `LINEAR_API_KEY` | Secret token string in the hook process environment, authorized to read the issue, project and attachments. | Required for repair; no default. The host credential bundle supplies `LINEAR_API_TOKEN`. |
+| `GH_TOKEN`, fallback `GITHUB_TOKEN` | Secret token string in the hook process environment with repository PR/label reads and label writes. | Required for repair; no default. The host credential bundle supplies `GITHUB_TOKEN`. |
+| `project-color` | One label-name string in the owning Linear project's content or description, for example `teal`. Both locations must agree; values are normalized to lowercase and must match `[a-z][a-z0-9-]*`. | Required for a matching open PR; no fallback to issue text, CLI, branch color or palette. |
+
+Create the color label and `symphony` in GitHub repository settings before use.
+The helper checks that missing labels exist, adds only missing
+`symphony`/color labels through GitHub REST, and verifies a separate label
+readback. It skips when no open PR matches. Requests share a 45-second deadline
+with no retries; a list that fills ten 100-item GitHub pages or more than 100
+Linear attachments fails as incomplete. Missing/conflicting metadata and
+API/readback failures produce a nonzero exit with sanitized diagnostics.
+
+Symphony logs and ignores `after_run` failures under its existing best-effort
+lifecycle. This safety net does not establish successful publishing, run on each
+PR creation event, gate review/merge, or change Linear states. Agents still need
+to apply any additional project labels and record actual label readback before
+handoff.
+
+The public GitHub and Linear API endpoints are fixed in this helper; host
+endpoint overrides do not configure it. Tokens exported to the host service
+must reach the hook process; Actions repository secrets do not populate it.
+Optional use defaults to the shipped hook, which can be omitted in an
+operator-owned profile. Omission does not remove the agent's publishing-label
+responsibility.
+
+## Supplying host settings
+
+The existing installer inputs are environment variables; it does not
+automatically read an installer configuration file. An operator can keep trusted,
+nonsecret `NAME=value` settings in an owned file such as
+`/etc/symphony/installer.env` and export them in the shell launching bootstrap
+or a standalone install step. Do not edit the shipped scripts to set those
+inputs. Secret payloads belong in the credential store described below.
+
+Reconciliation is a separate process. The shipped reconcile systemd unit has
+no installer `EnvironmentFile`, and `runtime.env` is generated for the runtime
+service, not a persistent copy of all installer inputs. Arrange the same settings
+for later launches, for example with an operator-owned systemd drop-in for
+`symphony-reconcile.service`. A shell-only override is not a reboot configuration.
+The following locations describe the retained defaults and the points needing
+operator setup; they are not an installation guarantee.
+
+## Source repositories and runtime
+
+Set `SYMPHONY_BOOTSTRAP_REPO` and `SYMPHONY_RUNTIME_REPO` to GitHub
+`owner/repository` names for the tooling source and executable runtime source,
+respectively. Their shipped values are synthetic placeholders. Select immutable
+commit IDs with `SYMPHONY_BOOTSTRAP_REF` and `SYMPHONY_RUNTIME_REF`. Both refs are
+required: `lib.sh` uses the explicit environment first, then EC2 tags
+`symphony:bootstrap-ref` and `symphony:runtime-ref`, and fails if neither supplies
+a value. The scripts accept other Git refs but do not enforce immutability.
+`bootstrap.sh` initially clones the repository's default branch; `05-source.sh`
+then synchronizes the selected bootstrap ref.
+
+`70-symphony-escript.sh` expects `mix.exs` at the runtime repository root or in
+`elixir/`. It installs Hex/Rebar, resolves production dependencies and runs
+`mix escript.build`. `SYMPHONY_RUNTIME_ESCRIPT_NAME` is optional and defaults to
+`symphony`; the build must produce that executable in `bin/`, the build root,
+or `_build/prod/escript/`. `SYMPHONY_RUNTIME_BUILD_HOME` defaults to a
+`runtime-build-home` directory beneath the bootstrap state directory.
+
+`SYMPHONY_RUNTIME_BIN_SOURCE` optionally names an existing executable file.
+That path bypasses the Mix build only: the current code still requires and
+synchronizes the runtime checkout first. No runtime source, binary, or known
+compatible runtime revision is bundled here. Matching the workflow schema and
+service command-line options to the selected external runtime remains setup work.
+
+## Host layout and prerequisites
+
+The scripts assume Linux, systemd, GNU filesystem utilities and root installation.
+`10-os-packages.sh` installs packages through `dnf` when available; its fallback
+only checks a few commands and does not provision another distribution. Bootstrap
+itself needs `curl`, `jq` and Git before the package step. The later steps also use
+AWS CLI, `flock`, `findmnt`, `blkid`, `lsblk`, XFS tools, archive tools and BEAM
+build dependencies. Node supports Linux x64/arm64; `60-dev-tools.sh` has its own
+platform restrictions. Adapting a different host image remains operator work.
+
+The following optional defaults in `host/lib.sh` can be overridden in the installer
+environment:
+
+| Inputs                                                                                                                     | Defaults and purpose                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SYMPHONY_RUNTIME_USER`, `SYMPHONY_RUNTIME_GROUP`                                                                          | `symphony` / `symphony`; runtime account and file ownership. The user step creates a system account with workspace home and a non-login shell.         |
+| `SYMPHONY_OPT_ROOT`                                                                                                        | `/opt/symphony`; immutable releases, source checkouts and tool installations.                                                                          |
+| `SYMPHONY_RELEASES_DIR`, `SYMPHONY_CURRENT_LINK`, `SYMPHONY_BOOTSTRAP_BIN_DIR`, `SYMPHONY_SRC_ROOT`, `SYMPHONY_TOOLS_ROOT` | Respectively `releases`, `current`, `bootstrap`, `src`, `tools` beneath the opt root. Each accepts an absolute path override.                          |
+| `SYMPHONY_CONFIG_DIR`, `SYMPHONY_SYSTEMD_DIR`                                                                              | `/etc/symphony`, `/etc/systemd/system`; generated runtime files and service units.                                                                     |
+| `SYMPHONY_BOOTSTRAP_STATE_DIR`, `SYMPHONY_BOOTSTRAP_LOG_DIR`                                                               | `/var/lib/symphony-bootstrap`, `/var/log/symphony-bootstrap`; root-owned state/markers and bootstrap logs. Keep state outside the workspace mount.     |
+| `SYMPHONY_WORKSPACE_ROOT`, `SYMPHONY_LOGS_ROOT`                                                                            | `/var/lib/symphony`, `/var/log/symphony`; persistent workspace/cache and runtime logs.                                                                 |
+| `SYMPHONY_TEMPLATES_DIR`, `SYMPHONY_STEPS_DIR`, `SYMPHONY_HOOKS_DIR`                                                       | `templates`, `install.d`, `hooks.d` beside `host/lib.sh`; optional operator-owned directories. Steps/hooks are executable Bash files in lexical order. |
+| `SYMPHONY_INIT_WORKSPACE_SCRIPT`                                                                                           | `infra/static/modules/symphony-host/files/init-workspace-volume.sh` beneath the tooling root; optional replacement executable path.                    |
+
+Checkout subdirectory names remain fixed in `bootstrap.sh` and `lib.sh`.
+`reconcile.sh` also retains absolute defaults for the bootstrap and installer
+entrypoints. When relocating a host, supply `SYMPHONY_BOOTSTRAP_SCRIPT` and
+`SYMPHONY_INSTALLER_SCRIPT` as executable paths to reconciliation. The generated
+freshness wrapper accepts `SYMPHONY_RUNTIME_BUNDLE_INSTALLER` for its installer
+path. Check the service templates and writable paths together; changing one
+root variable alone does not relocate every launch path.
+
+The workspace step expects an existing filesystem labeled `SYMPHONYWS` or an
+explicit `SYMPHONY_WORKSPACE_DEVICE` such as `/dev/xvdf`; inspect the volume
+helper before allowing it to initialize a device. `SYMPHONY_WORKSPACE_LABEL`
+changes discovery's label, while the helper retains its own label default.
+`SYMPHONY_WORKSPACE_DEVICE_WAIT_TIMEOUT_SECONDS` and
+`SYMPHONY_WORKSPACE_DEVICE_WAIT_INTERVAL_SECONDS` default to `180` and `5`.
+These are positive integer seconds, except the timeout may be zero. Label and
+path changes need to agree with the volume helper's inputs.
+
+AWS region, instance ID and AMI ID come from EC2 metadata unless supplied as
+`SYMPHONY_AWS_REGION`, `SYMPHONY_INSTANCE_ID` and `SYMPHONY_AMI_ID`.
+`SYMPHONY_GITHUB_BASE_URL` and `SYMPHONY_GITHUB_API_URL` override the ordinary
+GitHub web/API endpoints in bootstrap/library code. The credential step and
+workflow still contain public-GitHub-specific configuration; these two overrides
+alone do not establish enterprise-host support.
+
+## Toolchain and service settings
+
+| Input / setting location                                                                                  | Default and format                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SYMPHONY_ERLANG_VERSION`, `SYMPHONY_ELIXIR_VERSION` in `host/lib.sh`                                     | `28.5.0.5`, `1.19.5-otp-28`; matching Erlang release and Elixir release/OTP strings.                                                                                                          |
+| `SYMPHONY_MISE_BIN` in `host/lib.sh`                                                                      | `bin/mise` beneath the tools root; existing executable path, with PATH discovery taking precedence. Otherwise the step downloads the installer from `mise.run`.                               |
+| `SYMPHONY_MISE_DATA_DIR`, `SYMPHONY_MISE_CONFIG_DIR`, `SYMPHONY_MISE_CACHE_DIR` in `50-beam-toolchain.sh` | `mise`, `mise-config`, `mise-cache` beneath the tools root; absolute directory overrides.                                                                                                     |
+| `SYMPHONY_MISE_JOBS`, `SYMPHONY_MISE_ERLANG_COMPILE` in `50-beam-toolchain.sh`                            | `1`, `1`; build parallelism and compile switch. `KERL_CONFIGURE_OPTIONS` retains the headless build flags shown in that file.                                                                 |
+| `SYMPHONY_ELIXIR_INSTALL_DIR` in `50-beam-toolchain.sh`                                                   | `mise/installs/elixir/<version>` beneath the tools root; optional absolute directory override.                                                                                                |
+| `.nvmrc`, `package.json` `packageManager`                                                                 | Required root files for `55-node-toolchain.sh`: exact `vMAJOR.MINOR.PATCH` and `npm@MAJOR.MINOR.PATCH`. There is no Node/npm environment override in that step.                               |
+| `SYMPHONY_CODEX_VERSION` in `55-node-toolchain.sh`                                                        | `0.153.4`; optional package version. `install_codex` sets `NPM_CONFIG_MIN_RELEASE_AGE=0` only for its Codex npm install. |
+| `SYMPHONY_GH_VERSION`, `SYMPHONY_TERRAFORM_VERSION` in `60-dev-tools.sh`                                  | `2.97.0`, `1.4.2`; optional release version strings.                                                                                                                                          |
+| `SYMPHONY_INSTALL_NPM_CACHE` in `55-node-toolchain.sh`                                                    | `npm-cache` beneath the tools root; installer cache directory, distinct from the runtime workspace npm cache.                                                                                 |
+| `SYMPHONY_SERVICE_PORT` in `host/lib.sh`                                                                  | `4000`; runtime CLI port. Keep network and workflow server settings aligned.                                                                                                                  |
+| `SYMPHONY_WORKER_SLOTS` or EC2 `symphony:worker-slots` tag                                                | Optional integer `1`–`64`, default `6`; environment takes precedence over the tag. The renderer replaces `agent.max_concurrent_agents` in workflow frontmatter.                               |
+
+The Erlang installer explicitly installs with at most three attempts, delays of
+5 and 10 seconds, and checks the installed `erl` binary before recording success.
+The marker prevents repeating installation for the same Erlang/Elixir pair.
+The associated failure, recovery and rerun cases remain in the installer tests.
+The Node install step and its regression source agree on Codex `0.153.4` and
+the scoped release-age bypass. `host/lib.sh:runtime_codex_version` reports the
+installed binary first; if it cannot, it uses `SYMPHONY_CODEX_VERSION` or the
+older `0.147.0`. This reporting fallback differs from the install default and
+remains unresolved. The hosted workflow's `codex.command`
+retains `gpt-6-astra` with `model_reasoning_effort=xhigh`. Change worker policy
+in the operator-owned workflow; this snapshot makes no runtime compatibility
+claim. The host label-repair test imports `js-yaml`, which is not directly
+declared in the tooling manifests. Dependency setup for that optional suite
+remains later work.
+Fixture switches such as `SYMPHONY_SKIP_RUNTIME_INSTALL` are not usable runtime
+defaults; that switch produces a stub executable.
+
+## Workflow, bundle and credentials
+
+`SYMPHONY_WORKFLOW_SOURCE` optionally selects an operator-owned Markdown workflow.
+By default `80-config.sh` uses the staged bundle's `workflow/WORKFLOW.md`, falling
+back to the source bundle. A supplied file needs YAML frontmatter with exactly
+one indented numeric `max_concurrent_agents` line and one `command: codex` line
+so the renderer can substitute worker slots and the freshness wrapper.
+
+Configure the supplied workflow's `tracker` team/state/maturity mappings,
+`workspace.root`, clone repository/branch, `hooks`, `codex` command and `server`
+settings for the adopter. The bundled hooks retain these defaults: `after_create`
+checks credentials, clones `main` and runs `npm install`; `before_run` invokes
+the optional Misc ticket-start routing helper; `after_run` performs the label
+repair above; `before_remove` runs `true`. Configure these shell commands in the
+operator's workflow file. Misc routing still has a synthetic team predicate and
+must be assessed before enabling it for another team. These hooks do not define
+a required product language or application CI.
+
+Shared review/wakeup helpers choose `Active` first and legacy `Rework` only when
+`Active` is absent; configure these names in the Linear team, not just runtime
+state lists. The DAG parser no longer accepts integration-branch/frontier
+policies. The profile still carries `mature` and maturity state lists: these
+require a compatible external runtime and explicit project policy, not a
+replacement integration queue. Projects that disable maturity must arrange a
+compatible profile/runtime before execution. Runtime repair is deferred.
+
+`SYMPHONY_RUNTIME_BUNDLE_SOURCE_DIR` optionally selects a complete operator-owned
+bundle directory using the same schema and required source files; its default
+is this directory. This is also the existing way to supply personal instruction
+or Codex template changes. The loader copies `codex/config.toml.template`
+verbatim; it is not a general template renderer. The installed personal config
+and skill links are replaced on refresh, so edits to installed files do not
+persist. Shared-skill source paths still resolve against the tooling repository.
+
+`SYMPHONY_RUNTIME_BUNDLE_CACHE_DIR` defaults to
+`$SYMPHONY_WORKSPACE_ROOT/cache/runtime-bundle`. Optional
+`SYMPHONY_RUNTIME_BUNDLE_RELEASES_DIR`, `SYMPHONY_RUNTIME_BUNDLE_CURRENT_LINK` and
+`SYMPHONY_RUNTIME_BUNDLE_LOCK_PATH` default to its `releases`, `current` and
+`runtime-bundle.lock` children. `SYMPHONY_CODEX_HOME` defaults to
+`$SYMPHONY_WORKSPACE_ROOT/cache/codex-home` (the loader can also read the generated
+`CODEX_HOME` from `runtime.env`). All these overrides are absolute paths.
+
+Provision `SYMPHONY_KEYS_SECRET_ID` with JSON containing nonempty string fields
+`GITHUB_TOKEN`, `LINEAR_API_TOKEN` and `OPENAI_API_KEY`, and
+`SYMPHONY_GOOGLE_SECRET_ID` with a Google service-account key JSON object.
+The values are required by `40-credentials.sh`; the source's secret names are
+placeholders, and the host role needs permission to read the selected secrets.
+Set bot identity and repository-owner inputs in the installer environment as
+described by the root setup reference. The credential step writes `runtime.env`,
+the Google key file and personal authentication files; it overwrites its own
+outputs on rerun. Supplying `SYMPHONY_GITHUB_TOKEN` only bypasses bootstrap's
+initial token lookup, not the later full credential requirements.
+
+No hooks are shipped by default. To add host installation steps, select an
+operator-owned `SYMPHONY_HOOKS_DIR` containing executable Bash hooks. They run in
+lexical order after the core install steps; a failing hook fails installation.
+An absent or empty hooks directory is skipped.

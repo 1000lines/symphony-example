@@ -1,0 +1,44 @@
+name: symphony-lint
+
+# Extension point: invoke this workflow from an adopter-owned caller.
+# Keep triggers and additional product jobs in that caller.
+on:
+  workflow_call:
+    inputs:
+      tooling-directory:
+        description: Relative path to the standalone Symphony tooling package in the caller checkout.
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+jobs:
+  symphony-lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.tooling-directory }}
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up tooling Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.tooling-directory }}/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            ${{ inputs.tooling-directory }}/package.json
+            ${{ inputs.tooling-directory }}/tools/symphony-dag/package.json
+            ${{ inputs.tooling-directory }}/tools/symphony-host/package.json
+      - name: Select tooling npm version
+        run: npm install --global npm@11.13.0
+      - name: Install tooling dependencies
+        run: npm install
+      - name: Lint Symphony tooling
+        run: npm run lint

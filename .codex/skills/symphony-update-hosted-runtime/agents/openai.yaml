@@ -1,0 +1,6 @@
+interface:
+  display_name: "Symphony Update Hosted Runtime"
+  short_description: "Human-owned hosted runtime reconcile"
+  default_prompt: "Use $symphony-update-hosted-runtime to update hosted Symphony to current refs through host reconciliation."
+policy:
+  allow_implicit_invocation: false

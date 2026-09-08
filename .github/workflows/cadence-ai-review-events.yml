@@ -1,0 +1,259 @@
+name: Cadence AI Review Events
+
+# PR opens, Symphony commits, and human feedback create a visible
+# request/re-request for `example-cadence-bot`. The follow-on Cadence review-request
+# event is owned by `cadence-ai-review-trigger.yml`. Human comments/reviews are
+# filtered with the actor-classification helper so Cadence/Symphony bot activity
+# does not create review loops. Linear-linked events are either queued or
+# recorded as explicit skips in the Cadence Workpad when Linear credentials are
+# available. GitHub Actions concurrency coalesces bursts for the same PR head
+# and review/comment context without using Linear as a lock.
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, synchronize]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+env:
+  SYMPHONY_BOT_USER: ${{ vars.SYMPHONY_BOT_USER || 'example-symphony-bot' }}
+  CADENCE_REVIEWER: ${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }}
+  SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
+
+jobs:
+  route:
+    name: Route review-causing event
+    # Coarse gate before a runner is claimed, so unrelated events skip silently
+    # instead of failing (e.g. during a GitHub outage) on the checkout + API call
+    # the route script would otherwise make. The script still does the full
+    # classification. `issue.labels` covers issue_comment; `pull_request.labels`
+    # the rest — the `.*` filter is an empty, safe no-op when that object is absent.
+    if: >-
+      ${{
+        contains(github.event.pull_request.labels.*.name, 'symphony') ||
+        contains(github.event.issue.labels.*.name, 'symphony') ||
+        github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
+        github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot')
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: >-
+        cadence-ai-review-events-${{ github.repository }}-${{ github.event.pull_request.number || github.event.issue.number || 'no-pr' }}-${{ github.event.pull_request.head.sha || 'no-head' }}-${{ github.event.review.id || github.event.comment.pull_request_review_id || github.event.comment.id || 'head' }}
+      cancel-in-progress: false
+    outputs:
+      should_request_review: ${{ steps.route.outputs.should_request_review }}
+      pr_number: ${{ steps.route.outputs.pr_number }}
+      trigger_source: ${{ steps.route.outputs.trigger_source }}
+      trigger_actor: ${{ steps.route.outputs.trigger_actor }}
+      issue_identifier: ${{ steps.route.outputs.issue_identifier }}
+      current_head_sha: ${{ steps.review_state.outputs.current_head_sha || steps.route.outputs.current_head_sha }}
+      last_reviewed_sha: ${{ steps.review_state.outputs.last_reviewed_sha }}
+      skip_reason: ${{ steps.route.outputs.skip_reason }}
+      actor_classification: ${{ steps.route.outputs.actor_classification }}
+      actor_human_facing: ${{ steps.route.outputs.actor_human_facing }}
+      symphony_push: ${{ steps.route.outputs.symphony_push }}
+      cadence_reviewer: ${{ steps.route.outputs.cadence_reviewer }}
+      coalescing_key: ${{ steps.route.outputs.coalescing_key }}
+      coalescing_context_kind: ${{ steps.route.outputs.coalescing_context_kind }}
+      coalescing_context_id: ${{ steps.route.outputs.coalescing_context_id }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Classify and gate event
+        id: route
+        env:
+          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+        run: node .github/workflows/scripts/cadence-ai-review-route-event.mjs
+
+      - name: Fetch current PR review state for event
+        id: review_state
+        if: always() && steps.route.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.route.outputs.pr_number }}
+          ROUTE_CURRENT_HEAD_SHA: ${{ steps.route.outputs.current_head_sha }}
+          CADENCE_REVIEWER_LOGIN: ${{ steps.route.outputs.cadence_reviewer }}
+        run: |
+          set -euo pipefail
+
+          state_file="${RUNNER_TEMP}/cadence-event-review-state.json"
+          current_head_sha="${ROUTE_CURRENT_HEAD_SHA}"
+          last_reviewed_sha=""
+          review_decision=""
+          review_status=""
+
+          if REPO_SLUG="${GH_REPO}" node scripts/fetch-pr-review-state.mjs "${PR_NUMBER}" > "${state_file}"; then
+            current_head_sha="$(jq -r '.headRefOid // ""' "${state_file}")"
+            last_reviewed_sha="$(jq -r '.lastReview.oid // ""' "${state_file}")"
+            review_decision="$(jq -r '.decision // ""' "${state_file}")"
+            review_status="$(jq -r '.reviewStatus // ""' "${state_file}")"
+          else
+            echo "::warning::Could not fetch PR review state for trigger evidence; using event payload head when available."
+          fi
+
+          printf 'current_head_sha=%s\n' "${current_head_sha}" >> "${GITHUB_OUTPUT}"
+          printf 'last_reviewed_sha=%s\n' "${last_reviewed_sha}" >> "${GITHUB_OUTPUT}"
+          printf 'review_decision=%s\n' "${review_decision}" >> "${GITHUB_OUTPUT}"
+          printf 'review_status=%s\n' "${review_status}" >> "${GITHUB_OUTPUT}"
+          printf 'state_file=%s\n' "${state_file}" >> "${GITHUB_OUTPUT}"
+
+      - name: Write Cadence workpad trigger decision
+        if: always() && steps.route.outputs.issue_identifier != ''
+        env:
+          ISSUE_IDENTIFIER: ${{ steps.route.outputs.issue_identifier }}
+          SHOULD_REQUEST_REVIEW: ${{ steps.route.outputs.should_request_review }}
+          TRIGGER_SOURCE: ${{ steps.route.outputs.trigger_source }}
+          TRIGGER_ACTOR: ${{ steps.route.outputs.trigger_actor }}
+          CURRENT_HEAD_SHA: ${{ steps.review_state.outputs.current_head_sha || steps.route.outputs.current_head_sha }}
+          LAST_REVIEWED_SHA: ${{ steps.review_state.outputs.last_reviewed_sha }}
+          REVIEW_DECISION: ${{ steps.review_state.outputs.review_decision }}
+          REVIEW_STATUS: ${{ steps.review_state.outputs.review_status }}
+          SKIP_REASON: ${{ steps.route.outputs.skip_reason }}
+          COALESCING_KEY: ${{ steps.route.outputs.coalescing_key }}
+          COALESCING_CONTEXT_KIND: ${{ steps.route.outputs.coalescing_context_kind }}
+          COALESCING_CONTEXT_ID: ${{ steps.route.outputs.coalescing_context_id }}
+          ACTOR_CLASSIFICATION: ${{ steps.route.outputs.actor_classification }}
+          ACTOR_HUMAN_FACING: ${{ steps.route.outputs.actor_human_facing }}
+          SYMPHONY_PUSH: ${{ steps.route.outputs.symphony_push }}
+          CADENCE_REVIEWER: ${{ steps.route.outputs.cadence_reviewer }}
+          LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${LINEAR_API_TOKEN}" ]; then
+            echo "::warning::Skipping optional Cadence Workpad write because CADENCE_LINEAR_API_TOKEN is not configured."
+            exit 0
+          fi
+
+          status="skipped"
+          pending_trigger_state="ignored"
+          if [ "${SHOULD_REQUEST_REVIEW}" = "true" ]; then
+            status="review-requested"
+            pending_trigger_state="Cadence reviewer requested"
+          fi
+
+          if ! jq -n \
+            --arg status "${status}" \
+            --arg triggerSource "${TRIGGER_SOURCE}" \
+            --arg currentHeadSha "${CURRENT_HEAD_SHA}" \
+            --arg lastReviewedSha "${LAST_REVIEWED_SHA}" \
+            --arg reviewDecision "${REVIEW_DECISION}" \
+            --arg reviewStatus "${REVIEW_STATUS}" \
+            --arg pendingTriggerState "${pending_trigger_state}" \
+            --arg skipReason "${SKIP_REASON}" \
+            --arg triggerActor "${TRIGGER_ACTOR}" \
+            --arg coalescingKey "${COALESCING_KEY}" \
+            --arg coalescingContextKind "${COALESCING_CONTEXT_KIND}" \
+            --arg coalescingContextId "${COALESCING_CONTEXT_ID}" \
+            --arg actorClassification "${ACTOR_CLASSIFICATION}" \
+            --arg actorHumanFacing "${ACTOR_HUMAN_FACING}" \
+            --arg symphonyPush "${SYMPHONY_PUSH}" \
+            --arg shouldRequestReview "${SHOULD_REQUEST_REVIEW}" \
+            --arg cadenceReviewer "${CADENCE_REVIEWER}" \
+            '{
+              status: $status,
+              triggerSource: $triggerSource,
+              reviewState: "event-gate",
+              lastReviewedSha: $lastReviewedSha,
+              pendingTriggerState: $pendingTriggerState,
+              skippedEvents: (
+                if $skipReason == "" then []
+                else [{
+                  reason: $skipReason,
+                  actor: $triggerActor,
+                  classification: $actorClassification,
+                  triggerSource: $triggerSource,
+                  currentHeadSha: $currentHeadSha,
+                  lastReviewedSha: $lastReviewedSha,
+                  coalescingKey: $coalescingKey
+                }]
+                end
+              ),
+              coordination: {
+                triggerActor: $triggerActor,
+                actorClassification: $actorClassification,
+                actorHumanFacing: ($actorHumanFacing == "true"),
+                symphonyPush: ($symphonyPush == "true"),
+                reviewState: {
+                  currentHeadSha: $currentHeadSha,
+                  lastReviewedSha: $lastReviewedSha,
+                  decision: $reviewDecision,
+                  status: $reviewStatus
+                },
+                reviewRequest: {
+                  requested: ($shouldRequestReview == "true"),
+                  reviewer: $cadenceReviewer
+                },
+                triggerCoalescing: {
+                  key: $coalescingKey,
+                  contextKind: $coalescingContextKind,
+                  contextId: $coalescingContextId,
+                  mechanism: "github-actions-concurrency"
+                }
+              }
+            }' \
+            | node scripts/cadence-linear-workpad.mjs "${ISSUE_IDENTIFIER}" -; then
+            echo "::warning::Optional Cadence Workpad write failed; continuing deterministic trigger path."
+          fi
+
+      - name: Request or re-request Cadence review
+        id: request_cadence_review
+        if: steps.route.outputs.should_request_review == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          DELETE_GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.route.outputs.pr_number }}
+          REVIEWER_LOGIN: ${{ steps.route.outputs.cadence_reviewer }}
+          TRIGGER_SOURCE: ${{ steps.route.outputs.trigger_source }}
+          TRIGGER_ACTOR: ${{ steps.route.outputs.trigger_actor }}
+          DISMISS_APPROVALS: "true"
+          DISMISS_MESSAGE: "Cadence approval is stale because a new review-causing event is queued; Cadence will re-review current PR state."
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::CADENCE_BOT_GITHUB_TOKEN is required to request Cadence review."
+            exit 1
+          fi
+
+          if output="$(node .github/workflows/scripts/request-pr-reviewer.mjs 2>&1)"; then
+            printf '%s\n' "${output}"
+            exit 0
+          else
+            request_status=$?
+          fi
+
+          printf '%s\n' "${output}"
+
+          if ! grep -Fq "no fresh review_requested event was created" <<<"${output}"; then
+            exit "${request_status}"
+          fi
+
+          manual_remedy="Manual remedy: re-request ${REVIEWER_LOGIN} on PR #${PR_NUMBER}, or dispatch the Cadence AI Review workflow with pr_number=${PR_NUMBER}."
+          state_file="${RUNNER_TEMP}/cadence-review-state.json"
+          if REPO_SLUG="${GH_REPO}" \
+            CADENCE_REVIEWER_LOGIN="${REVIEWER_LOGIN}" \
+            node scripts/fetch-pr-review-state.mjs "${PR_NUMBER}" > "${state_file}"; then
+            head_sha="$(jq -r '.headRefOid // ""' "${state_file}")"
+            review_decision="$(jq -r '.decision // ""' "${state_file}")"
+            review_status="$(jq -r '.reviewStatus // ""' "${state_file}")"
+            last_reviewed_sha="$(jq -r '.lastReview.oid // ""' "${state_file}")"
+            echo "::error::Cadence could not guarantee a fresh review_requested event for PR #${PR_NUMBER} at head ${head_sha:-unknown}; review_decision=${review_decision:-unknown}; review_status=${review_status:-unknown}; last_reviewed_sha=${last_reviewed_sha:-none}. ${manual_remedy}"
+          else
+            echo "::error::Cadence could not guarantee a fresh review_requested event for PR #${PR_NUMBER}, and could not read PR review state for additional context. ${manual_remedy}"
+          fi
+
+          exit "${request_status}"

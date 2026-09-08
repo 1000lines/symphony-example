@@ -1,0 +1,247 @@
+name: Update Symphony host AMI
+run-name: ${{ github.event_name == 'schedule' && 'Weekly Symphony host AMI check' || 'Manual Symphony host AMI check' }}
+
+on:
+  schedule:
+    - cron: "23 15 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-symphony-host-ami
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      AMI_PARAMETER_NAME: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.18-x86_64
+      AWS_REGION: us-west-2
+      EXPECTED_AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      TERRAFORM_FILE: infra/static/modules/symphony-host/instance.tf
+      UPDATE_BRANCH: automation/symphony-host-ami
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # v1.7.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS account
+        run: |
+          set -euo pipefail
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          if [[ "$account_id" != "$EXPECTED_AWS_ACCOUNT_ID" ]]; then
+            echo "Expected AWS account $EXPECTED_AWS_ACCOUNT_ID but got $account_id" >&2
+            exit 1
+          fi
+
+      - name: Read latest AL2023 AMI
+        id: latest
+        run: |
+          set -euo pipefail
+          ami_id="$(
+            aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "$AMI_PARAMETER_NAME" \
+              --query Parameter.Value \
+              --output text
+          )"
+
+          if [[ ! "$ami_id" =~ ^ami-[0-9a-f]{8,17}$ ]]; then
+            echo "SSM parameter $AMI_PARAMETER_NAME returned invalid AMI id: $ami_id" >&2
+            exit 1
+          fi
+
+          echo "ami_id=$ami_id" >> "$GITHUB_OUTPUT"
+          echo "Latest AL2023 AMI: $ami_id"
+
+      - name: Verify candidate AMI metadata
+        id: image
+        env:
+          LATEST_AMI: ${{ steps.latest.outputs.ami_id }}
+        run: |
+          set -euo pipefail
+          image_json="$(
+            aws ec2 describe-images \
+              --region "$AWS_REGION" \
+              --owners amazon \
+              --image-ids "$LATEST_AMI" \
+              --query 'Images[0]' \
+              --output json
+          )"
+
+          if [[ -z "$image_json" || "$image_json" == "null" ]]; then
+            echo "AMI $LATEST_AMI was not returned as an Amazon-owned image." >&2
+            exit 1
+          fi
+
+          image_id="$(jq -r '.ImageId // empty' <<<"$image_json")"
+          image_name="$(jq -r '.Name // empty' <<<"$image_json")"
+          owner_id="$(jq -r '.OwnerId // empty' <<<"$image_json")"
+          architecture="$(jq -r '.Architecture // empty' <<<"$image_json")"
+          root_device_type="$(jq -r '.RootDeviceType // empty' <<<"$image_json")"
+          virtualization_type="$(jq -r '.VirtualizationType // empty' <<<"$image_json")"
+          image_type="$(jq -r '.ImageType // empty' <<<"$image_json")"
+          is_public="$(jq -r '.Public // false' <<<"$image_json")"
+          creation_date="$(jq -r '.CreationDate // empty' <<<"$image_json")"
+
+          if [[ "$image_id" != "$LATEST_AMI" ]]; then
+            echo "Expected image $LATEST_AMI but describe-images returned $image_id." >&2
+            exit 1
+          fi
+          if [[ "$owner_id" != "137112412989" ]]; then
+            echo "Expected Amazon Linux owner 137112412989 but got $owner_id." >&2
+            exit 1
+          fi
+          if [[ "$architecture" != "x86_64" ]]; then
+            echo "Expected x86_64 architecture but got $architecture." >&2
+            exit 1
+          fi
+          if [[ "$root_device_type" != "ebs" ]]; then
+            echo "Expected EBS root device but got $root_device_type." >&2
+            exit 1
+          fi
+          if [[ "$virtualization_type" != "hvm" ]]; then
+            echo "Expected HVM virtualization but got $virtualization_type." >&2
+            exit 1
+          fi
+          if [[ "$image_type" != "machine" ]]; then
+            echo "Expected machine image type but got $image_type." >&2
+            exit 1
+          fi
+          if [[ "$is_public" != "true" ]]; then
+            echo "Expected public Amazon Linux AMI but Public was $is_public." >&2
+            exit 1
+          fi
+          case "$image_name" in
+            al2023-ami-*kernel-6.18-x86_64) ;;
+            *)
+              echo "Expected AL2023 kernel 6.18 x86_64 image name, got $image_name." >&2
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "creation_date=$creation_date"
+            echo "image_name=$image_name"
+            echo "owner_id=$owner_id"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update pinned AMI
+        id: update
+        env:
+          LATEST_AMI: ${{ steps.latest.outputs.ami_id }}
+        run: |
+          set -euo pipefail
+          current_ami="$(sed -n '/# symphony-host-ami-update: begin/,/# symphony-host-ami-update: end/s/^[[:space:]]*symphony_host_ami_id[[:space:]]*=[[:space:]]*"\(ami-[0-9a-f]\{8,17\}\)".*/\1/p' "$TERRAFORM_FILE")"
+          if [[ ! "$current_ami" =~ ^ami-[0-9a-f]{8,17}$ ]]; then
+            echo "Could not read exactly one workflow-owned Symphony host AMI from $TERRAFORM_FILE." >&2
+            exit 1
+          fi
+
+          if [[ "$current_ami" == "$LATEST_AMI" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "current_ami=$current_ami" >> "$GITHUB_OUTPUT"
+            echo "latest_ami=$LATEST_AMI" >> "$GITHUB_OUTPUT"
+            echo "Symphony host AMI is already pinned to $LATEST_AMI."
+            exit 0
+          fi
+
+          sed -i.bak '/# symphony-host-ami-update: begin/,/# symphony-host-ami-update: end/s/^\([[:space:]]*symphony_host_ami_id[[:space:]]*=[[:space:]]*"\)ami-[0-9a-f]\{8,17\}\(".*\)$/\1'"$LATEST_AMI"'\2/' "$TERRAFORM_FILE"
+          rm -f "$TERRAFORM_FILE.bak"
+
+          updated_ami="$(sed -n '/# symphony-host-ami-update: begin/,/# symphony-host-ami-update: end/s/^[[:space:]]*symphony_host_ami_id[[:space:]]*=[[:space:]]*"\(ami-[0-9a-f]\{8,17\}\)".*/\1/p' "$TERRAFORM_FILE")"
+          if [[ "$updated_ami" != "$LATEST_AMI" ]]; then
+            echo "Expected $TERRAFORM_FILE to contain $LATEST_AMI after sed update, got $updated_ami." >&2
+            exit 1
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "current_ami=$current_ami" >> "$GITHUB_OUTPUT"
+          echo "latest_ami=$LATEST_AMI" >> "$GITHUB_OUTPUT"
+          echo "Updated Symphony host AMI from $current_ami to $LATEST_AMI."
+
+      - name: Report no update
+        if: steps.update.outputs.changed == 'false'
+        run: echo "Symphony host AMI is already current."
+
+      - name: Show proposed change
+        if: steps.update.outputs.changed == 'true'
+        run: git diff -- "$TERRAFORM_FILE"
+
+      - name: Write pull request body
+        id: pr_body
+        if: steps.update.outputs.changed == 'true'
+        env:
+          CURRENT_AMI: ${{ steps.update.outputs.current_ami }}
+          IMAGE_CREATION_DATE: ${{ steps.image.outputs.creation_date }}
+          IMAGE_NAME: ${{ steps.image.outputs.image_name }}
+          IMAGE_OWNER_ID: ${{ steps.image.outputs.owner_id }}
+          LATEST_AMI: ${{ steps.latest.outputs.ami_id }}
+        run: |
+          set -euo pipefail
+          pr_body="$RUNNER_TEMP/symphony-host-ami-pr-body.md"
+          cat > "$pr_body" <<EOF
+          ## Summary
+
+          Updates the pinned Symphony host AMI from \`$CURRENT_AMI\` to \`$LATEST_AMI\`, the current AL2023 x86_64 image published at \`$AMI_PARAMETER_NAME\`.
+
+          - Verified candidate image \`$IMAGE_NAME\` from owner \`$IMAGE_OWNER_ID\`, created \`$IMAGE_CREATION_DATE\`.
+          - Keeps Symphony host replacement deliberate: review the static Terraform plan and schedule singleton-host downtime before merge.
+
+          Selected base branch: \`main\`.
+
+          ## Tested
+
+          - Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - \`aws ssm get-parameter --region $AWS_REGION --name $AMI_PARAMETER_NAME\` returned \`$LATEST_AMI\`.
+          - \`aws ec2 describe-images --owners amazon --image-ids $LATEST_AMI\` verified Amazon owner, public machine image, x86_64 architecture, EBS root, HVM virtualization, and AL2023 kernel 6.18 image family.
+          - \`sed -i.bak ... $TERRAFORM_FILE\` updated the workflow-owned pinned AMI line between the marker comments.
+
+          Operator checks before merge:
+
+          - \`terraform -chdir=infra/static plan -parallelism=1 -refresh=false -no-color\` should show replacement of \`module.symphony_host.aws_instance.symphony\` only because \`ami\` changed.
+          - Deliberate cold replacement should record the new instance ID, workflow run URL, and elapsed time from \`RunInstances\` to ALB \`healthy\`.
+          EOF
+          sed -i 's/^          //' "$pr_body"
+          echo "path=$pr_body" >> "$GITHUB_OUTPUT"
+
+      - name: Verify pull request token
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::CADENCE_BOT_GITHUB_TOKEN is required to push and open an AMI update PR."
+            exit 1
+          fi
+
+      - name: Create or update pull request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          add-paths: ${{ env.TERRAFORM_FILE }}
+          commit-message: Update Symphony host AMI to ${{ steps.latest.outputs.ami_id }}
+          committer: "${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }} <${{ vars.CADENCE_GIT_EMAIL || 'example-cadence-bot@users.noreply.github.com' }}>"
+          author: "${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }} <${{ vars.CADENCE_GIT_EMAIL || 'example-cadence-bot@users.noreply.github.com' }}>"
+          branch: ${{ env.UPDATE_BRANCH }}
+          base: main
+          delete-branch: false
+          title: Update Symphony host AMI to ${{ steps.latest.outputs.ami_id }}
+          body-path: ${{ steps.pr_body.outputs.path }}
+          labels: symphony
+          assignees: ${{ vars.SYMPHONY_HUMAN_LEAD }}
+          draft: always-true

@@ -1,0 +1,40 @@
+{
+  "name": "symphony-tooling",
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=11.0.0"
+  },
+  "packageManager": "npm@11.13.0",
+  "workspaces": [
+    "tools/symphony-dag",
+    "tools/symphony-host"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces && tsc -p tsconfig.json",
+    "test": "npm test --workspaces -- --runInBand && npm run agent:guardrails:test && ts-node scripts/symphony/project-colors.test.ts && node --test scripts/*.test.mjs scripts/symphony/*.test.mjs .github/workflows/scripts/*.test.mjs",
+    "lint": "eslint --ext .js,.cjs,.mjs,.ts tools scripts .github/workflows/scripts .agents/skills/linear-graphql/scripts",
+    "lint:agent": "eslint --config .eslintrc.agent.js --rulesdir scripts/eslint-rules --ext .ts tools scripts",
+    "symphony-host:test": "node --test scripts/symphony/host/*.test.mjs infra/static/modules/symphony-host/files/*.test.mjs",
+    "agent:guardrails": "ts-node scripts/agent-guardrails.ts",
+    "agent:guardrails:test": "ts-node scripts/agent-guardrails.test.ts",
+    "symphony-dag:build": "npm run build -w @example/symphony-dag",
+    "symphony-dag:lint": "npm run lint -w @example/symphony-dag",
+    "symphony-dag:test": "npm test -w @example/symphony-dag",
+    "symphony-dag:check": "npm run symphony-dag:build && npm run symphony-dag:lint && npm run symphony-dag:test"
+  },
+  "devDependencies": {
+    "@types/jest": "29",
+    "@types/node": "18",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1",
+    "eslint": "8",
+    "eslint-config-prettier": "^9.1.0",
+    "jest": "29",
+    "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^4.2.0",
+    "ts-jest": "29",
+    "ts-node": "10",
+    "typescript": "^5.5.4"
+  }
+}

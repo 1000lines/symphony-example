@@ -1,0 +1,11 @@
+# Ignore artifacts:
+build
+coverage
+dist
+
+# Ignore generated test artifacts
+test-results
+
+# Ignore Claude Code files from prettier check
+.claude/
+node_modules

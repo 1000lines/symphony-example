@@ -1,0 +1,18 @@
+[Unit]
+Description=Reconcile Symphony host runtime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Stays "active (exited)" so symphony.service's After= ordering is satisfied
+# once convergence has finished rather than the moment the process forks.
+RemainAfterExit=yes
+# A steady-state reconcile is a fast incremental build, but losing the toolchain
+# marker or the workspace volume forces an Erlang/OTP source compile that runs
+# far past the 90s default and would be killed mid-build.
+TimeoutStartSec=infinity
+ExecStart={{SYMPHONY_BOOTSTRAP_BIN_DIR}}/reconcile.sh
+
+[Install]
+WantedBy=multi-user.target

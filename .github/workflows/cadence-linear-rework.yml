@@ -1,0 +1,61 @@
+name: Cadence Review Handoff
+
+on:
+  pull_request_review:
+    types: [submitted, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  SYMPHONY_BOT_USER: ${{ vars.SYMPHONY_BOT_USER || 'example-symphony-bot' }}
+  CADENCE_REVIEWER: ${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }}
+  SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
+
+jobs:
+  review-handoff:
+    name: Route Cadence review handoff
+    if: >-
+      ${{
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request &&
+          github.event.issue.state == 'open' &&
+          github.event.issue.user.login == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
+          contains(github.event.issue.labels.*.name, 'symphony') &&
+          github.actor != (vars.CADENCE_REVIEWER || 'example-cadence-bot') &&
+          github.actor != (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
+          github.actor != 'claude[bot]' &&
+          github.actor != 'dependabot[bot]' &&
+          !endsWith(github.actor, '[bot]')
+        ) || (
+          github.event_name == 'pull_request_review' &&
+          github.event.pull_request.state == 'open' &&
+          github.event.pull_request.user.login == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
+          contains(github.event.pull_request.labels.*.name, 'symphony') &&
+          (
+            github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot') ||
+            (
+              github.actor != (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
+              github.actor != 'claude[bot]' &&
+              github.actor != 'dependabot[bot]' &&
+              !endsWith(github.actor, '[bot]') &&
+              github.event.review.state != 'approved'
+            )
+          )
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Route linked Linear issue or human review request
+        env:
+          LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+        run: node scripts/cadence-linear-rework.mjs

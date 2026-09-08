@@ -1,0 +1,5 @@
+{
+  "useTabs": false,
+  "plugins": ["prettier-plugin-organize-imports"],
+  "organizeImportsSkipDestructiveCodeActions": true
+}

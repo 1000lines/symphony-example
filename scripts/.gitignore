@@ -1,0 +1,12 @@
+# Backup files containing sensitive API keys
+backups/
+*.json
+!eslint-agent-complexity-baseline.json
+*.bak
+
+# Temporary files
+*.tmp
+*.log
+
+# macOS
+.DS_Store

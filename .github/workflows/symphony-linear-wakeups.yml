@@ -1,0 +1,72 @@
+name: Symphony Linear Wakeups
+
+on:
+  # Actions-created checks do not trigger check_run workflows.
+  # The wildcard also covers issue-scoped validation workflows. GitHub creates
+  # run records for these completions, but the job gate below allocates no runner
+  # for unrelated runs. workflow_run only arms on the default branch.
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+  check_run:
+    types: [completed]
+  status:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, labeled]
+  # GitHub emits no dedicated merge-conflict webhook. Reconcile base changes
+  # and mergeability that was still unknown when the PR event arrived.
+  schedule:
+    - cron: "17,47 * * * *"
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  pull-requests: read
+  statuses: read
+
+jobs:
+  wake:
+    # GitHub evaluates this before assigning a runner. Workflow completions
+    # qualify only on Symphony branches.
+    # Keep the periodic sweep for base changes with no merge-conflict webhook.
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.path != '.github/workflows/symphony-linear-wakeups.yml' &&
+        github.event.workflow_run.event != 'workflow_run' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'workflow_dispatch' ||
+          contains(fromJSON('["failure","error","timed_out","cancelled","action_required","startup_failure"]'), github.event.workflow_run.conclusion)) &&
+        startsWith(github.event.workflow_run.head_branch, 'symphony/')) ||
+      (github.event_name == 'check_run' &&
+        github.event.check_run.check_suite.app.slug != 'github-actions' &&
+        startsWith(github.event.check_run.check_suite.head_branch, 'symphony/') &&
+        contains(fromJSON('["failure","error","timed_out","cancelled","action_required","startup_failure"]'), github.event.check_run.conclusion)) ||
+      (github.event_name == 'status' &&
+        contains(fromJSON('["failure","error"]'), github.event.state) &&
+        contains(format(' {0}', join(github.event.branches.*.name, ' ')), ' symphony/')) ||
+      (github.event_name == 'pull_request_target' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(github.event.pull_request.labels.*.name, 'symphony'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Serialize bridge writes, including the multi-issue conflict sweep. Queue
+    # up to GitHub's 100-run limit rather than replacing the single pending run.
+    # Cadence's separate review workflows remain independent writers.
+    concurrency:
+      group: symphony-linear-wakeups-${{ github.repository }}
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Check out trusted bridge code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Route non-review wakeups
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
+        run: node .github/workflows/scripts/symphony-linear-wakeups.mjs

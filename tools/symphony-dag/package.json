@@ -1,0 +1,16 @@
+{
+  "name": "@example/symphony-dag",
+  "version": "0.0.0",
+  "private": true,
+  "description": "DAG plan parsing and Linear payload helpers for Symphony.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "prettier --check 'src/**/*.ts' 'package.json' 'jest.config.cjs' 'tsconfig.json' && eslint --report-unused-disable-directives 'src/**/*.ts' 'jest.config.cjs'",
+    "test": "jest --config jest.config.cjs",
+    "check": "npm run build && npm run lint && npm test"
+  },
+  "dependencies": {
+    "yaml": "2.9.0"
+  }
+}
