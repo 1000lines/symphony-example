@@ -44,6 +44,17 @@ specific handoff. Do not substitute assumptions for proof.
 
 ## Evidence Workflow
 
+For repository changes, organize validation and evidence
+**local → Docker if needed → mandatory CI**: run relevant tests locally first;
+if they pass, skip Docker. Use containers only when the local environment cannot
+run required tests, then always run CI on the published commit as the shared,
+reviewable validation surface.
+Record justified local/Docker skips and fix actionable test failures; do not
+treat an unavailable toolchain as a failed assertion. Include the Docker image
+digest and CI run/check links when used. Required CI still applies to small and
+documentation-only changes; pending, missing, failed, canceled, or stale results
+are not success. See the proof standard's `Validation Order` for the full rule.
+
 1. List the ticket acceptance checks and handoff requirements the current
    checkpoint claims.
 2. Match each claim to the proof item that directly demonstrates it.

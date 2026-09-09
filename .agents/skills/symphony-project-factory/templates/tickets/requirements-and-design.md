@@ -64,6 +64,11 @@ labels, including `{{project-color}}` and any project-required labels such as
 
 ## Validation Expectations
 
+- Validate repository changes **local → Docker if needed → mandatory CI**:
+  run relevant tests locally and skip Docker if they pass. Use Docker only for
+  local environment gaps, then always run CI on the published commit as the
+  shared validation surface. Record skips; fix actionable failures before
+  publishing. Follow `docs/engineering/symphony/proof-of-work.md#validation-order`.
 - Markdown formatting passes for the committed document.
 - The document is mechanically consumable by the plan-project ticket.
 - Required source material is either read successfully or recorded as an

@@ -46,6 +46,13 @@ scope, such as extraction redaction generators, remains allowed in the plan.
   concrete external-resource ownership/use, estimated PR size, easy/hard
   difficulty, exclusions, dependencies, validation expectations, and initial
   labels. Parallel work has disjoint files and no conflicting resource use.
+- Each implementation task orders validation **local → Docker if needed → mandatory CI**, with
+  applicable host commands, container command/image or a justified skip, and
+  CI workflows/checks on the published commit. If relevant tests pass locally,
+  skip Docker; use it only when required tests cannot run in the local
+  environment. CI is always required as the shared validation surface. Preserve CI
+  evidence requirements for small and documentation-only changes. Follow
+  `docs/engineering/symphony/proof-of-work.md#validation-order`.
 - The plan briefly compares a few materially different decompositions and
   explains the chosen breakdown, its dependency rounds, and main tradeoffs.
 - The plan is structured enough that a human, script, or agent can turn each
@@ -197,6 +204,10 @@ not a new acceptance gate, and does not block otherwise valid assigned work.
 
 ## Validation Expectations
 
+- Validate this ticket's repository changes **local → Docker if needed → mandatory CI**:
+  skip Docker when relevant tests pass locally; use it for local environment
+  gaps. Record skips and current-commit CI evidence per the proof
+  standard. Fix actionable failures before publishing.
 - Markdown formatting passes for the committed plan and any touched generic
   planning docs.
 - Existing shared checks validate the matching Mermaid, manifest, and direct

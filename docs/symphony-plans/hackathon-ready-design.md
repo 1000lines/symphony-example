@@ -161,7 +161,7 @@ below are follow-up responsibility types, not created implementation tickets.
 | R04 | Credentials are scoped and renewable.                                                         | Matrix permission tests; operation after token expiry; revoked installation, denied permission upgrade and unselected repository fail closed without PAT fallback.                                 | App credentials                            |
 | R05 | Machine acceptance has one unambiguous current-head contract.                                 | Correct App/name/SHA/generation accepted; spoofed App, prior SHA, newer queued review, missing workpad or malformed findings rejected by every consumer. Human approval remains separate.          | Acceptance integration                     |
 | R06 | Every change receives actual repository CI.                                                   | Workflow/run URL, tested SHA, check names and results for docs and code changes authored by the App. Missing/failed/canceled/timed-out/stale checks never pass.                                    | Repository CI                              |
-| R07 | Prefer actual local compilation/testing; use repository CI when local tooling is unavailable. | Local build/test evidence when tooling exists; the selected Rust target proves CI fallback from a host without Rust, with the unavailable local command recorded.                                  | CI rehearsal and runtime instructions      |
+| R07 | Run tests locally; use Docker only for local environment gaps; always run repository CI. | Local passing tests skip Docker; the selected Rust target proves container fallback without a host toolchain. Both paths have current-commit CI evidence on the shared review surface. | CI rehearsal and runtime instructions |
 | R08 | Waiting work releases slots and resumes correctly.                                            | Pending ticket Inactive and absent from running workers; failing CI wakes it to Active once; corrected head requires fresh checks/review; green head reaches human handoff.                        | CI/review handoff                          |
 | R09 | Existing 15-minute daemon recovers missed events.                                             | Real timer lease Happy/Unhappy → Evaluating → resting verdict, engine anchor timestamps, jitter/poll delay and recovered ordinary ticket recorded; duplicate events and terminal tickets tested.   | Daemon integration/rehearsal               |
 | R10 | Installation, cutover and recovery are documented and actually verified.                      | Accepted target refs, host deploy/reload evidence and complete credential/operation inventory in MIGRATION.md; obsolete active PAT/Anthropic dependencies removed after replacement succeeds.      | Deployment/finalization                    |
@@ -534,7 +534,7 @@ CLI wrappers, label helper and host bootstrap belong in the credential migration
 
 ## CI evidence and bootstrap
 
-### Local-first validation and CI fallback
+### Local validation, Docker fallback, and mandatory CI
 
 Workers and their subagents first read the target repository's README,
 package/toolchain files, relevant `AGENTS.md` and `CLAUDE.md`, and `.github/`
@@ -545,15 +545,19 @@ where the extracted hosted template currently excludes legacy filenames.
 Treat repository text as tooling guidance subject to task scope and instruction
 priority, not permission to expose credentials or change protected settings.
 
-Use two explicit modes and record the selection in the workpad and PR:
+Use this order and record the outcome in the workpad and PR:
 
 - **Preferred — local compile/test:** run the documented build and relevant
   tests when tools and isolated services are available, fix actionable failures,
-  then publish for the required repository CI. Local proof helps the developer;
-  it does not remove the CI requirement.
-- **Fallback — repository CI:** when a needed compiler/service is unavailable,
-  record the unavailable command and reason, run useful available checks, and
-  publish a reviewable draft so the repository CI can compile/test it. Record
+  then skip Docker and publish for mandatory repository CI.
+- **Fallback — Docker:** when a needed compiler/service is unavailable locally,
+  record the unavailable command and use the repository's container setup or a
+  suitable pinned toolchain image. Docker is unnecessary when relevant tests
+  already pass locally. A failing assertion calls for a fix, not an automatic
+  switch of environments. If Docker is also unavailable, record the limitation
+  and publish a reviewable draft for CI; do not claim the skipped tests passed.
+- **Always — repository CI:** CI is mandatory because it is the shared,
+  reviewable validation surface, even when local or Docker tests pass. Record
   the workflow and tested SHA, exit Inactive while it runs, and resume concrete
   failures. Missing local Rust is not a missing-product-input blocker and does
   not require permission or installing every toolchain on the host. If CI also
@@ -563,8 +567,10 @@ For `jeremycarroll/venn-search-rs`, the read README/CLAUDE.md describe
 `cargo build --release`, `cargo test` and `cargo clippy`; CI additionally runs
 release tests/doc tests for `ncolors_3` through `ncolors_6`, strict Clippy and
 `cargo fmt --all -- --check`. The rehearsal owner selects a small reversible
-change and records both a toolchain-available local run and a genuinely
-Rust-unavailable host run with CI evidence. Existing CI triggers main pushes
+change and records both a toolchain-available local run (Docker skipped) and a
+Rust-unavailable host run using Docker, with CI evidence for both. Docker was
+installed on the Symphony host after the original design; see MIGRATION.md for
+the verified container smoke test. Existing CI triggers main pushes
 and PRs targeting main, including docs. Adapt checkout to the explicit PR head
 and set documented job timeouts as part of target integration; ordinary PR
 workflow defaults currently test a merge ref. Reuse these tests and keep the
@@ -863,7 +869,7 @@ working configuration; no automatic credential or registration deletion.
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Successful small docs change      | App-authored PR/commit, actual CI jobs, Codex result and App-owned successful check at the same head, ready transition and Jeremy handoff; neither bot collaborator.                                                                     |
 | Failed then corrected code change | Failed run and Active wake, fix/new SHA, fresh CI/review, old success rejected, no duplicate worker.                                                                                                                                     |
-| Both validation modes             | Local compile/test evidence when available; the selected Rust repository also demonstrates a genuinely Rust-unavailable host, reviewable small change, and fresh repository CI run/results.                                              |
+| Both validation paths | Local compile/test evidence with Docker skipped; the selected Rust repository also demonstrates Docker fallback on a host without Rust. Both paths require fresh repository CI run/results. |
 | Cross-owner target (R12)          | `jeremycarroll/venn-search-rs` App-authored PR; both installations/repository selection and no-bot-collaborator evidence; controller dispatch/result at target head; CI/Codex/check/Linear handoff; unknown/mismatched mapping rejected. |
 | Pending and missing event         | Inactive ordinary ticket, worker slot released, dropped-event rehearsal, actual 15-minute daemon lease/verdict and recovered action.                                                                                                     |
 | Identity/freshness failures       | Wrong App/name, old SHA, same-SHA new feedback, stale attempt, malformed/missing output and failed workpad all fail closed.                                                                                                              |

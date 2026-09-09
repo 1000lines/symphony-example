@@ -5,6 +5,37 @@ where it was validated, and what still needs a human or later ticket. Proof of
 work is a product reliability artifact: reviewers should not have to infer
 coverage from branch names, broad claims, or hidden local state.
 
+## Validation Order
+
+For repository changes, validate in this order:
+
+1. **Local:** run relevant, targeted checks with the tools already available on
+   the worker host. Start with inexpensive checks that give useful feedback.
+2. **Docker fallback:** if the relevant tests pass locally, skip Docker. Use
+   the repository's container setup or a suitable pinned toolchain image only
+   when required checks cannot run in the local environment, for example because
+   tools or services are missing. Try that fallback before deferring to CI.
+3. **CI:** publish the prepared change and run/inspect required repository CI on
+   that exact commit, including small and documentation-only changes. Record
+   workflow/run links and results. CI is mandatory because it is the shared,
+   reviewable validation surface; local or Docker success does not replace it.
+
+Use this order to get feedback before publishing, not to repeat identical tests
+without useful coverage. Record `Docker: skipped — passed locally` when local
+tests pass. If either environment is unavailable, record why and continue to
+the next viable stage. Fix actionable
+test failures before publishing, rerun affected checks, and distinguish an
+environment limitation from a failing assertion. Do not install every toolchain
+on the host or build new test infrastructure merely to satisfy the sequence.
+
+Each implementation ticket should name the applicable local commands, Docker
+command/image (or justified skip), and CI workflow/checks. Workpad and PR proof
+should report these stages in order, with the tested SHA, actual outcome, and
+limitations. Missing CI configuration, pending/failed/canceled runs, or results
+for an earlier commit are not passing evidence; record the gap or wait using
+the existing issue workflow. Metadata-only tickets with no repository change
+record API readback evidence instead of manufacturing a code/CI change.
+
 ## Required Evidence Fields
 
 Every proof item in a Linear workpad or PR body must name:

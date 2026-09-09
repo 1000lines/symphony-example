@@ -30,6 +30,12 @@ Do not implement any spawned ticket work from this ticket.
   commands, direct blockers, directly blocked issues, pinned plan links, labels,
   dependencies, workpad expectations, PR expectations, and validation
   expectations.
+- Each generated implementation ticket explicitly orders validation
+  **local → Docker if needed → mandatory CI** and carries the plan's applicable commands, container
+  image or justified skip, and required CI checks for the published commit.
+  If relevant tests pass locally, skip Docker; use it only for local environment
+  gaps. CI is the shared validation surface, mandatory even for small/docs-only changes;
+  follow `docs/engineering/symphony/proof-of-work.md#validation-order`.
 - Generated tickets preserve confirmed decisions and material assumptions.
   Carry forward only questions whose answers change the task or an authorized
   next action; name that decision. Assign routine discovery and verification to
@@ -161,6 +167,10 @@ labels.
 
 ## Validation Expectations
 
+- For repository changes, validate **local → Docker if needed → mandatory CI**:
+  skip Docker when relevant tests pass locally; use it for local environment
+  gaps. Record skips and current-commit CI evidence per the proof standard.
+  Metadata-only writes use API readback evidence; no artificial PR is needed.
 - Payload fixture or actual write evidence records mutation input shape and
   resulting issue identifiers.
 - Payload fixture or actual write evidence includes at least one generated

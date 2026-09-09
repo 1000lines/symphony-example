@@ -76,6 +76,19 @@ blocker handling, or state classification:
 
 ## Review And Evidence
 
+Validate repository changes in order: **local → Docker if needed → mandatory CI**.
+Run relevant checks locally first. If they pass, skip Docker. Use Docker only
+when required tests cannot run in the local environment, such as missing tools
+or services. Then publish and inspect CI on the exact commit, even for small or
+documentation-only changes: CI is the shared, reviewable validation surface.
+Record `Docker: skipped — passed locally` or any environment limitation.
+Fix actionable failures and rerun affected
+checks before publishing. A missing host toolchain is a reason to try Docker,
+not immediately defer all validation. Missing, pending, failed, canceled, or
+stale CI is not passing evidence. Record each stage's commands, results, tested
+SHA, and CI links in the workpad and PR. Follow
+`docs/engineering/symphony/proof-of-work.md` for evidence details.
+
 The host installer provides Docker for containerized toolchains and test
 dependencies. Use a repository Dockerfile or documented container command when
 it helps verify a change without installing another host toolchain. Mount only
