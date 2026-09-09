@@ -116,3 +116,13 @@ will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live d
 - Created the `blue` label in Linear team `100` and GitHub repository `1000lines/symphony-example`; the required GitHub `symphony` label already exists.
 - File tickets directly into Misc in Backlog, then move ready work to Active. No tickets were created or activated during this setup.
 - Automatic routing of projectless tickets remains deferred. The hosted `before_run` hook is still `true`; the retained routing helper still has its extracted `DEMO-*` restriction. No server changes or restart were needed.
+
+## Readiness project commissioned — 2026-09-09
+
+- Created [Symphony hackathon readiness](https://linear.app/1000lines/project/symphony-hackathon-readiness-178a07b73fe2), `project-code: hackathon-ready`, color pink, base `main`, human lead Jeremy Carroll. The project-color helper selected pink from verified Linear metadata; matching labels exist in Linear and both 1000lines repositories.
+- The [committed brief](docs/symphony-plans/hackathon-ready-brief.md) preserves the requested scope: Codex instead of Anthropic for Cadence, GitHub App installation identities instead of bot-user PATs, and repository CI evidence for every change with a working wait/resume path.
+- Created only the three planning seeds: [100-6 requirements/design](https://linear.app/1000lines/issue/100-6/create-requirements-and-design-doc) in Backlog, [100-7 DAG planning](https://linear.app/1000lines/issue/100-7/plan-project-seed-ticket) in Blocked, and [100-8 fan-out](https://linear.app/1000lines/issue/100-8/trigger-fan-out) in Blocked. Explicit relations are `100-6 blocks 100-7` and `100-7 blocks 100-8`; all are assigned to Jeremy.
+- Jeremy has brought daemon support back into the planned project scope. Prefer existing `Happy` / `Unhappy` / `Evaluating` with `wake:15m`. The runtime hard-codes `15m`, `1h`, `4h`, and `1d` in `daemon_wake.ex` and validates them in `config/schema.ex`; five-minute and ordinary-ticket timer extensions remain optional.
+- This is project setup, not deployment of those changes. The live host still uses the verified current bot/Anthropic flow, dispatches Active only, and has no daemon states enabled. Automatic Misc routing remains deferred.
+- Jeremy will contact the organizers about starter-kit keys. Initial Codex review may reuse Symphony's current OpenAI key; the project must document and verify event-key rotation when it arrives.
+- Incorporated the human merge of rehearsal PR #1 before publishing the brief. This supersedes the earlier rehearsal snapshot saying that PR was unmerged.
