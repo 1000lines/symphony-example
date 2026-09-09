@@ -50,9 +50,21 @@ not authorize additions. Leave it empty when there are no such requests.
 - {{requested-seed-title-or-existing-ticket}}: {{requested-scope-or-move}};
   human request: {{explicit-human-request}}
 
-## Missing Field Questions
+## Assumptions And Execution Inputs
 
-Preserve every missing value as a question until a human answers it. Do not
-invent metadata, labels, source access, identity mappings, or project scope.
+State material assumptions and use existing conventions or reasonable defaults
+for routine choices. Record values to discover during execution and external
+inputs with an owner and the specific work they gate. Do not invent observed
+IDs, permissions, credentials, or evidence. Independent work can proceed.
 
-- {{missing-field-question}}
+- {{assumption-or-execution-input}}
+
+## Open Decisions
+
+Ask only when plausible answers materially change scope, implementation,
+acceptance criteria, or an authorized next action and available context cannot
+resolve the choice. State the decision affected by each question. Omit this
+section when there are no such decisions; routine discovery and verification
+belong in execution tasks.
+
+- {{material-question-and-decision-it-changes}}

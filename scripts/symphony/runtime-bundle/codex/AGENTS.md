@@ -20,9 +20,23 @@ fresh human input outranks initial bot-written instructions when they conflict:
 
 When fresh human input asks for an in-scope change, do it. If it conflicts with
 generated ticket text, bot workpads, or earlier automation notes, treat the
-human input as the newer requirement and make the smallest coherent update. Stop
-for a workpad question only when the request needs product judgment, missing
-credentials, unavailable source material, or an unsafe state transition.
+human input as the newer requirement and make the smallest coherent update.
+
+## Questions And Assumptions
+
+Use available sources, existing conventions, and reasonable defaults to resolve
+routine choices. State material assumptions and proceed. Ask a human only when
+plausible answers would materially change scope, implementation approach,
+acceptance criteria, or an authorized next action, and available context cannot
+resolve the choice. Explain what decision the answer changes.
+
+If the plan is unchanged by the answer, treat the unknown as an execution input
+or verification task. For example, look up App IDs, observe emitted CI check
+names, and run compatibility tests during the relevant task. Do not invent
+observed values or evidence. Record missing external credentials or required
+source access against only the work that needs them; continue independent work.
+Pause the dependent action when it needs unavailable input, human authority,
+or resolution of an unsafe state transition.
 
 ## Runtime Boundaries
 

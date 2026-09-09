@@ -23,13 +23,18 @@ Do not create the fan-out plan, implementation tickets, or project implementatio
 ## Success Criteria
 
 - The requirements/design document records project goal, out-of-scope
-  boundaries, acceptance criteria, locked decisions, open questions, source
+  boundaries, acceptance criteria, locked decisions, material open decisions, source
   inputs read, and source inputs unavailable.
-- The document preserves missing-field questions instead of inventing values.
+- Use available context and reasonable defaults; state material assumptions.
+  Ask only when plausible answers would change scope, implementation,
+  acceptance criteria, or an authorized next action, and explain which decision
+  the answer changes. Do not invent observed values or evidence.
 - The document is structured so the plan-project ticket can produce a fan-out
   plan with no further product judgment.
-- Remaining open items are named with their intended owner or follow-up ticket
-  type.
+- Routine discovery, generated IDs, CI check names, compatibility tests, and
+  externally supplied credentials are execution inputs or verification tasks
+  with owners and only the necessary dependencies. They do not become human
+  questions or block independent design work merely because values are unknown.
 
 ## Labels
 
@@ -38,8 +43,10 @@ Do not create the fan-out plan, implementation tickets, or project implementatio
 
 ## Dependencies
 
-No default upstream dependency. If a source document is unavailable, stop in
-`Human Input Needed` rather than drafting from partial context.
+No default upstream dependency. If a required source is unavailable, record the
+access failure and block only conclusions or actions that depend on it. Continue
+independent work without guessing the source's contents; use `Human Input
+Needed` when no independent work remains and access is required to proceed.
 
 ## Workpad Expectations
 

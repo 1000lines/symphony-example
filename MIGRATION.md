@@ -128,3 +128,9 @@ will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live d
 - Incorporated the human merge of rehearsal PR #1 before publishing the brief. This supersedes the earlier rehearsal snapshot saying that PR was unmerged.
 - Jeremy subsequently requested activation: moved `100-6` to Active after verifying both seed blocker relations; `100-7` and `100-8` remain Blocked.
 - Updated this repository's `.agents/skills/symphony-project-factory/SKILL.md` and its three seed templates: stage seeds outside dispatch, verify blocker relations, then activate the ready planning frontier by default. Explicit holds or future start times override that default.
+
+## Material planning questions — 2026-09-09
+
+- [100-9](https://linear.app/1000lines/issue/100-9/ask-planning-questions-only-when-the-answer-changes-the-plan): updated the project factory, project description and three seed templates, and hosted runtime instruction source to ask only questions whose answers materially change the plan or an authorized next action. State reasonable assumptions and continue independent work.
+- App inventory, generated IDs, observed CI check names, and compatibility tests are execution/verification tasks. The event key remains an external input for rotation; it does not block initial implementation. Unknown observed values and evidence must still be verified rather than invented.
+- This changes repository guidance on main. Existing ticket descriptions and the design in draft PR #2 are not rewritten by changing templates. Hosted personal instructions take effect when the updated runtime bundle is installed; no host restart or deployment was performed for this documentation change.

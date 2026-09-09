@@ -35,8 +35,12 @@ scope, such as extraction redaction generators, remains allowed in the plan.
 
 ## Success Criteria
 
-- The plan preserves confirmed metadata and lists unresolved questions instead
-  of inventing values.
+- The plan preserves confirmed metadata and states material assumptions using
+  available context and reasonable defaults. Ask only unresolved questions whose
+  answers would materially change the plan or an authorized next action; name
+  the affected decision. Treat discoverable values and compatibility checks as
+  execution tasks, and external inputs as dependencies of only the affected
+  work. Do not invent observed values or evidence.
 - The plan records source documents read and source documents unavailable.
 - The plan contains per-task items, each with scope, file or target ownership,
   concrete external-resource ownership/use, estimated PR size, easy/hard

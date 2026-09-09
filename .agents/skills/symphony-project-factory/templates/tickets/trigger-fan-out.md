@@ -30,8 +30,11 @@ Do not implement any spawned ticket work from this ticket.
   commands, direct blockers, directly blocked issues, pinned plan links, labels,
   dependencies, workpad expectations, PR expectations, and validation
   expectations.
-- Generated tickets preserve missing-field questions instead of inventing
-  values.
+- Generated tickets preserve confirmed decisions and material assumptions.
+  Carry forward only questions whose answers change the task or an authorized
+  next action; name that decision. Assign routine discovery and verification to
+  the task that performs them, and external inputs to the work that needs them.
+  Do not invent observed values or evidence.
 - Initial states match the accepted plan and any human-provided state override.
 - If the accepted plan is a DAG, generated tickets and artifacts preserve graph,
   manifest, branch, relation, and maturity semantics from the plan.

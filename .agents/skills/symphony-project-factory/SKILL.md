@@ -72,14 +72,18 @@ set of required sources:
   `color-helper-output: unavailable` field, but live Linear writes must stop
   unless the human supplies equivalent verified availability output.
 
-If a required source cannot be read, fail closed. Record `Unavailable source`,
-the source name or URL, the access method attempted, and the exact failure in
-the workpad. Ask for access or pasted contents and move the issue to
-`Human Input Needed` when operating inside Symphony.
+If a required source cannot be read, record `Unavailable source`, the source
+name or URL, the access method attempted, and the exact failure in the workpad.
+Do not guess its contents. Continue independent work; ask for access or pasted
+contents only when the source is needed for the next decision or action. Use
+`Human Input Needed` when operating inside Symphony if no independent work
+remains and that access is required to proceed.
 
-## Required Questions
+## Required Inputs
 
-Confirm or ask for each field before writing project or ticket payloads:
+Resolve each field from sources, existing configuration, or the defaults below
+before writing project or ticket payloads. Ask only for material unresolved
+choices:
 
 - Project goal.
 - Out-of-scope boundaries.
@@ -108,9 +112,17 @@ Resolve the Linear team from the adopter's project configuration and verify it
 through Linear before writing. `DEMO` is only an example team key. If no team is
 configured, include the missing team in the write-plan questions.
 
-Do not infer missing values silently. If a value looks inferable, state the
-inference and preserve a question in the write plan until the human supplies
-the value.
+Use available sources, existing project conventions, and stated defaults to
+resolve routine choices. Record material assumptions without requiring human
+confirmation. Do not invent observed IDs, permissions, credentials, or evidence.
+
+Ask a human only when plausible answers would materially change scope,
+implementation approach, acceptance criteria, or an authorized next action,
+and the choice cannot be resolved from available context. Explain what decision
+the answer changes. If the plan is the same either way, proceed: discovery of
+App IDs or CI check names and compatibility tests are execution tasks, not
+planning questions. Record externally supplied credentials as dependencies of
+the work that needs them; continue independent planning and implementation.
 
 ## Project Description Rules
 
@@ -124,9 +136,11 @@ base-branch: <base-branch>
 human-lead: <full-name>
 ```
 
-If any field is missing, keep a concrete question in `Missing Field Questions`
-instead of inventing a value. Preview output may show placeholders, but live
-writes require resolved metadata, labels, and color availability.
+Resolve missing fields from verified sources or the defaults above. Keep only
+material unresolved decisions in `Open Decisions`, with the affected work
+identified. Preview output may show placeholders, but live writes require
+resolved metadata, labels, and color availability. A missing API-required ID
+must be looked up; if it remains unavailable, block only the dependent write.
 
 Keep the full project scope in the brief, including delivery and wrap-up
 outcomes. Only put an outcome into an additional seed payload when the human
