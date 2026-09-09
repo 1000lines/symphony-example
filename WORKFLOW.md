@@ -5,7 +5,6 @@ tracker:
   team_key: "100"
   active_states:
     - Active
-    - Evaluating
   terminal_states:
     - Done
     - Closed
@@ -16,12 +15,8 @@ tracker:
   maturity_gate_state_scope:
     - Todo
     - Active
-  daemon_states:
-    - Happy
-    - Unhappy
-  daemon_dispatch_states:
-    - Evaluating
-  daemon_default_wake: 1h
+  daemon_states: []
+  daemon_dispatch_states: []
 polling:
   interval_ms: 30000
 workspace:
@@ -40,8 +35,6 @@ hooks:
     true
 agent:
   max_concurrent_agents: 3
-  max_concurrent_agents_by_state:
-    evaluating: 5
   max_turns: 20
 codex:
   command: codex --enable apps --config shell_environment_policy.inherit=all --config 'model="gpt-5.5"' --config model_reasoning_effort=xhigh app-server
@@ -157,21 +150,15 @@ Symphony uses these state meanings:
 - `Active`: the issue can be worked now. It covers implementation and rework.
 - `Inactive`: the issue is waiting for something outside the worker slot. It
   covers CI, deploy, AI review, human review, and missing-input waits.
-- `Happy`: daemon-managed project monitoring is healthy and waiting for the next
-  timer.
-- `Unhappy`: daemon-managed project monitoring found a condition that prevents
-  closing the project yet.
 - `Done`: accepted work is complete.
 - `Canceled`: work was intentionally stopped.
 - `Duplicate`: work is represented by another issue.
 
-`Backlog` is outside the active pool. `Evaluating` is the configured daemon
-dispatch state. The runtime also accepts legacy workable states `Todo`,
-`In Progress`, and `Rework`; legacy waiting names include `Waiting for CI`,
-`In Review`, and `Human Input Needed`. The 1000lines team has `Active` and `Inactive`,
-so agents use them for work and external waits. Record any other team's fallback
-in the workpad. Bridges prefer `Active` and use only `Rework` when `Active` is
-absent; missing both is a visible failure, not an arbitrary started-state choice.
+`Backlog` holds the ready DAG frontier before the starting gun. `Blocked` holds
+work waiting on prerequisite tickets, with explicit Linear blocker relations.
+Only `Active` is dispatched. Daemon tickets and the `Happy`, `Unhappy`, and
+`Evaluating` states are not supported in this deployment. The human lead manages
+follow-up and monitoring manually during the hackathon.
 
 Waiting on another ticket uses the accepted hard blocker relations. Waiting on
 CI, review, or input uses `Inactive`. Optional `waiting:ci`,
@@ -289,7 +276,7 @@ For coding tickets spawned from a DAG plan:
      fall back to the Symphony workpad, similarly named headings, or another
      arbitrary comment.
 - Only after the Codex workpad ID is pinned, determine the issue's current
-  Linear state and whether it is workable, waiting, daemon-managed, terminal,
+  Linear state and whether it is workable, waiting, terminal,
   or a legacy compatibility name.
 - Use `Active` for implementation and rework when the team supports it. If the
   team still uses legacy states, preserve their compatibility transitions:
@@ -311,9 +298,7 @@ For coding tickets spawned from a DAG plan:
   - `Active`: implementation or rework may run now.
   - `Inactive`: CI, deploy, review, human input, or another external event is
     pending and the issue should not consume a worker slot.
-  - `Happy`: daemon monitoring is healthy and waiting for the next timer.
-  - `Unhappy`: daemon monitoring has work or evidence that prevents closing the
-    project yet.
+  - `Blocked`: prerequisite tickets are incomplete.
   - `Done`, `Canceled`, and `Duplicate`: terminal states.
 - Treat legacy waiting states such as `Waiting for CI`, `In Review`, and
   `Human Input Needed` as `Inactive`. Treat legacy workable states such as

@@ -22,6 +22,8 @@ deployment progress. Configuration changes are not proof of a working deployment
 
 | Numeric Linear team | Accept the existing `100-…` ticket identifiers in branch, DAG and PR-label helpers. | Updated locally. |
 
+| No daemon tickets (Linear only) | Drop daemon-ticket support from the hackathon Linear workflow. Do not configure Happy, Unhappy or Evaluating states; dispatch Active tickets only. Handle monitoring and follow-up manually on the day. Daemons are optional and deferred until after the hackathon. | Workflow updated; upstream runtime unchanged. |
+
 ## Deployment progress
 
 - Checked out `1000lines/symphony-example` and `1000lines/symphony`.
