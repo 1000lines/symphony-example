@@ -49,36 +49,90 @@ email and obtaining the event key; this document does not send that email.
 
 All required source inputs below were read successfully on September 9. There
 are **no unavailable required source documents**. Missing operator values are
-listed separately under open items; unknown registration inventory is not
-evidence that no Apps exist.
+listed separately under open items; registration identities are now supplied
+and verified, while installation grants remain rollout evidence.
 
-| ID  | Source read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Evidence or relevance                                                                                                                                                                   |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S01 | [Live Linear project](https://linear.app/1000lines/project/symphony-hackathon-readiness-178a07b73fe2) and 100-6 description/comments                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Metadata, human intent, three outcomes, activation restriction. Read through injected GraphQL.                                                                                          |
-| S02 | [Authoritative brief at 9673504](https://github.com/1000lines/symphony-example/blob/9673504cfc0c96e11a8de79c9a0247ec53827f7f/docs/symphony-plans/hackathon-ready-brief.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | GitHub contents API read; SHA-256 `f742ed757d816c7b4be31f1b9435ce0589a694dcd9c6d6b47520e66e832081da` matches the checkout.                                                              |
-| S03 | [MIGRATION.md](../../MIGRATION.md), [WORKFLOW.md](../../WORKFLOW.md), [hosted WORKFLOW.md](../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Deployment/credential history and the deployed Active-only configuration. Hosted bundle, not root WORKFLOW.md, is rendered on the host.                                                 |
-| S04 | [Project workflow](../engineering/symphony/project-workflow.md), [proof standard](../engineering/symphony/proof-of-work.md), [planning README](README.md), [schema](fan-out-plan-schema.md), [split criteria](fan-out-criteria.md), [DAG package](../../tools/symphony-dag/package.json)                                                                                                                                                                                                                                                                                                                                                                                                                                              | Existing planning conventions, evidence fields, review gates, and state bridges. No new planning schema is introduced here.                                                             |
-| S05 | `.github/workflows/cadence-ai-review{,-trigger,-events}.yml`, `cadence-linear-rework.yml`, and their scripts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Current PAT/Claude reviewer, visible user review requests, verification, actor filters, three-pass cap, human handoff. Consumer inventory below names the seams.                        |
-| S06 | `.github/workflows/symphony-{build,lint,test,linear-wakeups}.yml`, `package.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Three reusable CI workflows with only `workflow_call`; no automatic caller. Non-review bridge excludes successful ordinary checks. GitHub workflow API reports wakeups `disabled_fork`. |
-| S07 | [Runtime daemon source](https://github.com/1000lines/symphony/blob/e4d3f6a05b0a00201c9d04d3ceca02b206e22de5/elixir/lib/symphony_elixir/daemon_wake.ex), [schema](https://github.com/1000lines/symphony/blob/e4d3f6a05b0a00201c9d04d3ceca02b206e22de5/elixir/lib/symphony_elixir/config/schema.ex), supporting `linear/issue.ex` and `orchestrator.ex` at that commit                                                                                                                                                                                                                                                                                                                                                                  | Supported intervals, engine workpad anchor, jitter, dispatch lease, state constraints, retry limits. Retrieved through GitHub contents API.                                             |
-| S08 | [Codex Action documentation](https://learn.chatgpt.com/docs/github-action), [pinned action source](https://github.com/openai/codex-action/blob/86365089eb2b84e0a8fb0717b304f8bdcb13b20e/action.yml)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | API-key-backed execution, explicit CLI/model inputs, structured output, protected execution. `v1` resolved through its annotated tag to this commit.                                    |
-| S09 | [GitHub App permissions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app), [installation tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app), [check runs](https://docs.github.com/en/rest/checks/runs), [workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event), [review requests](https://docs.github.com/en/rest/pulls/review-requests#request-reviewers-for-a-pull-request), [workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow) | Permission, authentication, event and check-publication constraints.                                                                                                                    |
-| S10 | [Rehearsal PR #1](https://github.com/1000lines/symphony-example/pull/1) and its submitted reviews                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Merged; PAT/Anthropic review of `a6fa5f15478fbb6ac74f521704d7514f06a96706`. Baseline proof only, not proof of this design.                                                              |
-| S11 | `scripts/symphony/host/install.d/{40-credentials,80-config}.sh`, `host/lib.sh`, `host/install-runtime.sh`, `host/templates/symphony.service`, `scripts/symphony/setup-local-env.sh`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Secret materialization, fixed-token assumptions, Codex auth file, reload entry point.                                                                                                   |
-| S12 | `.claude/skills/cadence-ai-review/SKILL.md`, its `review-CLAUDE.md`, and `scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Review criteria to adapt as source material; not an instruction to run a review or mutate the legacy files in this ticket.                                                              |
+Source IDs remain stable. Repository paths describe observed inputs, not files
+changed by this ticket.
 
-Repository observations use `1000lines/symphony-example` base
-`ce68e3967ffb155331cdb29ccb78ec627585512b`. Source inventory records paths at that
-ref; proposed paths below are explicitly identified as additions.
+- **S01:** [Live Linear project](https://linear.app/1000lines/project/symphony-hackathon-readiness-178a07b73fe2)
+  and 100-6 description/comments, read through injected GraphQL: metadata,
+  outcomes, human ownership and activation restriction.
+- **S02:** [Authoritative brief at 9673504](https://github.com/1000lines/symphony-example/blob/9673504cfc0c96e11a8de79c9a0247ec53827f7f/docs/symphony-plans/hackathon-ready-brief.md),
+  fetched through GitHub contents API. SHA-256
+  `f742ed757d816c7b4be31f1b9435ce0589a694dcd9c6d6b47520e66e832081da`
+  matches the checkout.
+- **S03:** [MIGRATION.md](../../MIGRATION.md), [WORKFLOW.md](../../WORKFLOW.md)
+  and [hosted WORKFLOW.md](../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md):
+  deployment history and Active-only configuration. The hosted bundle is the
+  deployed workflow source.
+- **S04:** [Project workflow](../engineering/symphony/project-workflow.md),
+  [proof standard](../engineering/symphony/proof-of-work.md),
+  [planning README](README.md), [schema](fan-out-plan-schema.md),
+  [split criteria](fan-out-criteria.md), [DAG package](../../tools/symphony-dag/package.json)
+  and `.agents/skills/symphony-project-factory/templates/`: planning and gates.
+- **S05:** `.github/workflows/cadence-ai-review{,-trigger,-events}.yml`,
+  `cadence-linear-rework.yml` and their scripts: PAT/Claude review, actor
+  filters, three-pass cap, stale approvals and human handoff.
+- **S06:** `.github/workflows/symphony-{build,lint,test,linear-wakeups}.yml`
+  and `package.json`: three reusable workflows, each only `workflow_call`,
+  with no automatic caller. GitHub reports wakeups `disabled_fork`; its source
+  includes the `17,47 * * * *` merge-conflict sweep.
+- **S07:** [Runtime daemon source](https://github.com/1000lines/symphony/blob/e4d3f6a05b0a00201c9d04d3ceca02b206e22de5/elixir/lib/symphony_elixir/daemon_wake.ex)
+  and [schema](https://github.com/1000lines/symphony/blob/e4d3f6a05b0a00201c9d04d3ceca02b206e22de5/elixir/lib/symphony_elixir/config/schema.ex),
+  with supporting `linear/issue.ex` and `orchestrator.ex` at that ref: interval,
+  anchor, jitter, state constraints, lease and retry behavior.
+- **S08:** [Official Codex Action documentation](https://learn.chatgpt.com/docs/github-action)
+  and [pinned action source](https://github.com/openai/codex-action/blob/86365089eb2b84e0a8fb0717b304f8bdcb13b20e/action.yml):
+  API-key execution, CLI/model pins, structured output and process protection.
+- **S09:** Official GitHub documentation for
+  [App permissions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app),
+  [installation tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app),
+  [check runs](https://docs.github.com/en/rest/checks/runs),
+  [dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event),
+  [review requests](https://docs.github.com/en/rest/pulls/review-requests#request-reviewers-for-a-pull-request),
+  [triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
+  [environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
+  and [branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+- **S10:** [Rehearsal PR #1](https://github.com/1000lines/symphony-example/pull/1),
+  merged, with PAT/Anthropic approval of
+  `a6fa5f15478fbb6ac74f521704d7514f06a96706`. Jeremy confirms that rehearsal
+  succeeded. It remains valid baseline evidence for the setup loop.
+- **S11:** `scripts/symphony/host/install.d/{40-credentials,55-node-toolchain,80-config}.sh`,
+  `host/lib.sh`, `host/install-runtime.sh`, `host/templates/symphony.service`,
+  `scripts/symphony/setup-local-env.sh` and runtime-bundle README:
+  credentials, actual install pin, provenance fallback and reload entry point.
+- **S12:** `.claude/skills/cadence-ai-review/SKILL.md`, its `review-CLAUDE.md`,
+  `scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.md`
+  and root README: review criteria and acceptance guidance to migrate.
+- **S13:** [Jeremy's PR feedback](https://github.com/1000lines/symphony-example/pull/2#issuecomment-5605278113)
+  and [Cadence's review](https://github.com/1000lines/symphony-example/pull/2#pullrequestreview-5156808681):
+  local-first/CI-fallback modes, operator handoffs, existing App IDs, selected
+  Rust repository, configurable checks, automatic state discovery and technical
+  corrections. Fresh human decisions supersede the original unanswered questions.
+- **S14:** Public `GET /apps/1000lines-cadence` and
+  `GET /apps/1000lines-symphony`: owner, App IDs, slugs and registration grants
+  read on September 9. Installation grants and private keys were not queried.
+- **S15:** [Rust rehearsal repository](https://github.com/jeremycarroll/venn-search-rs/tree/99528c2e4da241ec2c9961d0a155357611f16a76),
+  repository ID `1076114173`: README, CLAUDE.md and `.github/workflows/ci.yml`
+  read at that ref. [Existing CI run](https://github.com/jeremycarroll/venn-search-rs/actions/runs/18952923407)
+  supplies six successful check names and GitHub Actions App ID `15368`.
+  This is target tooling evidence, not an App migration rehearsal.
 
-The current host uses `1000-symphony-bot` through `symphony/keys:GITHUB_TOKEN`.
-Cadence uses `CADENCE_BOT_GITHUB_TOKEN`, `CADENCE_LINEAR_API_TOKEN`, and
-`CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` in GitHub Actions; its configured model is
-`claude-opus-5`. MIGRATION records both PATs expiring September 16. No App ID,
-installation ID, registered owner, or private-key location is recorded there.
-This worker has repository push/triage access, not administration access;
-registration absence and installation permissions have not been independently
-certified. O01 assigns that inventory to Jeremy before any App creation.
+The task branch starts at `ce68e3967ffb155331cdb29ccb78ec627585512b` on `main`.
+The September 9 rework also inspected `main` at
+`df3c6ebd3b086b340a6dac7537527e56d889397f`; its intervening changes concern
+planning activation/templates. Runtime and CI observations above are unchanged.
+Proposed paths below are additions, not claims about files already deployed.
+
+The host still uses `1000-symphony-bot` through `symphony/keys:GITHUB_TOKEN`.
+Cadence uses `CADENCE_BOT_GITHUB_TOKEN`, `CADENCE_LINEAR_API_TOKEN` and
+`CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` in Actions, with `claude-opus-5`.
+MIGRATION records both PATs expiring September 16. Jeremy has now supplied the
+existing App registrations; the verified inventory is below. This worker has
+push/triage but no administration access to the controller and read-only access
+to the Rust target. Those limits require operator assistance for later rollout,
+not another product decision or a block on design/code preparation.
 
 The live Linear team has Active, Inactive, Backlog, Blocked and terminal states;
 it has no Happy/Unhappy/Evaluating states. Both workflow profiles disable daemon
@@ -100,39 +154,43 @@ below are follow-up responsibility types, not created implementation tickets.
 | R04 | Credentials are scoped and renewable.                                                         | Matrix permission tests; operation after token expiry; revoked installation, denied permission upgrade and unselected repository fail closed without PAT fallback.                                 | App credentials                            |
 | R05 | Machine acceptance has one unambiguous current-head contract.                                 | Correct App/name/SHA/generation accepted; spoofed App, prior SHA, newer queued review, missing workpad or malformed findings rejected by every consumer. Human approval remains separate.          | Acceptance integration                     |
 | R06 | Every change receives actual repository CI.                                                   | Workflow/run URL, tested SHA, check names and results for docs and code changes authored by the App. Missing/failed/canceled/timed-out/stale checks never pass.                                    | Repository CI                              |
-| R07 | Missing host toolchains do not prevent reviewable publication.                                | A small Rust change published from a host without Rust and tested in repository CI; local unavailable check explicitly reported.                                                                   | CI rehearsal and runtime instructions      |
+| R07 | Prefer actual local compilation/testing; use repository CI when local tooling is unavailable. | Local build/test evidence when tooling exists; the selected Rust target proves CI fallback from a host without Rust, with the unavailable local command recorded.                                  | CI rehearsal and runtime instructions      |
 | R08 | Waiting work releases slots and resumes correctly.                                            | Pending ticket Inactive and absent from running workers; failing CI wakes it to Active once; corrected head requires fresh checks/review; green head reaches human handoff.                        | CI/review handoff                          |
 | R09 | Existing 15-minute daemon recovers missed events.                                             | Real timer lease Happy/Unhappy → Evaluating → resting verdict, engine anchor timestamps, jitter/poll delay and recovered ordinary ticket recorded; duplicate events and terminal tickets tested.   | Daemon integration/rehearsal               |
 | R10 | Installation, cutover and recovery are documented and actually verified.                      | Accepted target refs, host deploy/reload evidence and complete credential/operation inventory in MIGRATION.md; obsolete active PAT/Anthropic dependencies removed after replacement succeeds.      | Deployment/finalization                    |
 | R11 | Project activation and scope remain controlled.                                               | Plan preserves Backlog frontier/Blocked dependents, Jeremy assignment and direct hard relations; no uncommissioned extensions.                                                                     | 100-7 and 100-8                            |
+| R12 | Review the selected repository across owners without distributing controller secrets.         | App-only PR/CI/Codex/check/handoff in `jeremycarroll/venn-search-rs`; wrong target/installation/Linear mapping rejected; neither bot collaborator.                                                 | Cross-repository integration and rehearsal |
 
 ## Locked design decisions
 
 These choices are proposed for acceptance with this design. They are definite
 inputs to 100-7, not claims that the running system implements them.
 
-| ID  | Decision and rationale                                                                                                                                                                                | Enforcing owner           |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| D01 | Use the pinned official Codex Action with a deterministic acquisition/publication wrapper. The model assesses evidence; trusted code validates and publishes it.                                      | Cadence integration       |
-| D02 | Use two installation-only Apps. No OAuth user-token flow, bot invitations, implicit human PAT, or organization-team read dependency.                                                                  | App credentials           |
-| D03 | Select `Cadence Review` check run emitted by the Cadence App as the sole AI acceptance signal. Do not produce automated APPROVE or REQUEST_CHANGES reviews after cutover.                             | Acceptance integration    |
-| D04 | Queue review through explicit workflow dispatch; replace user-review-request orchestration. Only human review invitations continue to use the review-request API.                                     | Cadence event integration |
-| D05 | Require successful repository CI and a fresh successful Cadence result before maturity/normal human handoff. Human acceptance/merge owns Done.                                                        | Shared gate consumers     |
-| D06 | Add an adopter-owned CI caller; no path exclusions that omit all checks. Start with existing full build/lint/test on every change plus Markdown formatting where relevant.                            | Repository CI             |
-| D07 | One monitoring daemon per opted-in repository monitors ordinary Inactive tickets. Ordinary tickets never enter daemon states. Reuse wake:15m and the existing runtime.                                | Daemon integration        |
-| D08 | Reuse the existing bridge helpers and workpads for reconciliation. No second scheduler, planning framework, or new database.                                                                          | CI/review handoff         |
-| D09 | Stage rollout on the existing host, keep the working reviewer until replacement evidence exists, and rotate the external key last when available.                                                     | Deployment/finalization   |
-| D10 | Keep all implementation work parked until human activation and all task PR bases at main. Runtime code stays unchanged unless a reproducible defect requires an explicitly reviewed design amendment. | 100-7, 100-8, Jeremy      |
+| ID  | Decision and rationale                                                                                                                                                                                           | Enforcing owner                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| D01 | Use the pinned official Codex Action with a deterministic acquisition/publication wrapper. The model assesses evidence; trusted code validates and publishes it.                                                 | Cadence integration             |
+| D02 | Use two installation-only Apps. No OAuth user-token flow, bot invitations, implicit human PAT, or organization-team read dependency.                                                                             | App credentials                 |
+| D03 | Select `Cadence Review` check run emitted by the Cadence App as the sole AI acceptance signal. Do not produce automated APPROVE or REQUEST_CHANGES reviews after cutover.                                        | Acceptance integration          |
+| D04 | Queue review through explicit workflow dispatch; replace user-review-request orchestration. Only human review invitations continue to use the review-request API.                                                | Cadence event integration       |
+| D05 | Require successful repository CI and a fresh successful Cadence result before maturity/normal human handoff. Human acceptance/merge owns Done.                                                                   | Shared gate consumers           |
+| D06 | Add an adopter-owned CI caller; no path exclusions that omit all checks. Start with existing full build/lint/test on every change plus Markdown formatting where relevant.                                       | Repository CI                   |
+| D07 | One monitoring daemon per opted-in repository monitors ordinary Inactive tickets. Ordinary tickets never enter daemon states. Reuse wake:15m and the existing runtime.                                           | Daemon integration              |
+| D08 | Reuse the existing bridge helpers and workpads for reconciliation. Daemon owns recovery for opted-in projects; the existing cron excludes them after handover. No new scheduler, planning framework or database. | CI/review handoff               |
+| D09 | Stage rollout on the existing host, keep the working reviewer until replacement evidence exists, and rotate the external key last when available.                                                                | Deployment/finalization         |
+| D10 | Keep all implementation work parked until human activation and all task PR bases at main. Runtime code stays unchanged unless a reproducible defect requires an explicitly reviewed design amendment.            | 100-7, 100-8, Jeremy            |
+| D11 | Cross-repository dispatch is required for the selected Rust target (R12). Use a trusted controller mapping and per-target CI configuration; no general customer control plane.                                   | Cross-repository/CI integration |
 
 ## Codex review execution
 
 Pin `openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e`, Codex CLI
-`0.147.0` (the host's existing pinned version), model `gpt-6-astra`, and effort
+`0.153.4` (the install default in `55-node-toolchain.sh`), model `gpt-6-astra`, and effort
 `xhigh`. Record them in the result. This selects the known host model rather
 than silently resolving a moving model default. Action/CLI compatibility must
-pass the R01 rehearsal; a pin change needs a reviewed update, not an automatic
-upgrade. Use `sandbox: read-only`, `safety-strategy: drop-sudo`, a fresh Codex
-home, and the action's API proxy. Explicitly allow only the configured Symphony
+pass the R01 integration verification; a pin change needs a reviewed update, not an automatic
+upgrade. `host/lib.sh`'s `0.147.0` is only a provenance-reporting fallback;
+record the actual deployed binary version during rollout. Use
+`sandbox: read-only`, `safety-strategy: drop-sudo`, a fresh Codex home, and the
+action's API proxy. Explicitly allow only the configured Symphony
 and Cadence App bot actors when necessary; never wildcard actors.
 
 Trusted base-branch code acquires the exact PR head, base, diff, checks, complete
@@ -167,32 +225,69 @@ produce an operational failure, never a clean review.
 
 ## GitHub Apps and credential contract
 
-Jeremy owns the App registration inventory and initial setup under `1000lines`.
-Prefer reusing compatible existing registrations after verifying ownership and
-distinct identities. If none exists, register two publicly installable Apps
-owned by `1000lines`; names/slugs and numeric IDs are O01 values, not guessed
-identities. Public installation allows customers to install on selected
-repositories without inviting service users.
+Reuse these existing `1000lines` registrations. Do not create duplicates.
+Jeremy supplied the identities; public App API readback confirms them.
 
-Keep privileged review workflows and signing secrets in the operator-controlled
-`1000lines/symphony-example` repository (the controller). Initially controller
-and target are the same repository. For another installed target, dispatch the
-controller workflow with validated target repository ID, PR, head and generation;
-use that target's Cadence installation token to read/publish there. Never copy
-the shared App private key, provider key or Linear token into a customer
-repository. The host holds the Symphony signing credential and can dispatch
-the controller with a controller-scoped token. Both Apps need the documented
-controller and target installations; resolve each explicitly, never reuse an
-installation ID across owners.
+| Role           | Slug                 | App ID    | Observed registration permissions                                                            |
+| -------------- | -------------------- | --------- | -------------------------------------------------------------------------------------------- |
+| Review         | `1000lines-cadence`  | `4866513` | Actions read; Checks, Issues and Pull requests write; Contents and Metadata read.            |
+| Implementation | `1000lines-symphony` | `4866508` | Actions and Checks read; Contents, Issues, Pull requests and Workflows write; Metadata read. |
 
-Controller-repository events keep the immediate bridge path. For other targets,
-the host monitor polls the installed repository's CI and human feedback and
-dispatches the controller; latency is the documented 15-minute recovery path.
-The controller publisher invokes the same handoff evaluator after publishing
-target results. No customer event relay, custom webhook server or signing-key
-distribution is required. Clients enable their repository CI and the operator
-records the Linear/project mapping. App installation supplies target GitHub
-authority; controller credentials and host onboarding remain operator-owned.
+Both currently report no webhook subscriptions. The selected dispatch/poll
+model needs none. Verify public installability, installations, selected
+repositories and effective grants during authorized setup. Registration
+permissions are not proof that an installation has accepted those permissions.
+The matrix below adds Actions write and Commit statuses read to both current
+registrations for dispatch/retry and status observation. Jeremy applies those
+changes and approves them on each installation; no agent needs App-admin access
+to prepare the implementation or the exact operator checklist.
+
+Keep privileged review workflows in `1000lines/symphony-example` (the controller).
+It reviews itself and the selected cross-owner target
+`jeremycarroll/venn-search-rs` (repository ID `1076114173`). This bounded
+cross-repository path is required September-12 scope under R12, not optional
+forward compatibility. Additional repositories use the same configuration;
+a customer portal, custom webhooks and automatic onboarding remain outside scope.
+
+Store signing, provider and Linear secrets only in a controller Environment
+named `cadence-controller` (proposed), restricted to the controller's exact
+protected default branch. Privileged jobs must declare that Environment and
+check out trusted default-branch code. Remove duplicate repository-level or
+broad organization-secret grants after migration; branch CI must not access
+these values. PRs changing privileged workflows/configuration require human
+review before merge. This is necessary even when controller and target coincide
+and the Symphony App can push workflow files. Rehearse a branch attempt and
+verify the Environment denies secret access. Environment or branch-protection
+setup that needs administration becomes a concrete Jeremy handoff.
+
+Add a small data file at `.github/symphony/repositories.yml` in the controller
+(proposed; owned by the integration work, not a planning framework). Each entry
+contains repository ID/full name, enabled flag, Linear team/project ID and
+human lead, both App/installation IDs, controller dispatch workflow/ref,
+CI requirements and waiting limits defined below. Load it from the protected
+controller default branch and record its revision in review/CI evidence. Host
+and controller use the same revision; disagreement blocks that target's action
+until refreshed. Discover IDs via APIs during setup; an incomplete entry stays
+disabled while independently reviewable code preparation continues.
+
+This operator-approved mapping is the authorization source. Dispatch inputs
+may identify a repository/PR/head/generation, but cannot supply authority or
+choose credentials. Resolve the repository by numeric ID, verify its current
+owner/name, installation selection, open PR/head and unique Linear association
+against the mapping before token minting/publication/state changes. Reject
+unknown targets, caller-supplied installation IDs and cross-project substitutions.
+Install both Apps on the controller and target, resolving installation IDs per
+owner. Never reuse an installation ID across `1000lines` and `jeremycarroll`.
+
+The host uses the Symphony signing credential for a controller-scoped dispatch
+token; the controller mints a separate Cadence token for the selected target.
+Controller events retain immediate bridges. The target's monitor polls CI and
+complete human feedback and dispatches review on the controller, using the
+15-minute recovery cadence. The publisher evaluates the target handoff after
+publication. It must publish checks against the target head, not the controller
+workflow SHA. No App private key, provider key or Linear token is copied into
+the Rust/customer repository; App installation plus normal repository CI and
+the operator-owned mapping provide the required GitHub integration.
 
 ### Permission matrix
 
@@ -259,20 +354,53 @@ transport and secret-free remote URLs.
 The following names distinguish current locations from proposed additions.
 Values never enter commits, logs, artifacts, Terraform variables or state.
 
-| Location                             | Name                                                                                            | Use/status                                                                                                                       |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| AWS Secrets Manager, `us-west-2`     | `symphony/keys`, JSON field `OPENAI_API_KEY`                                                    | Existing initial provider key; preserve other fields when updating it.                                                           |
-| Host                                 | `/etc/symphony/runtime.env`, `/var/lib/symphony/cache/codex-home/auth.json`                     | Existing materialized provider copies; regenerate both, then restart service.                                                    |
-| GitHub Actions controller repository | `CADENCE_OPENAI_API_KEY`                                                                        | Proposed secret containing the same initial key; later the event key. Action input reads this name.                              |
-| AWS Secrets Manager                  | `symphony/github-apps/symphony`                                                                 | Proposed separate JSON secret for implementation App private key and identifiers; materialized privately for the renewal helper. |
-| GitHub Actions controller repository | `CADENCE_APP_PRIVATE_KEY`; variables `CADENCE_APP_ID`, `CADENCE_INSTALLATION_ID`                | Proposed review App credentials. Host monitor does not receive this signing key.                                                 |
-| Host/Actions                         | `LINEAR_API_TOKEN` / `CADENCE_LINEAR_API_TOKEN`                                                 | Existing Linear access retained; no provider change implies a Linear-token change.                                               |
-| AWS/GitHub Actions                   | `symphony/keys:GITHUB_TOKEN`, `CADENCE_BOT_GITHUB_TOKEN`, `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Legacy dependencies retained only through staged verification, then removed from the active path and retired by Jeremy.          |
+| Location                                    | Name                                                                                            | Use/status                                                                                                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AWS Secrets Manager, `us-west-2`            | `symphony/keys`, JSON field `OPENAI_API_KEY`                                                    | Existing initial provider key; preserve other fields when updating it.                                                                                            |
+| Host                                        | `/etc/symphony/runtime.env`, `/var/lib/symphony/cache/codex-home/auth.json`                     | Existing materialized provider copies; regenerate both, then restart service.                                                                                     |
+| Controller `cadence-controller` Environment | `CADENCE_OPENAI_API_KEY`                                                                        | Proposed secret containing the same initial key; later the event key. Action input reads this name.                                                               |
+| AWS Secrets Manager                         | `symphony/github-apps/symphony`                                                                 | Proposed separate JSON secret for implementation App private key and identifiers; materialized privately for the renewal helper.                                  |
+| Controller `cadence-controller` Environment | `CADENCE_APP_PRIVATE_KEY`; variables `CADENCE_APP_ID`, `CADENCE_CONTROLLER_INSTALLATION_ID`     | Proposed review App credentials. Controller installation is separate from target installation IDs in the mapping; host monitor does not receive this signing key. |
+| Host/Actions                                | `LINEAR_API_TOKEN` / `cadence-controller:CADENCE_LINEAR_API_TOKEN`                              | Existing Linear access retained; no provider change implies a Linear-token change.                                                                                |
+| AWS/GitHub Actions                          | `symphony/keys:GITHUB_TOKEN`, `CADENCE_BOT_GITHUB_TOKEN`, `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Legacy dependencies retained only through staged verification, then removed from the active path and retired by Jeremy.                                           |
+
+### Operator handoff when credentials or administration are missing
+
+Expect implementation workers to lack App administration/private-key access.
+Finish the code, configuration shape and available tests first. Put the exact
+blocked operation, error/presence result, affected repository/App, required
+permission, secret destination and resume command in the PR description under
+an operator-action heading; mirror it in the pinned Codex workpad. Never put a
+key value in a PR. For this rollout the prepared handoff is:
+
+1. Jeremy opens the existing `1000lines-symphony` registration (`4866508`),
+   applies the matrix delta and generates a private key if no usable operator
+   key exists. Store `{app_id, private_key}` in AWS Secrets Manager
+   `symphony/github-apps/symphony` in `us-west-2`. Resolve/install for both
+   owners and record installation/repository IDs in the controller mapping.
+2. For `1000lines-cadence` (`4866513`), approve the matrix delta, install on the
+   controller and target, and place its private key in
+   `cadence-controller:CADENCE_APP_PRIVATE_KEY`. Set `CADENCE_APP_ID=4866513`
+   and the discovered `CADENCE_CONTROLLER_INSTALLATION_ID`; target IDs come
+   from the mapping. The operator retains any backup outside the worker.
+3. Configure the protected Environment and narrowly scoped access to the
+   Symphony AWS secret for the host renewal helper. Populate the Environment's
+   `CADENCE_OPENAI_API_KEY` and `CADENCE_LINEAR_API_TOKEN`. Return only secret
+   names/version IDs and installation IDs to the PR/workpad.
+4. Run the accepted credential materializer/reload step below and the
+   implementation PR's installation-token smoke check. Record API identity,
+   granted permissions and fresh check/run URLs, never the token. Resume the
+   blocked live verification in Active when these inputs are available.
+
+Missing credentials park the affected issue in Inactive with this actionable
+handoff, while other independent preparation can proceed. They do not justify
+creating substitute Apps, borrowing a PAT, widening scopes or asking Jeremy
+to design the integration. This design ticket performs none of these steps.
 
 During the later authorized rollout, Jeremy securely copies the existing
 OpenAI value into `CADENCE_OPENAI_API_KEY`, without printing it. When the event
-key arrives, drain active workers/reviews, update that Actions secret and only
-`OPENAI_API_KEY` in `symphony/keys`, record secret version IDs/timestamps, and
+key arrives, drain active workers/reviews, update that Environment secret and
+only `OPENAI_API_KEY` in `symphony/keys`, record secret version IDs/timestamps, and
 run the accepted host checkout's
 `scripts/symphony/host/install-runtime.sh --only 40-credentials` as the operator.
 That step writes runtime.env and Codex auth; `systemctl restart symphony`
@@ -308,43 +436,64 @@ Line annotations may supplement it, with bounded batches and safe paths.
 Only success qualifies; neutral/skipped/absent results cannot satisfy this gate.
 The trusted wrapper must finalize failed/canceled checks when possible, and the
 reconciler must detect abandoned queued/running checks when finalization fails.
-The old bot APPROVE may remain historical evidence but is ignored after cutover.
+At cutover, inventory all open opted-in PRs and dismiss approvals by the exact
+legacy Cadence bot identity, preserving human reviews. Remove obsolete requests
+to that bot, record review IDs and successful dismissal readback, then queue
+fresh checks. If dismissal is denied by repository policy, park that target and
+provide Jeremy the exact review IDs/API action; do not claim cutover complete.
+Dismissed reviews remain historical evidence and are ignored by new consumers.
 Do not require an App to be a selectable human reviewer. Preserve human review
 events and notes; a human APPROVED review is not a replacement for missing CI.
 
 Define `ai_accepts` as: current open PR and valid project/labels; expected App
 ID/name; matching head; latest required review generation completed successfully;
 valid output with no mandatory findings; and matching durable workpad evidence.
-Define `ci_passes` as the complete nonempty configured CI requirement set passing
-for that head and latest applicable attempts. Exclude `Cadence Review` from
-that CI set to avoid circular waiting. Normal human handoff and maturity require
-both predicates. GitHub branch rules should bind the check to its emitting App
-where supported, with the same identity check always enforced by consumers.
-Jeremy configures repository protection; bots do not gain administration access.
+Define `ci_passes` once: every member of the nonempty, trusted per-repository
+CI allowlist must have a completed **success** for the current head and latest
+applicable run/attempt. Each member identifies exact check name and owning App
+ID, workflow path, allowed event/ref policy and expected tested SHA. Validate
+Actions run/job provenance too; a lookalike job from a different workflow is
+not that requirement. Duplicate ambiguous candidates, unknown conclusions,
+neutral, skipped, action_required, missing or stale results do not pass.
+
+Only allowlisted validation jobs are candidates; orchestration, review,
+label-repair, bridge and unrelated deploy jobs cannot enter the set implicitly.
+Both predicates are required for normal human handoff and maturity. GitHub
+branch rules bind required checks to the emitting App where supported, while
+consumers additionally enforce workflow identity. App binding alone cannot
+distinguish two workflows using GitHub Actions. Changes to required workflow
+logic, mappings and branch policy require human review; neither App gets
+administration or a branch-rule bypass. Jeremy applies any required repository
+protection from the prepared integration PR instructions.
 
 A review generation captures head SHA plus the latest relevant human feedback
 IDs and update timestamps (including inline thread replies and Linear comments),
-base revision, and a manual-retry generation. New human feedback invalidates
+base and controller-configuration revisions, and a manual-retry generation. New human feedback invalidates
 earlier acceptance even at the same head. Under serialized per-PR routing,
 create the next queued check before dispatch; consumers also compare the live
 feedback watermark so a missed event cannot preserve stale acceptance. Before
 completion, re-read head and watermark; an older run cannot overwrite or satisfy
 a newer generation. Repeated delivery of the same context reuses that generation.
-If history cannot establish freshness, do a full review, not a skip.
+Exclude generated workpad/check bookkeeping from the human-feedback watermark,
+even when automation writes through a human-owned credential. If history cannot
+establish freshness, do a full review, not a skip.
 
-| Consumer/seam                                                                                                                       | Required migration                                                                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/fetch-pr-review-state.mjs`                                                                                                 | Read App-owned checks and persisted generations instead of newest bot APPROVED review; retain incremental/rebase/paged-out decisions and add complete feedback acquisition.                               |
-| `.github/workflows/cadence-ai-review-trigger.yml` and `scripts/verify-cadence-ai-review.cjs` beneath that workflow directory        | Replace Claude execution/config validation and PR-review false-green guard with schema, expected App, check, generation and persistence verification.                                                     |
-| `cadence-ai-review-events.yml`, `cadence-ai-review.yml`, `scripts/cadence-ai-review-route-event.mjs` beneath the workflow directory | Replace requests/re-requests/dismissals to the bot user with queued checks and explicit dispatch; keep human-input reset, three-pass limit and per-PR coalescing.                                         |
-| `.github/workflows/scripts/request-pr-reviewer.mjs`                                                                                 | Retain for human requests only; remove it from machine-review queue and stale-AI-approval handling.                                                                                                       |
-| `scripts/github-actor-classification.mjs` and workflow-level actor gates                                                            | Recognize both configured App bot identities, prevent self-trigger loops, drop required organization-team queries; do not classify all `[bot]` actors as trusted.                                         |
-| `scripts/cadence-linear-rework.mjs`, `cadence-linear-rework.yml`                                                                    | Consume fresh check findings; keep direct human feedback wakes and human-needed/cap escalation. Do not request normal human approval until CI and AI predicates hold.                                     |
-| `scripts/cadence-linear-workpad.mjs` and fixtures                                                                                   | Persist result/check identity, generation, disposition, findings and actual handoff outcomes while retaining incremental requirement/finding history.                                                     |
-| `.github/workflows/scripts/symphony-linear-wakeups.mjs`, its workflow, and the monitor                                              | Recognize CI success as well as failure; handle Cadence completion in the review path, not as an ordinary failing build; exclude bridge/review orchestration runs from validation evidence and recursion. |
-| Root/hosted WORKFLOW.md, runtime-bundle instructions/skills, `docs/engineering/{review,symphony}/` and adapted Cadence prompt       | Replace automated-approval wording with the predicate; preserve human acceptance, evidence standards, draft/ready and maturity semantics. Update assertions/fixtures that encode the old signal.          |
-| Maturity consumers in `tools/symphony-dag/` conventions and runtime maturity gate                                                   | Runtime still consumes the blocker issue's `mature` label, not GitHub reviews. The label writer checks both predicates and ready status. No change to runtime label semantics or task ancestry.           |
-| Finalization, MIGRATION.md and operator branch rules                                                                                | Require current target-ref CI/review/deploy evidence; a green review check never marks Done or proves deployment by itself.                                                                               |
+| Consumer/seam                                                                                                                                                          | Required migration                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/fetch-pr-review-state.mjs`                                                                                                                                    | Read App-owned checks and persisted generations instead of newest bot APPROVED review; retain incremental/rebase/paged-out decisions and add complete feedback acquisition.                               |
+| `.github/workflows/cadence-ai-review-trigger.yml` and `scripts/verify-cadence-ai-review.cjs` beneath that workflow directory                                           | Replace Claude execution/config validation and PR-review false-green guard with schema, expected App, check, generation and persistence verification.                                                     |
+| `cadence-ai-review-events.yml`, `cadence-ai-review.yml`, `scripts/cadence-ai-review-route-event.mjs` beneath the workflow directory                                    | Replace requests/re-requests/dismissals to the bot user with queued checks and explicit dispatch; keep human-input reset, three-pass limit and per-PR coalescing.                                         |
+| `.github/workflows/scripts/request-pr-reviewer.mjs`                                                                                                                    | Retain for human requests only; remove it from machine-review queue and stale-AI-approval handling.                                                                                                       |
+| `scripts/github-actor-classification.mjs` and workflow-level actor gates                                                                                               | Recognize both configured App bot identities, prevent self-trigger loops, drop required organization-team queries; do not classify all `[bot]` actors as trusted.                                         |
+| `scripts/cadence-linear-rework.mjs`, `cadence-linear-rework.yml`                                                                                                       | Consume fresh check findings; keep direct human feedback wakes and human-needed/cap escalation. Do not request normal human approval until CI and AI predicates hold.                                     |
+| `scripts/cadence-linear-workpad.mjs` and fixtures                                                                                                                      | Persist result/check identity, generation, disposition, findings and actual handoff outcomes while retaining incremental requirement/finding history.                                                     |
+| `.github/workflows/scripts/symphony-linear-wakeups.mjs`, its workflow, and the monitor                                                                                 | Recognize CI success as well as failure; handle Cadence completion in the review path, not as an ordinary failing build; exclude bridge/review orchestration runs from validation evidence and recursion. |
+| Root/hosted WORKFLOW.md, runtime-bundle instructions/skills, `docs/engineering/{review,symphony}/` and adapted Cadence prompt                                          | Replace automated-approval wording with the predicate; preserve human acceptance, evidence standards, draft/ready and maturity semantics. Update assertions/fixtures that encode the old signal.          |
+| `.claude/skills/cadence-ai-review/`, including `SKILL.md`, `review-CLAUDE.md` and references                                                                           | Adapt the loaded prompt/skill and references to the check contract; retire old review publication instructions from the active path.                                                                      |
+| `.agents/skills/symphony-project-factory/templates/`, especially `tickets/{plan-project,trigger-fan-out,standup}.md`, and `docs/symphony-plans/fan-out-plan-schema.md` | Generate the same current-head predicates and maturity rules. Until the template update lands, 100-7/100-8 must copy D03/D05 explicitly so newly generated tickets cannot require a retired bot APPROVE.  |
+| Root `README.md` and generated/reference review guidance                                                                                                               | Update the provider, actor, token, review signal and handoff instructions; distinguish current behavior from historical deployment notes.                                                                 |
+| Maturity consumers in `tools/symphony-dag/` conventions and runtime maturity gate                                                                                      | Runtime still consumes the blocker issue's `mature` label, not GitHub reviews. The label writer checks both predicates and ready status. No change to runtime label semantics or task ancestry.           |
+| Finalization, MIGRATION.md and operator branch rules                                                                                                                   | Require current target-ref CI/review/deploy evidence; a green review check never marks Done or proves deployment by itself.                                                                               |
 
 All code paths that consume these values must share one interpretation, with
 fixture coverage at each boundary. Inventory by searching `APPROVE`, `APPROVED`,
@@ -354,6 +503,76 @@ or explicitly retired paths. Existing user-identity/token assumptions in clone,
 CLI wrappers, label helper and host bootstrap belong in the credential migration.
 
 ## CI evidence and bootstrap
+
+### Local-first validation and CI fallback
+
+Workers and their subagents first read the target repository's README,
+package/toolchain files, relevant `AGENTS.md` and `CLAUDE.md`, and `.github/`
+workflow documentation. These files should explain local build/test commands,
+prerequisites and available CI; inspect workflow definitions when prose is
+incomplete. Later instruction changes must allow this adopter guidance even
+where the extracted hosted template currently excludes legacy filenames.
+Treat repository text as tooling guidance subject to task scope and instruction
+priority, not permission to expose credentials or change protected settings.
+
+Use two explicit modes and record the selection in the workpad and PR:
+
+- **Preferred — local compile/test:** run the documented build and relevant
+  tests when tools and isolated services are available, fix actionable failures,
+  then publish for the required repository CI. Local proof helps the developer;
+  it does not remove the CI requirement.
+- **Fallback — repository CI:** when a needed compiler/service is unavailable,
+  record the unavailable command and reason, run useful available checks, and
+  publish a reviewable draft so the repository CI can compile/test it. Record
+  the workflow and tested SHA, exit Inactive while it runs, and resume concrete
+  failures. Missing local Rust is not a missing-product-input blocker and does
+  not require permission or installing every toolchain on the host. If CI also
+  cannot run, provide the specific access/setup handoff.
+
+For `jeremycarroll/venn-search-rs`, the read README/CLAUDE.md describe
+`cargo build --release`, `cargo test` and `cargo clippy`; CI additionally runs
+release tests/doc tests for `ncolors_3` through `ncolors_6`, strict Clippy and
+`cargo fmt --all -- --check`. The rehearsal owner selects a small reversible
+change and records both a toolchain-available local run and a genuinely
+Rust-unavailable host run with CI evidence. Existing CI triggers main pushes
+and PRs targeting main, including docs. Adapt checkout to the explicit PR head
+and set documented job timeouts as part of target integration; ordinary PR
+workflow defaults currently test a merge ref. Reuse these tests and keep the
+Rust project's application functionality outside the readiness project.
+
+### Configurable required checks
+
+The controller mapping's `ci` object contains `required_checks` (nonempty),
+`missing_after_minutes`, `queued_after_minutes`, `completion_grace_minutes`,
+and `run_budget_minutes`. Each check has `name`, `app_id`, `workflow_path`,
+allowed `events`, `tested_ref: head`, and `running_timeout_minutes` matching its
+job configuration. A check with dependencies records their job IDs; dependency
+waiting is evaluated from the children, not counted as aggregator execution.
+This is configuration consumed by shared bridge/monitor helpers, not hard-coded
+repository names or an additional scheduler.
+
+The implementation owner discovers candidates from repository instructions,
+workflow files and check/run APIs, prepares the configuration PR, and verifies
+it with an actual head run. Jeremy is asked only for administration/installation
+steps unavailable to the worker. Defaults are engineering choices below;
+observed names/App IDs and supplied repository identities are populated now.
+Adding or changing requirements uses a reviewed configuration change and a new
+validation run. Configuration is read from the controller default branch,
+never from the target PR under evaluation.
+
+| Repository                     | Initial allowlist                                                                                                                                                                                                               | Provenance and remaining setup                                                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `1000lines/symphony-example`   | `CI Required`, App ID `15368`, `.github/workflows/ci.yml`, push or pull_request, explicit head                                                                                                                                  | Planned caller job uses `name: CI Required`; integration verifies the emitted name and child results on its first branch run before enabling the entry.      |
+| `jeremycarroll/venn-search-rs` | `Test Suite (NCOLORS=3)`, `Test Suite (NCOLORS=4)`, `Test Suite (NCOLORS=5)`, `Test Suite (NCOLORS=6)`, `Clippy (Linting)`, `Format Check`; all App ID `15368`, `.github/workflows/ci.yml`, push or pull_request, explicit head | Names/App ID read from S15's successful run. Verify new App-authored head checkout, timeout settings and current branch rules during installation rehearsal. |
+
+Each listed Rust check becomes an individual allowlist entry; no wildcard
+name or approval-state fallback is allowed. For other repositories, discover
+and propose their equivalents rather than asking Jeremy to enumerate checks.
+Unavailable API identity is a live enablement gate, not a reason to stop
+preparing defaults or reviewable code. Branch-protection setup uses the same
+allowlist; a successful unrelated check cannot conceal a missing member.
+
+### Caller and bootstrap
 
 Add `.github/workflows/ci.yml` as the adopter-owned caller in the later CI work.
 Use `push` for every branch and `pull_request` for opened/synchronize/reopened
@@ -366,11 +585,17 @@ the gate select the latest applicable attempt; duplicate CI is not duplicate
 implementation dispatch.
 
 Call the existing `symphony-build`, `symphony-lint`, and `symphony-test` workflows
-with `tooling-directory: .`. Add a narrow Markdown formatting job for changed
+with `tooling-directory: .`. Their checkout steps currently use the default
+ref; pass an explicit tested-ref input through each reusable workflow so the
+caller's head selection actually reaches the executing jobs. Add a narrow Markdown formatting job for changed
 Markdown, using the locked Prettier dependency. A final `CI Required` job runs
 with `always()` and succeeds only when the expected jobs actually succeeded;
-all-docs changes still invoke real checks. Pin its exact emitted check name and
-GitHub Actions App identity after the first run. Record child job/run results
+all-docs changes still invoke real checks. Set leaf and Markdown job timeouts
+to 20 minutes and aggregator execution timeout to five minutes. The default
+end-to-end run budget is 120 minutes, including dependency and queue delays;
+it is a reconciler deadline, not a GitHub workflow-level timeout. Bind the
+aggregator to its expected children and verify its exact emitted name and
+GitHub Actions identity after the first run. Record child job/run results
 too; an aggregator whose dependencies all skipped is not evidence. Product
 repositories keep their own build/test/lint commands and declare a nonempty
 equivalent requirement set. No generalized validation framework is required.
@@ -378,10 +603,8 @@ equivalent requirement set. No generalized validation framework is required.
 Use App installation credentials for pushes/PRs that must trigger workflows.
 Verify actual runs rather than infer triggering from an API success. The
 repository workflow token has different event behavior, documented by GitHub;
-it is not the selected implementation identity. A host missing Rust may still
-run cheap available checks and push a draft. Record unavailable local tests and
-wait for repository CI. Update contrary host/agent instructions in the later
-integration work; do not install every product toolchain on the host.
+it is not the selected implementation identity. The two validation modes above
+apply to both controller and product repositories.
 
 Bootstrap must not claim CI coverage before the caller exists:
 
@@ -415,18 +638,19 @@ sets the issue to `Inactive`, and exits. Optional waiting labels are hints only.
 The trusted bridge and daemon read live GitHub/Linear state; a label, event
 payload or cached success alone cannot authorize a transition.
 
-| Observation for the current head                                                    | Ordinary ticket action                                                                                                                                                                      | Next actor                     |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| CI queued/running                                                                   | Keep Inactive; record pending check names and run URLs.                                                                                                                                     | CI completion event or monitor |
-| Required CI missing for less than 20 minutes after publication                      | Keep Inactive; report awaiting workflow appearance, never pass.                                                                                                                             | Event or monitor               |
-| CI absent after 20 minutes, canceled/timed out, or operational infrastructure error | Keep Inactive; attempt at most one safe allowlisted retry per head/run failure; otherwise record exact operator question.                                                                   | CI integration owner/Jeremy    |
-| Current required CI fails with actionable code/test diagnostic                      | Re-read issue/head; move Inactive → Active with the diagnostic and evidence. Already Active is a no-op.                                                                                     | Symphony correction            |
-| All required CI succeeds; AI review absent/pending/stale                            | Keep Inactive; ensure one current review generation is queued.                                                                                                                              | Cadence                        |
-| Fresh Cadence blocker                                                               | Re-read issue/head; move Inactive → Active, link mandatory findings.                                                                                                                        | Symphony correction            |
-| Cadence human-needed/cap/credential failure                                         | Keep Inactive; explicit owner/question; request eligible human assignee.                                                                                                                    | Human or credential owner      |
-| Both predicates pass and feedback ledger is closed                                  | Wake Inactive → Active once for **handoff reconciliation only**; worker rechecks, marks PR ready, applies mature if required, records evidence, returns Inactive and requests human review. | Symphony, then Jeremy          |
-| Human changes request or nonempty actionable comment                                | Direct existing human-feedback path to Active; approval with notes queues a Cadence re-look.                                                                                                | Symphony/Cadence               |
-| Closed PR, terminal issue, wrong repo/project, missing identity or changed head     | No stale mutation or acceptance; record skip or missing mapping.                                                                                                                            | Human if unresolved            |
+| Observation for the current head                                                                     | Ordinary ticket action                                                                                                                                                                      | Next actor                     |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| CI queued/running                                                                                    | Keep Inactive; record pending check names and run URLs.                                                                                                                                     | CI completion event or monitor |
+| Required CI missing for less than 20 minutes after publication                                       | Keep Inactive; report awaiting workflow appearance, never pass.                                                                                                                             | Event or monitor               |
+| CI overdue, canceled/timed out, neutral/skipped/action_required, or operational infrastructure error | Keep Inactive; attempt at most one safe allowlisted retry per head/run failure; otherwise publish exact operator steps in the PR and workpad.                                               | CI integration owner/Jeremy    |
+| Current required CI fails with actionable code/test diagnostic                                       | Re-read issue/head; move Inactive → Active with the diagnostic and evidence. Already Active is a no-op.                                                                                     | Symphony correction            |
+| Confirmed merge conflict in an opted-in Active/Inactive PR                                           | Re-read PR/issue; wake Inactive → Active for conflict correction, or no-op if already Active. Never activate Backlog/Blocked work.                                                          | Symphony correction            |
+| All required CI succeeds; AI review absent/pending/stale                                             | Keep Inactive; ensure one current review generation is queued.                                                                                                                              | Cadence                        |
+| Fresh Cadence blocker                                                                                | Re-read issue/head; move Inactive → Active, link mandatory findings.                                                                                                                        | Symphony correction            |
+| Cadence human-needed/cap/credential failure                                                          | Keep Inactive; explicit owner/question; request eligible human assignee.                                                                                                                    | Human or credential owner      |
+| Both predicates pass and feedback ledger is closed                                                   | Wake Inactive → Active once for **handoff reconciliation only**; worker rechecks, marks PR ready, applies mature if required, records evidence, returns Inactive and requests human review. | Symphony, then Jeremy          |
+| Human changes request or nonempty actionable comment                                                 | Direct existing human-feedback path to Active; approval with notes queues a Cadence re-look.                                                                                                | Symphony/Cadence               |
+| Closed PR, terminal issue, wrong repo/project, missing identity or changed head                      | No stale mutation or acceptance; record skip or missing mapping.                                                                                                                            | Human if unresolved            |
 
 The handoff-only wake is keyed by `(issue, PR, head, review generation,
 handoff action)` and persisted so an unchanged green result does not wake the
@@ -436,22 +660,44 @@ existing selective removal rule: remove for rejected acceptance or a severe
 regression making dependent work unsafe, not ordinary review edits alone.
 Neither maturity nor a CI completion activates the parked project frontier.
 
-Use explicit waiting limits: missing CI is overdue after 20 minutes; queued CI
-is overdue after 60 minutes; running CI is overdue after its configured workflow
-timeout (20 minutes for the existing reusable workflows), allowing one polling
-cycle for completion visibility. Overdue work follows the operational-error
-row, not indefinite pending. A safe retry requires an existing failed run or a
-verified dispatchable allowlisted workflow and the same current head. A missing
-caller cannot be repaired by retrying it; that case goes directly to the CI
-owner. Successful API retry submission is recorded as pending, not passing.
+Evaluate deadlines on every event and daemon observation; these are overdue
+thresholds, not promises of execution at an exact minute. Default missing-check
+deadline is publication + 20 minutes; a runnable job queued for 60 minutes is
+overdue. A job waiting on dependencies inherits their progress/deadlines until
+it becomes runnable. Running deadlines start at that job's actual `started_at`
+and use its configured timeout plus two minutes for completion visibility.
+Use 20-minute timeouts for existing reusable jobs/Markdown, five minutes for
+`CI Required` after children finish, and an explicit 60-minute job timeout for
+the Rust target during integration. An unresolved attempt also becomes overdue
+at run creation + the configured 120-minute overall budget. A new head starts
+new deadlines; repeated observations do not reset them.
+
+At an observation, first consume terminal conclusions, then test these bounds
+for nonterminal/missing results. Events report failures immediately when
+available. The daemon acts on the first scan after a deadline: detection may
+lag by another 14–16 minutes plus polling/capacity delay. Record both deadline
+and observation time. Do not apply a leaf's 20 minutes to the whole caller or
+to an aggregator that has not started. Fixtures cover dependency waits, late
+visibility, overruns and observations straddling each deadline.
+
+Overdue work follows the operational-error row. A safe retry requires an
+existing terminal failed run or a verified dispatchable allowlisted workflow,
+the same head, no active attempt and a persisted retry budget. Retry at most
+once per head/failure; do not create a concurrent retry of a stuck running job.
+Neutral/skipped/action_required are unsatisfied requirements: record the
+actual job conclusion, distinguish approval/configuration needs from actionable
+code diagnostics, and give the operator concrete steps. Unknown conclusions
+also remain Inactive. A missing caller goes directly to the CI owner; retry
+cannot create it. An accepted retry is pending evidence, never passing.
 
 Extend the existing non-review bridge to route successful ordinary CI
 completions, rather than relying on its present failure-only gate. Keep
 same-repository/head checks, issue association, project metadata and labels,
 terminal protection, run-attempt evidence and merge-conflict handling. A
 `workflow_run` payload's SHA may describe orchestration code, so resolve actual
-tested head and jobs before accepting it. Exclude the review workflow's own
-green job from `ci_passes`; process its explicit Cadence check instead.
+tested head and jobs before accepting it. Use only the `ci_passes` allowlist
+defined above and process the explicit Cadence check through `ai_accepts`. Both event and periodic paths use those
+same predicates.
 
 ### Dedicated monitor daemon
 
@@ -460,6 +706,15 @@ target repository, Linear team/project allowlist, nonempty CI requirement set,
 human lead and this contract. It does not implement fixes and is not a blocker
 of ordinary tickets. Scope is opted-in waiting tickets, never all Backlog,
 Blocked or unrelated Inactive work. No new Misc routing is involved.
+
+The current wakeup workflow also has a `17,47 * * * *` conflict sweep. During
+monitor rollout, transfer its opted-in project coverage to the daemon, including
+mergeability checks for open Active/Inactive PRs; cron retains only legacy
+non-monitored coverage. Its filter must exclude monitored mappings once the
+monitor is activated and restore coverage only on explicit rollback. Do not
+leave two periodic reconcilers acting on the same target. Before switching,
+prove the daemon detects base-change conflicts as well as lost CI/review events.
+No new cron schedule is added.
 
 The later runtime-bundle configuration is:
 
@@ -474,17 +729,21 @@ agent:
     Evaluating: 1
 ```
 
-Jeremy/operator setup creates Happy/Unhappy as nonterminal resting states and
-Evaluating as a started dispatch state, resolves their IDs, applies `wake:15m`
-to the monitor, and deploys the accepted workflow configuration. It remains in
+The daemon integration owner queries the team's current states, reuses exact
+compatible matches, and prepares creation of Happy/Unhappy as nonterminal
+resting states and Evaluating as a started dispatch state. The setup code
+reads back IDs, configures `wake:15m` and persists the monitor ID and mapping;
+Jeremy need not supply those IDs. If state creation/configuration needs rights
+the worker lacks, the PR lists exact names/types and the one operator action,
+then discovery resumes. Deploy only after the accepted plan is activated. The monitor remains in
 Backlog until explicit activation. Configuration requires resting states to be
 disjoint from active/terminal states and dispatch states to be active; adding
 names alone does not implement the scan.
 
 On each run the daemon performs a bounded scan using the shared bridge
 evaluation helpers: paginate eligible waiting issues and current PRs/checks,
-apply the ordinary-ticket table, reconcile missing review dispatches, record
-actual results, and exit. It runs no product test suites and never waits for CI
+apply the ordinary-ticket table, check opted-in open PR mergeability, reconcile
+missing review dispatches, record actual results, and exit. It runs no product test suites and never waits for CI
 to finish. Budget five minutes per scan; persist pagination cursor/counts when
 that budget is exhausted, and resume on the next wake without starving later
 issues. A partial scan is visible as incomplete, not a clean all-clear.
@@ -492,8 +751,8 @@ issues. A partial scan is visible as incomplete, not a clean all-clear.
 | Monitor transition            | Meaning                                                                                                                                                                                                                                            |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Happy or Unhappy → Evaluating | Runtime timer is due; existing orchestrator checks blockers/capacity, writes dispatch state and re-fetches before leasing a worker.                                                                                                                |
-| Evaluating → Happy            | Scan completed; no failed/stale/overdue validation or unresolved handoff/API error. Pending CI within its workflow timeout is healthy waiting; zero waiting issues is healthy.                                                                     |
-| Evaluating → Unhappy          | Any actionable failing CI/review (even if successfully woken), overdue/missing checks, incomplete scan, API/access failure or unreconciled handoff. Record per-issue reason and owner.                                                             |
+| Evaluating → Happy            | Scan completed; no failed/stale/overdue validation or unresolved handoff/API error. Pending CI within the configured stage/run deadlines is healthy waiting; zero waiting issues is healthy.                                                       |
+| Evaluating → Unhappy          | Any actionable failing CI/review or confirmed conflict (even if successfully woken), overdue/missing checks, incomplete scan, API/access failure or unreconciled handoff. Record per-issue reason and owner.                                       |
 | Crash/retry exhaustion        | Existing runtime retries and attempts restoration from state history after three retries. Missing history can leave Evaluating dispatchable; Jeremy inspects and restores the resting state. Never claim automatic recovery if restoration failed. |
 
 Both resting verdicts wake again: Unhappy is not a terminal failed ticket. The
@@ -547,11 +806,15 @@ turning this document into a ticket graph:
   credential helpers and App-aware consumers before the host identity cutover.
 - Land compatible publisher and consumer changes before selecting the check
   contract. Only one authoritative reviewer path runs for a PR generation.
-  Rehearse Codex and the check flow on a designated PR/repository while the
+  Rehearse Codex and the check flow on the selected Rust target while the
   current production reviewer remains available; do not emit competing verdicts.
 - Enable completion bridges and deploy the monitor's instructions/config before
   activating the monitor. Verify the current host runtime revision and bundle
   provenance; do not rebuild upstream solely to add supported state names.
+- Dismiss legacy bot approvals and remove its outstanding review requests on
+  every opted-in open PR, verify the readback and queue fresh App checks before
+  enabling check-only acceptance. Preserve human reviews. A denied dismissal
+  gets an explicit Jeremy action and prevents that target's cutover.
 - Cut over the selected review/provider path, prove the integrated flow, then
   retire active Anthropic/PAT dependencies. Preserve recovery instructions and
   bot accounts. A temporary rollback to the old path is explicitly recorded as
@@ -566,37 +829,39 @@ Linear state before/after, retired dependencies, operator actions and limits.
 Recovery first parks affected work/monitor and preserves the last verified
 working configuration; no automatic credential or registration deletion.
 
-| Scenario                          | Required recorded proof                                                                                                                                                                  |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Successful small docs change      | App-authored PR/commit, actual CI jobs, Codex result and App-owned successful check at the same head, ready transition and Jeremy handoff; neither bot collaborator.                     |
-| Failed then corrected code change | Failed run and Active wake, fix/new SHA, fresh CI/review, old success rejected, no duplicate worker.                                                                                     |
-| Missing local Rust                | Host check showing Rust unavailable; reviewable fixture change and repository Rust CI run URL/results. A minimal rehearsal fixture is sufficient.                                        |
-| Pending and missing event         | Inactive ordinary ticket, worker slot released, dropped-event rehearsal, actual 15-minute daemon lease/verdict and recovered action.                                                     |
-| Identity/freshness failures       | Wrong App/name, old SHA, same-SHA new feedback, stale attempt, malformed/missing output and failed workpad all fail closed.                                                              |
-| Credential lifecycle              | Token renewal across expiry, revoked/unselected installation and permission-upgrade denial, secret-free evidence; new provider key works after reload.                                   |
-| Operational failure/race          | Missing/canceled/timed-out CI, no workflow caller, provider denial, cap, no eligible human, daemon crash/history failure and terminal/concurrent changes produce explicit safe outcomes. |
+| Scenario                          | Required recorded proof                                                                                                                                                                                                                  |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Successful small docs change      | App-authored PR/commit, actual CI jobs, Codex result and App-owned successful check at the same head, ready transition and Jeremy handoff; neither bot collaborator.                                                                     |
+| Failed then corrected code change | Failed run and Active wake, fix/new SHA, fresh CI/review, old success rejected, no duplicate worker.                                                                                                                                     |
+| Both validation modes             | Local compile/test evidence when available; the selected Rust repository also demonstrates a genuinely Rust-unavailable host, reviewable small change, and fresh repository CI run/results.                                              |
+| Cross-owner target (R12)          | `jeremycarroll/venn-search-rs` App-authored PR; both installations/repository selection and no-bot-collaborator evidence; controller dispatch/result at target head; CI/Codex/check/Linear handoff; unknown/mismatched mapping rejected. |
+| Pending and missing event         | Inactive ordinary ticket, worker slot released, dropped-event rehearsal, actual 15-minute daemon lease/verdict and recovered action.                                                                                                     |
+| Identity/freshness failures       | Wrong App/name, old SHA, same-SHA new feedback, stale attempt, malformed/missing output and failed workpad all fail closed.                                                                                                              |
+| Credential lifecycle              | Token renewal across expiry, revoked/unselected installation and permission-upgrade denial, secret-free evidence; new provider key works after reload.                                                                                   |
+| Operational failure/race          | Missing/canceled/timed-out CI, no workflow caller, provider denial, cap, no eligible human, daemon crash/history failure and terminal/concurrent changes produce explicit safe outcomes.                                                 |
 
 Every proof item identifies target ref, command/environment, acceptance
 criterion, artifact location, result, limitation and next handoff. Source
 inspection and fixture tests are not substitutes for the live integration,
-installation, timer, rotation and deployment demonstrations. R01–R11 all need
+installation, timer, rotation and deployment demonstrations. R01–R12 all need
 coverage; configuration alone is not final readiness.
 
 ## Open items and planning handoff
 
 No unresolved product choice is delegated to 100-7: the provider integration,
 permission matrix, signal semantics, CI bootstrap and daemon model are selected
-above. The following missing values/evidence become named operator or
-verification gates. Preserve them explicitly rather than inventing values.
+above. Jeremy's supplied answers are decisions and engineering inputs, not questions
+to send back to him. Remaining installation evidence and external secrets have
+explicit owners; code preparation and planning can proceed without them.
 
-| ID  | Missing value/question                                                                                                                                                                   | Owner / follow-up type                               | Blocks                                                                              |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| O01 | Which existing App registrations and installations can be reused? Record owner, IDs/slugs, repository selection, permissions and approver; confirm inventory before creating duplicates. | Jeremy / App inventory and installation              | App creation/cutover and R03/R04, not design or code preparation                    |
-| O02 | What is the organizers' event key and when is it available?                                                                                                                              | Jeremy / external credential acquisition             | Final rotation and readiness; not initial Codex implementation                      |
-| O03 | Which isolated repository/PR will demonstrate neither bot as collaborator and the missing-Rust scenario? Record repository ID and observed collaborator/installation evidence.           | Jeremy / installation rehearsal                      | Live R03/R07 proof; a minimal fixture is the selected fallback surface              |
-| O04 | What check names/App IDs and branch-rule configuration are actually emitted after the caller lands?                                                                                      | CI integration + Jeremy / repository configuration   | Required-check enforcement and R06; do not guess observed names                     |
-| O05 | What Linear state IDs, monitor issue ID and activation time result from authorized setup?                                                                                                | Jeremy / daemon deployment                           | R09 activation only; leave downstream tickets parked                                |
-| O06 | Do the pinned Action/CLI/model combination and App permissions pass the real rehearsal?                                                                                                  | Cadence/App integration / compatibility verification | Cutover; failures require a reviewed pin/permission correction, not silent fallback |
+| ID  | Decision or remaining action                                                                                                                                                                                                               | Owner / follow-up type                                                                                        | Gate                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| O01 | Reuse Cadence `4866513` and Symphony `4866508`, owned by `1000lines`; registration grants read. Resolve installation IDs/selection, approve the specified permission delta and provide signing credentials using the operator steps above. | App integration prepares discovery and instructions; Jeremy performs unavailable administration/secret steps. | Live App cutover and R03/R04/R12; design and code preparation proceed.                              |
+| O02 | Jeremy expects an event key before the event; arrival time is unknown. Continue with the existing OpenAI key and execute the documented rotation when supplied.                                                                            | Jeremy / external credential acquisition; rollout owner verifies rotation.                                    | Final credential rotation/readiness only.                                                           |
+| O03 | Use `jeremycarroll/venn-search-rs`, repository ID `1076114173`. Existing README/CLAUDE.md/CI read; integration selects the small rehearsal PR and gathers installation/no-collaborator and both-mode evidence.                             | Cross-repository integration and rehearsal; Jeremy approves installations if needed.                          | Live R03/R07/R12 proof, not repository selection or planning.                                       |
+| O04 | Implement the per-repository configuration above. Known Rust check names/App ID are populated; CI owner verifies emitted controller names and prepares branch-rule settings after the caller runs.                                         | CI integration owns discovery/configuration; Jeremy only applies unavailable admin changes.                   | Enablement of current-head CI enforcement; no product answer required.                              |
+| O05 | Discover/reuse or create the exact daemon states under the accepted rollout, record returned IDs and monitor ID, and keep the monitor parked until human activation.                                                                       | Daemon integration owns setup/discovery; Jeremy handles any concrete permission failure.                      | Live R09 activation; no pre-supplied IDs required.                                                  |
+| O06 | Jeremy confirms the existing setup rehearsal succeeded (S10). Preserve that completed baseline; collect new-version/provider/App verification during the integrated rollout, reusing evidence wherever the same criterion/ref is covered.  | Cadence/App integration / verification.                                                                       | New integration cutover proof, not a repeated request to approve or select the successful baseline. |
 
 100-7 should map each R/D/O ID to reviewed ownership and evidence, assign shared
 workflow/helper files to a single coherent owner, and preserve the ordering
