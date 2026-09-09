@@ -23,7 +23,7 @@ variable "deploy_host" {
 variable "bootstrap_ref" {
   description = "Reviewed commit SHA of this repository used to install the host."
   type        = string
-  default     = "57175c8921245e7c76d410f83fe2d09dbdca7b21"
+  default     = "3069a70dc1c85b4c0de511542ba5629d75049dac"
 }
 
 variable "runtime_ref" {

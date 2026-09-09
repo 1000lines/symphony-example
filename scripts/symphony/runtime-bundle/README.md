@@ -122,6 +122,8 @@ that trusted runtime account. No Docker TCP listener is configured. Existing
 Docker configurations/data that conflict with these settings require explicit
 reconciliation; the installer does not move or delete them. Package-skipping
 fixtures also skip Docker setup. Use container tests alongside repository CI.
+Installation follows the [AWS Docker package guidance](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-container-image.html);
+storage and socket settings use the [Docker daemon configuration](https://docs.docker.com/reference/cli/dockerd/).
 
 The scripts assume Linux, systemd, GNU filesystem utilities and root installation.
 `10-os-packages.sh` installs packages through `dnf` when available; its fallback
