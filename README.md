@@ -11,6 +11,27 @@ and known setup gaps. They are preparation guidance, not a tested installation
 procedure. **nothing in this extraction has been verified by execution; no
 extraction round trip was performed.**
 
+## Hidden files
+
+Disable GitHub Actions before your first push (Settings → Actions → General →
+Actions permissions → Disable actions) and leave it off until setup is
+complete. The leading-dot paths here are working configuration, not samples.
+
+`.agents`, `.claude`, `.codex` and the lint, format and Node config files are
+inert until you run the corresponding tool. `.npmrc` refuses packages published
+in the last seven days, which looks like an install failure.
+
+`.github/workflows` is armed by existence instead: GitHub reads it from the
+default branch and starts the two cron workflows, one twice hourly, as soon as
+they land. They also do not fail closed — unset variables fall back to
+placeholders like `example-cadence-bot`, so runs act as accounts you do not
+have. Work through [repository variables](#repository-variables),
+[repository secrets](#repository-secrets) and
+[manual setup steps](#manual-setup-steps) before enabling Actions.
+
+Finder, "Download ZIP" and `cp` without dotglob skip hidden files silently. If
+you copy parts of this repo rather than forking it, check they arrived.
+
 ## Start with the tooling package
 
 Paths below are relative to the directory containing this README and
