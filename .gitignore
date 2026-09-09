@@ -1,0 +1,13 @@
+node_modules/
+**/dist/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.example.tfvars
+.env
+.env.*
+.local/
+crash.log
+*.tsbuildinfo

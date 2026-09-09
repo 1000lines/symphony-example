@@ -7,21 +7,18 @@ terraform {
       version = "~> 5.31"
     }
 
-    godaddy-dns = {
-      source  = "veksh/godaddy-dns"
-      version = "~> 0.3.12"
-    }
   }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region              = var.aws_region
+  profile             = var.aws_profile
+  allowed_account_ids = ["350353785278"]
 
   default_tags {
     tags = {
       managed_by = "terraform"
+      project    = "1000lines-symphony"
     }
   }
 }
-
-provider "godaddy-dns" {}

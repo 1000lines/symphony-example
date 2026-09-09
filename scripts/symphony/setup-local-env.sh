@@ -10,7 +10,7 @@
 #
 # Required AWS Secrets Manager entries:
 #   symphony-google-service-account-json  raw Google service-account JSON
-#   symphony/runtime-credentials
+#   symphony/keys
 #     JSON map of Symphony environment variables
 
 if [[ "${BASH_SOURCE[0]}" == "$0" && "${1:-}" != "--identity-preflight" ]]; then
@@ -107,14 +107,14 @@ symphony_json_field() {
 }
 
 symphony_set_identity_defaults() {
-  export SYMPHONY_BOT_USER="${SYMPHONY_BOT_USER:-example-symphony-bot}"
-  export CADENCE_REVIEWER="${CADENCE_REVIEWER:-example-cadence-bot}"
+  export SYMPHONY_BOT_USER="${SYMPHONY_BOT_USER:-jeremycarroll}"
+  export CADENCE_REVIEWER="${CADENCE_REVIEWER:-jeremycarroll}"
   export SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL="${SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL:-example-doc-reader@example-project.iam.gserviceaccount.com}"
   export SYMPHONY_EXPECTED_GITHUB_LOGIN="${SYMPHONY_BOT_USER}"
-  export SYMPHONY_EXPECTED_LINEAR_EMAIL="${SYMPHONY_EXPECTED_LINEAR_EMAIL:-linear-bot@example.invalid}"
+  export SYMPHONY_EXPECTED_LINEAR_EMAIL="${SYMPHONY_EXPECTED_LINEAR_EMAIL:-jjc1729@gmail.com}"
 
   export SYMPHONY_GIT_AUTHOR_NAME="${SYMPHONY_BOT_USER}"
-  export SYMPHONY_GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony@example.invalid}"
+  export SYMPHONY_GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
 }
 
 symphony_prepare_google_credentials() {
@@ -394,7 +394,6 @@ symphony_identity_preflight() {
   symphony_require_command gh || return 1
   symphony_require_command node || return 1
 
-  symphony_verify_google_identity || return 1
   symphony_verify_github_identity || return 1
   symphony_verify_linear_identity || return 1
   symphony_verify_git_identity || return 1
@@ -405,9 +404,6 @@ symphony_identity_preflight() {
   symphony_identity_record "github.credential_class" "$(symphony_github_credential_class)"
   symphony_identity_record "linear.viewer_email" "${SYMPHONY_LINEAR_VIEWER_EMAIL_ACTUAL}"
   symphony_identity_record "linear.credential_source" "env:LINEAR_API_TOKEN"
-  symphony_identity_record "google.service_account_email" "${SYMPHONY_GOOGLE_CLIENT_EMAIL_ACTUAL}"
-  symphony_identity_record "google.project_id" "${SYMPHONY_GOOGLE_PROJECT_ID_ACTUAL}"
-  symphony_identity_record "google.credential_source" "file:GOOGLE_APPLICATION_CREDENTIALS service-account-json"
   symphony_identity_record "git.author" "${GIT_AUTHOR_NAME} <${GIT_AUTHOR_EMAIL}>"
   symphony_identity_record "git.committer" "${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>"
   symphony_identity_record "git.askpass" "executable"
@@ -422,12 +418,12 @@ symphony_setup_main() {
   symphony_require_command gh || return 1
   symphony_require_command node || return 1
 
-  export AWS_PROFILE="example"
+  export AWS_PROFILE="1000lines"
   export AWS_REGION="us-west-2"
   export AWS_DEFAULT_REGION="us-west-2"
 
   export SYMPHONY_GOOGLE_SA_SECRET_ID="symphony-google-service-account-json"
-  export SYMPHONY_KEYS_SECRET_ID="symphony/runtime-credentials"
+  export SYMPHONY_KEYS_SECRET_ID="symphony/keys"
   export SYMPHONY_RUNTIME_DIR="/tmp/symphony"
 
   symphony_set_identity_defaults
@@ -448,8 +444,6 @@ symphony_setup_main() {
   unset GH_TOKEN LINEAR_API_KEY
   symphony_load_secret_env_map "${SYMPHONY_KEYS_SECRET_ID}" || return 1
 
-  symphony_prepare_google_credentials || return 1
-  symphony_verify_google_identity || return 1
 
   symphony_verify_github_identity || return 1
   symphony_prepare_git_auth || return 1

@@ -72,7 +72,7 @@ reconciliation unit.
 - The static Terraform directory is `infra/static`.
 - Required providers are available: AWS and `veksh/godaddy-dns`.
 - Required Secrets Manager values exist and have valid shapes:
-  - `symphony/runtime-credentials`: JSON containing runtime GitHub, Linear, OpenAI, and
+  - `symphony/keys`: JSON containing runtime GitHub, Linear, OpenAI, and
     related Symphony keys.
   - `symphony-google-service-account-json`: Google service-account JSON.
   - `symphony/oidc-credentials`: Google OIDC web client JSON for ALB auth.
@@ -137,7 +137,7 @@ path. The restored volume must be encrypted. Existing old volumes are not
 required for cold restore.
 
 ```bash
-aws secretsmanager describe-secret --region us-west-2 --secret-id symphony/runtime-credentials
+aws secretsmanager describe-secret --region us-west-2 --secret-id symphony/keys
 aws secretsmanager describe-secret --region us-west-2 --secret-id symphony-google-service-account-json
 aws secretsmanager describe-secret --region us-west-2 --secret-id symphony/oidc-credentials
 ```

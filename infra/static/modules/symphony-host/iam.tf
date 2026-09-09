@@ -4,8 +4,7 @@ data "aws_region" "current" {}
 
 locals {
   symphony_secret_names = [
-    "symphony/runtime-credentials",
-    "symphony-google-service-account-json",
+    "symphony/keys",
   ]
 
   symphony_secret_arns = [

@@ -135,11 +135,10 @@ write_credential_presence_report() {
     .files.runtime_env.present == true and
     .files.git_askpass.present == true and
     .files.git_askpass.executable == true and
-    .files.google_credentials.present == true and
     .codex.home.present == true and
     .codex.auth_json.present == true and
     .codex.config_toml.present == true and
-    all(.runtime_env_keys[]; . == true)
+    all(.runtime_env_keys | del(.GOOGLE_APPLICATION_CREDENTIALS) | .[]; . == true)
   ' "$tmp" >/dev/null || die "credential presence check failed"
 
   install -m 0644 "$tmp" "$output"
@@ -194,7 +193,7 @@ write_codex_home() {
 }
 
 write_runtime_credentials() {
-  local keys_secret="${SYMPHONY_KEYS_SECRET_ID:-symphony/runtime-credentials}"
+  local keys_secret="${SYMPHONY_KEYS_SECRET_ID:-symphony/keys}"
   local keys_json
   local github_token
   local linear_token
@@ -209,7 +208,7 @@ write_runtime_credentials() {
   openai_key="$(json_value "$keys_json" OPENAI_API_KEY)" ||
     die "$keys_secret is missing OPENAI_API_KEY"
 
-  write_json_secret_file "${SYMPHONY_GOOGLE_SECRET_ID:-symphony-google-service-account-json}" "$google_credentials_path"
+  # This deployment uses repository Markdown and needs no Google service account.
   write_runtime_git_askpass
   write_codex_home "$openai_key"
   install_runtime_dir 0700 "$workspace_root/cache/npm"
@@ -224,8 +223,6 @@ write_runtime_credentials() {
     shell_quote "$linear_token"
     printf '\nOPENAI_API_KEY='
     shell_quote "$openai_key"
-    printf '\nGOOGLE_APPLICATION_CREDENTIALS='
-    shell_quote "$google_credentials_path"
     printf '\nGIT_ASKPASS='
     shell_quote "$git_askpass_path"
     printf '\nGIT_TERMINAL_PROMPT='
@@ -243,23 +240,23 @@ write_runtime_credentials() {
     printf '\nGIT_CONFIG_COUNT='
     shell_quote "2"
     printf '\nSYMPHONY_BOT_USER='
-    shell_quote "${SYMPHONY_BOT_USER:-example-symphony-bot}"
+    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
     printf '\nCADENCE_REVIEWER='
-    shell_quote "${CADENCE_REVIEWER:-example-cadence-bot}"
+    shell_quote "${CADENCE_REVIEWER:-jeremycarroll}"
     printf '\nSYMPHONY_REPOSITORY_OWNER='
-    shell_quote "${SYMPHONY_REPOSITORY_OWNER:-example-org}"
+    shell_quote "${SYMPHONY_REPOSITORY_OWNER:-1000lines}"
     printf '\nSYMPHONY_GIT_AUTHOR_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony@example.invalid}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
     printf '\nSYMPHONY_EXPECTED_LINEAR_EMAIL='
-    shell_quote "${SYMPHONY_EXPECTED_LINEAR_EMAIL:-linear-bot@example.invalid}"
+    shell_quote "${SYMPHONY_EXPECTED_LINEAR_EMAIL:-jjc1729@gmail.com}"
     printf '\nGIT_AUTHOR_NAME='
-    shell_quote "${SYMPHONY_BOT_USER:-example-symphony-bot}"
+    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
     printf '\nGIT_AUTHOR_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony@example.invalid}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
     printf '\nGIT_COMMITTER_NAME='
-    shell_quote "${SYMPHONY_BOT_USER:-example-symphony-bot}"
+    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
     printf '\nGIT_COMMITTER_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony@example.invalid}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
     printf '\nCODEX_HOME='
     shell_quote "${SYMPHONY_CODEX_HOME:-$workspace_root/cache/codex-home}"
     printf '\nNPM_CONFIG_CACHE='

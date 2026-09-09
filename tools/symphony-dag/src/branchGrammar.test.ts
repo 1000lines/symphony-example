@@ -6,6 +6,21 @@ import {
 } from "./branchGrammar";
 
 describe("DAG task branch grammar", () => {
+  test("accepts numeric Linear team identifiers", () => {
+    const name = "symphony/hackathon/100-12/first-ticket";
+    expect(parseDagTaskBranch(name).ticket).toEqual({
+      id: "100-12",
+      prefix: "100",
+      number: 12,
+    });
+    expect(
+      formatDagTaskBranchName({
+        projectCode: "hackathon",
+        ticket: "100-12",
+        slug: "first-ticket",
+      })
+    ).toBe(name);
+  });
   test("accepts Symphony project-code issue slug branches", () => {
     const branch = parseDagTaskBranch(
       "symphony/sample-dag/DEMO-386/package-rename-prune"

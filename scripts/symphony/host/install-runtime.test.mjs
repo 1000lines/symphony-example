@@ -1130,7 +1130,7 @@ test("fails closed when a required secret is missing", async () => {
   try {
     await mkdir(secretsDir, { recursive: true });
     const result = runBash(
-      `source "${join(hostDir, "lib.sh")}"; require_secret 'symphony/runtime-credentials'`,
+      `source "${join(hostDir, "lib.sh")}"; require_secret 'symphony/keys'`,
       {
         SYMPHONY_BOOTSTRAP_STATE_DIR: join(root, "state"),
         SYMPHONY_SECRETS_DIR: secretsDir,
@@ -1138,7 +1138,7 @@ test("fails closed when a required secret is missing", async () => {
     );
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /missing required secret: symphony\/runtime-credentials/);
+    assert.match(result.stderr, /missing required secret: symphony\/keys/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -1305,7 +1305,7 @@ test("runtime install builds the escript from the elixir subdirectory of the che
   const root = await mkdtemp(join(tmpdir(), "symphony-elixir-build-"));
   const binDir = join(root, "bin");
   const remoteRoot = join(root, "remotes");
-  const remote = join(remoteRoot, "example-org", "symphony.git");
+  const remote = join(remoteRoot, "1000lines", "symphony.git");
   const seed = join(root, "seed");
   const mixLog = join(root, "mix.log");
   const optRoot = join(root, "opt", "symphony");
@@ -1403,22 +1403,18 @@ test("a full fixture run materializes credentials, units, workspace, and provena
   const logsRoot = join(root, "logs");
   const optRoot = join(root, "opt", "symphony");
   const remoteRoot = join(root, "remotes");
-  const remote = join(remoteRoot, "example-org", "symphony.git");
+  const remote = join(remoteRoot, "1000lines", "symphony.git");
   const seed = join(root, "seed");
 
   try {
     await mkdir(join(secretsDir, "symphony"), { recursive: true });
     await writeFile(
-      join(secretsDir, "symphony", "runtime-credentials"),
+      join(secretsDir, "symphony", "keys"),
       JSON.stringify({
         GITHUB_TOKEN: "github-token",
         LINEAR_API_TOKEN: "linear-token",
         OPENAI_API_KEY: "openai-key",
       })
-    );
-    await writeFile(
-      join(secretsDir, "symphony-google-service-account-json"),
-      JSON.stringify({ client_email: "bot@example.com", private_key: "key" })
     );
 
     spawnSync("git", ["init", "--bare", "--initial-branch", "main", remote], {
@@ -1485,22 +1481,15 @@ test("a full fixture run materializes credentials, units, workspace, and provena
     const runtimeEnv = await readFile(join(configDir, "runtime.env"), "utf8");
     assert.match(runtimeEnv, new RegExp(`HOME='${workspaceRoot}'`));
     assert.match(runtimeEnv, /GITHUB_TOKEN='github-token'/);
-    assert.ok(
-      runtimeEnv.includes(
-        `GOOGLE_APPLICATION_CREDENTIALS='${configDir}/google-drive-reader-sa.json'`
-      )
-    );
+    assert.equal(runtimeEnv.includes("GOOGLE_APPLICATION_CREDENTIALS="), false);
     assert.ok(runtimeEnv.includes(`GIT_ASKPASS='${configDir}/git-askpass.sh'`));
     assert.match(runtimeEnv, /GIT_TERMINAL_PROMPT='0'/);
     assert.match(runtimeEnv, /GCM_INTERACTIVE='never'/);
     assert.match(runtimeEnv, /GIT_CONFIG_KEY_0='credential.helper'/);
     assert.match(runtimeEnv, /GIT_CONFIG_VALUE_0=''/);
     assert.match(runtimeEnv, /GIT_CONFIG_COUNT='2'/);
-    assert.match(runtimeEnv, /GIT_AUTHOR_NAME='example-symphony-bot'/);
-    assert.match(
-      runtimeEnv,
-      /GIT_COMMITTER_EMAIL='symphony@example.invalid'/
-    );
+    assert.match(runtimeEnv, /GIT_AUTHOR_NAME='jeremycarroll'/);
+    assert.match(runtimeEnv, /GIT_COMMITTER_EMAIL='jjc1729@gmail.com'/);
     assert.ok(
       runtimeEnv.includes(`CODEX_HOME='${workspaceRoot}/cache/codex-home'`)
     );
@@ -1686,6 +1675,55 @@ test("a full fixture run materializes credentials, units, workspace, and provena
         false
       );
     }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("credentials install from symphony/keys without Google credentials", async () => {
+  const root = await mkdtemp(join(tmpdir(), "symphony-credentials-"));
+  try {
+    const secretsDir = join(root, "secrets");
+    const stateDir = join(root, "state");
+    const configDir = join(root, "config");
+    const workspaceRoot = join(root, "workspace");
+    await mkdir(join(secretsDir, "symphony"), { recursive: true });
+    await mkdir(stateDir);
+    await mkdir(configDir);
+    await writeFile(
+      join(secretsDir, "symphony", "keys"),
+      JSON.stringify({
+        GITHUB_TOKEN: "fixture-github",
+        LINEAR_API_TOKEN: "fixture-linear",
+        OPENAI_API_KEY: "fixture-openai",
+      })
+    );
+    const result = runBash(`bash "${step("40-credentials")}"`, {
+      SYMPHONY_ALLOW_NON_ROOT_INSTALL: "1",
+      SYMPHONY_SECRETS_DIR: secretsDir,
+      SYMPHONY_BOOTSTRAP_STATE_DIR: stateDir,
+      SYMPHONY_CONFIG_DIR: configDir,
+      SYMPHONY_WORKSPACE_ROOT: workspaceRoot,
+      SYMPHONY_WORKER_SLOTS: "1",
+      SYMPHONY_RUNTIME_USER: currentUser,
+      SYMPHONY_RUNTIME_GROUP: currentGroup,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(
+      await readFile(join(stateDir, "credential-presence.json"), "utf8")
+    );
+    assert.equal(report.files.google_credentials.present, false);
+    assert.equal(report.runtime_env_keys.GOOGLE_APPLICATION_CREDENTIALS, false);
+    for (const key of ["GITHUB_TOKEN", "LINEAR_API_TOKEN", "OPENAI_API_KEY"]) {
+      assert.equal(report.runtime_env_keys[key], true);
+    }
+    const authPath = join(workspaceRoot, "cache", "codex-home", "auth.json");
+    assert.equal(
+      JSON.parse(await readFile(authPath, "utf8")).OPENAI_API_KEY,
+      "fixture-openai"
+    );
+    assert.equal((await stat(authPath)).mode & 0o777, 0o600);
+    assert.equal(JSON.stringify(report).includes("fixture-openai"), false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

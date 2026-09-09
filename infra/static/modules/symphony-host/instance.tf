@@ -3,7 +3,7 @@ locals {
   # singleton host when AWS rolls the public "latest" AL2023 SSM parameter.
   # Weekly update PRs are proposed by update-symphony-host-ami.yml.
   # symphony-host-ami-update: begin, owned by update-symphony-host-ami.yml
-  symphony_host_ami_id = "ami-00000000000000000"
+  symphony_host_ami_id = "ami-0bea529386a62a2ad"
   # symphony-host-ami-update: end
 }
 
@@ -38,8 +38,8 @@ resource "aws_instance" "symphony" {
 
   tags = {
     Name                     = local.name
-    "symphony:bootstrap-ref" = "main"
-    "symphony:runtime-ref"   = "main"
+    "symphony:bootstrap-ref" = var.bootstrap_ref
+    "symphony:runtime-ref"   = var.runtime_ref
     "symphony:worker-slots"  = "4"
   }
 

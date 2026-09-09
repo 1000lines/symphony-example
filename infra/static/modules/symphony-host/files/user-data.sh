@@ -9,7 +9,7 @@ set -euo pipefail
 log_dir="/var/log/symphony-bootstrap"
 bootstrap_dir="/opt/symphony/bootstrap"
 github_api_url="https://api.github.com"
-bootstrap_repo="example-org/example-repo"
+bootstrap_repo="1000lines/symphony-example"
 bootstrap_max_attempts=3
 bootstrap_retry_backoff_seconds=10
 
@@ -76,7 +76,7 @@ aws_secret_string() {
 
 github_token_from_secret() {
   local region="$1"
-  local secret_id="symphony/runtime-credentials"
+  local secret_id="symphony/keys"
   local secret
 
   secret="$(aws_secret_string "$secret_id" "$region")" ||

@@ -56,7 +56,7 @@ test("git askpass supplies the bot token without persisting it", async () => {
 test("clones example-repo only when the checkout is absent", async () => {
   const root = await mkdtemp(join(tmpdir(), "symphony-clone-"));
   const remoteRoot = join(root, "remotes");
-  const remote = join(remoteRoot, "example-org", "example-repo.git");
+  const remote = join(remoteRoot, "1000lines", "symphony-example.git");
   const seed = join(root, "seed");
   const srcRoot = join(root, "src");
 

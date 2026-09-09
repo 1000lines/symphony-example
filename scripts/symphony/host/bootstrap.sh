@@ -13,7 +13,7 @@
 set -euo pipefail
 
 github_base_url="${SYMPHONY_GITHUB_BASE_URL:-https://github.com}"
-bootstrap_repo="${SYMPHONY_BOOTSTRAP_REPO:-example-org/example-repo}"
+bootstrap_repo="${SYMPHONY_BOOTSTRAP_REPO:-1000lines/symphony-example}"
 opt_root="${SYMPHONY_OPT_ROOT:-/opt/symphony}"
 src_root="${SYMPHONY_SRC_ROOT:-$opt_root/src}"
 config_dir="${SYMPHONY_CONFIG_DIR:-/etc/symphony}"
@@ -61,7 +61,7 @@ metadata_region() {
 
 github_token_from_secret() {
   local region="$1"
-  local secret_id="${SYMPHONY_KEYS_SECRET_ID:-symphony/runtime-credentials}"
+  local secret_id="${SYMPHONY_KEYS_SECRET_ID:-symphony/keys}"
   local secret
 
   if [[ -n "${SYMPHONY_SECRETS_DIR:-}" ]]; then

@@ -72,7 +72,7 @@ const SQUARE_NODE_PATTERN = new RegExp(
 const ROUND_NODE_PATTERN = new RegExp(
   `^\\s*(${GRAPH_NODE_ID_SOURCE})\\s*\\(\\("([^"]+)"\\)\\)\\s*$`
 );
-const RELATION_KEY_PATTERN = /^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9-]*$/;
+const RELATION_KEY_PATTERN = /^[A-Z0-9]+-[A-Z0-9][A-Z0-9-]*$/;
 const DECISION_PATTERN = /^(\d+)\.\s+\*\*([^*]+)\*\*/;
 
 export function parseProjectGraphFromMarkdown(markdown: string): ProjectGraph {

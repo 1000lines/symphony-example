@@ -2,13 +2,10 @@
 tracker:
   kind: linear
   api_key: $LINEAR_API_TOKEN
-  team_key: DEMO
+  team_key: "100"
   active_states:
     - Active
     - Evaluating
-    - Todo
-    - In Progress
-    - Rework
   terminal_states:
     - Done
     - Closed
@@ -25,25 +22,24 @@ tracker:
   daemon_dispatch_states:
     - Evaluating
   daemon_default_wake: 1h
-  polling:
-    interval_ms: 5000
+polling:
+  interval_ms: 30000
 workspace:
-  root: ~/code/example-repo-symphony-workspaces
+  root: ~/code/1000lines-symphony-workspaces
 hooks:
   after_create: |
     test -n "${GITHUB_TOKEN:-}" || { echo "GITHUB_TOKEN is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
     test -n "${LINEAR_API_TOKEN:-}" || { echo "LINEAR_API_TOKEN is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
-    test -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" || { echo "GOOGLE_APPLICATION_CREDENTIALS is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
     test -x "${GIT_ASKPASS:-}" || { echo "GIT_ASKPASS is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
     GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git \
       -c credential.helper= \
-      clone --branch main --depth 1 https://github.com/example-org/example-repo.git .
-    git remote set-url origin https://github.com/example-org/example-repo.git
-    npm install
+      clone --branch main --depth 1 https://github.com/1000lines/symphony-example.git .
+    git remote set-url origin https://github.com/1000lines/symphony-example.git
+    npm ci
   before_run: |
-    node scripts/symphony/route-misc-project-on-ticket-start.mjs --issue "$(basename "$PWD")" --apply
+    true
   after_run: |
-    node scripts/symphony/ensure-pr-labels.mjs --issue "$(basename "$PWD")" --repo example-org/example-repo
+    node scripts/symphony/ensure-pr-labels.mjs --issue "$(basename "$PWD")" --repo 1000lines/symphony-example
   before_remove: |
     true
 agent:
@@ -172,7 +168,7 @@ Symphony uses these state meanings:
 `Backlog` is outside the active pool. `Evaluating` is the configured daemon
 dispatch state. The runtime also accepts legacy workable states `Todo`,
 `In Progress`, and `Rework`; legacy waiting names include `Waiting for CI`,
-`In Review`, and `Human Input Needed`. The DEMO team has `Active` and `Inactive`,
+`In Review`, and `Human Input Needed`. The 1000lines team has `Active` and `Inactive`,
 so agents use them for work and external waits. Record any other team's fallback
 in the workpad. Bridges prefer `Active` and use only `Rework` when `Active` is
 absent; missing both is a visible failure, not an arbitrary started-state choice.
@@ -417,10 +413,10 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   feedback, CI results, or validation findings require another local fix.
 - Name branches `symphony/<project-code>/<ticket-id>/<free-text>`, where
   `<project-code>` comes from the Linear project description/content and
-  `<ticket-id>` is the Linear issue identifier such as `DEMO-22`.
+  `<ticket-id>` is the Linear issue identifier such as `100-22`.
 - Push a branch and open a draft PR when implementation is ready for review.
 - Set PR titles to `[<ticket-id>]: <brief-title>`, for example
-  `[DEMO-22]: reorganize PR review docs`.
+  `[100-22]: reorganize PR review docs`.
 - Do not use another task branch as a PR base. Branch from the selected base
   branch, open PRs against that branch, and keep each ticket's diff file-level
   independent from other open Symphony PRs. Base-branch metadata is not a reason
@@ -511,22 +507,11 @@ blocker is transient infrastructure that should simply be retried later.
 Do not invent cloud fallbacks. This project is explicitly for local Symphony
 execution.
 
-## Google Drive Source Documents
+## Source Documents
 
-Local Symphony must read required Google Docs through the bot-owned service
-account exposed by the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
-
-When a Linear issue, project, comment, PR body, or fan-out plan links a required
-Google Doc, read it before planning or implementation with:
-
-```bash
-node scripts/fetch-google-doc.mjs <google-doc-url-or-id>
-```
-
-Do not use a personal Google identity or manually copied snippets as a fallback
-for a primary source document. If the helper cannot read the doc because of
-authentication, sharing, API, tab-read, or tooling failure, handle it as an
-unavailable source document below.
+Hackathon plans and designs live in repository Markdown. Read the referenced
+files before implementation. Google Docs access is not configured; if required
+inputs exist only there, ask the human lead to add them to the repository.
 
 ## Unavailable Source Documents
 

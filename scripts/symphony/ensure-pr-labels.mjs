@@ -2,7 +2,7 @@
 
 import { fileURLToPath } from "node:url";
 
-const ISSUE_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+const ISSUE_PATTERN = /^[A-Z0-9]+-\d+$/;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const ISSUE_QUERY = `query SymphonyPrLabels($id: String!) {
   issue(id: $id) {
@@ -57,10 +57,10 @@ function associatedPr(issue, repository, pulls) {
   const candidates = pulls
     .map((pr) => ({
       pr,
-      branchIssue: /^symphony\/[^/]+\/([A-Z][A-Z0-9]*-\d+)\/.+$/i
+      branchIssue: /^symphony\/[^/]+\/([A-Z0-9]+-\d+)\/.+$/i
         .exec(pr.head?.ref)?.[1]
         ?.toUpperCase(),
-      titleIssue: /^\[([A-Z][A-Z0-9]*-\d+)\]:/i
+      titleIssue: /^\[([A-Z0-9]+-\d+)\]:/i
         .exec(pr.title)?.[1]
         ?.toUpperCase(),
     }))

@@ -126,7 +126,7 @@ type RawObject = { readonly [key: string]: unknown };
 
 const MANIFEST_SCHEMA = "symphony-dag-manifest/v1";
 const NODE_ID_PATTERN = /^[A-Z][A-Z0-9_]*$/;
-const PAYLOAD_KEY_PATTERN = /^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9-]*$/;
+const PAYLOAD_KEY_PATTERN = /^[A-Z0-9]+-[A-Z0-9][A-Z0-9-]*$/;
 const BRANCH_REF_PATTERN = /^[A-Za-z0-9._/${}-]+$/;
 const V1_DEFAULT_FIELDS = [
   "stack_policy",

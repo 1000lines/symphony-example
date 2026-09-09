@@ -1,5 +1,22 @@
 # Symphony tooling
 
+## Current status: manual migration
+
+For the current upstream runtime implementation, start with the
+[head of Orchestra-Bio's Symphony fork](https://github.com/Orchestra-Bio/symphony/tree/main).
+
+We are manually migrating this extracted example into a working deployment for
+1000lines, directly on `main`. The target is `https://symphony.1000lines.dev` in
+the 1000lines AWS account. Treat this repository as work in progress until the
+host and an end-to-end ticket run have been verified.
+
+See the [migration log](MIGRATION.md) for top-level changes and deployment status.
+
+The original extraction notes are preserved below. They describe the starting
+snapshot and may contain placeholders or assumptions that the migration replaces.
+
+---
+
 Symphony connects issue tracking, coding workers and pull request review. This
 source snapshot contains its Node tooling, workflow profiles, review automation,
 host installer and runtime bundle, plus Terraform for a Symphony host. The

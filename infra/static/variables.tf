@@ -3,33 +3,31 @@ variable "aws_region" {
   default = "us-west-2"
 }
 
-variable "deployment_stage" {
-  type = string
+variable "aws_profile" {
+  type    = string
+  default = "1000lines-terraform"
 }
 
 variable "domain_name" {
-  description = "Root DNS domain managed in GoDaddy."
+  description = "Root DNS domain managed in Route 53."
   type        = string
-  default     = "example.invalid"
+  default     = "1000lines.dev"
 }
 
-# Inputs for infrastructure omitted from this snapshot. See README.md.
-variable "vpc_id" {
-  description = "Existing VPC containing the Symphony host and ALB subnets."
+variable "deploy_host" {
+  description = "Enable after runtime credentials are populated and bootstrap code is pushed."
+  type        = bool
+  default     = true
+}
+
+variable "bootstrap_ref" {
+  description = "Reviewed commit SHA of this repository used to install the host."
   type        = string
+  default     = "main"
 }
 
-variable "private_subnet_ids" {
-  description = "Existing private subnet IDs; the host uses the first subnet."
-  type        = list(string)
-}
-
-variable "public_subnet_ids" {
-  description = "Existing public ALB subnet IDs in at least two availability zones."
-  type        = list(string)
-}
-
-variable "certificate_arn" {
-  description = "Existing ACM certificate ARN covering the Symphony hostname in the host region."
+variable "runtime_ref" {
+  description = "Pinned commit of 1000lines/symphony."
   type        = string
+  default     = "e4d3f6a05b0a00201c9d04d3ceca02b206e22de5"
 }

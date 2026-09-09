@@ -21,8 +21,8 @@ init_workspace_script="${SYMPHONY_INIT_WORKSPACE_SCRIPT:-$repo_root/infra/static
 
 github_api_url="${SYMPHONY_GITHUB_API_URL:-https://api.github.com}"
 github_base_url="${SYMPHONY_GITHUB_BASE_URL:-https://github.com}"
-bootstrap_repo="${SYMPHONY_BOOTSTRAP_REPO:-example-org/example-repo}"
-runtime_repo="${SYMPHONY_RUNTIME_REPO:-example-org/symphony}"
+bootstrap_repo="${SYMPHONY_BOOTSTRAP_REPO:-1000lines/symphony-example}"
+runtime_repo="${SYMPHONY_RUNTIME_REPO:-1000lines/symphony}"
 
 runtime_user="${SYMPHONY_RUNTIME_USER:-symphony}"
 runtime_group="${SYMPHONY_RUNTIME_GROUP:-symphony}"

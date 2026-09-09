@@ -4,9 +4,6 @@ terraform {
       source = "hashicorp/aws"
     }
 
-    godaddy-dns = {
-      source = "veksh/godaddy-dns"
-    }
   }
 }
 
@@ -20,7 +17,8 @@ locals {
   # under scripts/symphony/host/hooks.d/ run lexicographically after core
   # bootstrap prerequisites and any nonzero hook exit fails bootstrap closed.
 
-  oidc_authentication_request_extra_params = {
-    hd = "example.invalid"
-  }
+}
+
+output "instance_id" {
+  value = aws_instance.symphony.id
 }

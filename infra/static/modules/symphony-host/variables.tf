@@ -3,25 +3,22 @@ variable "certificate_arn" {
   type        = string
 }
 
-variable "deployment_stage" {
-  description = "Static deployment stage resource suffix."
-  type        = string
-}
-
 variable "domain_name" {
-  description = "Root DNS domain managed by GoDaddy."
+  description = "Root DNS domain managed by Route 53."
   type        = string
 }
 
-variable "oidc_client_id" {
-  description = "Google OIDC client id for the Symphony ALB."
+variable "hosted_zone_id" {
+  description = "Public Route 53 hosted zone ID."
   type        = string
 }
 
-variable "oidc_client_secret" {
-  description = "Google OIDC client secret for the Symphony ALB. Do not commit a value."
-  type        = string
-  sensitive   = true
+variable "bootstrap_ref" {
+  type = string
+}
+
+variable "runtime_ref" {
+  type = string
 }
 
 variable "private_subnet_ids" {
@@ -39,8 +36,8 @@ variable "public_subnet_ids" {
   type        = list(string)
 
   validation {
-    condition     = length(var.public_subnet_ids) > 0
-    error_message = "At least one public subnet id is required."
+    condition     = length(var.public_subnet_ids) >= 2
+    error_message = "At least two public subnet IDs in different availability zones are required."
   }
 }
 

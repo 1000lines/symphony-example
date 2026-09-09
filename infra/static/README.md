@@ -1,3 +1,35 @@
+# 1000lines deployment
+
+The current deployment uses personal AWS account `350353785278` in `us-west-2`.
+It provisions its own network and ACM certificate, reuses the existing Route 53
+zone, and exposes a public HTTPS dashboard with GET/HEAD only.
+
+Credentials are the JSON environment map in Secrets Manager `symphony/keys`:
+`GITHUB_TOKEN`, `LINEAR_API_TOKEN`, and `OPENAI_API_KEY`. No Google credentials
+are needed. Secret values are populated separately from Terraform.
+
+Authenticate profile `1000lines` as IAM user `jeremy`. Terraform uses profile
+`1000lines-terraform`, whose credential process is:
+`aws configure export-credentials --profile 1000lines --format process`.
+
+From the repository root:
+
+```sh
+terraform -chdir=infra/static init
+terraform -chdir=infra/static plan -out=deploy.tfplan
+terraform -chdir=infra/static apply deploy.tfplan
+```
+
+The host defaults to enabled. `bootstrap_ref` defaults to `main`; an initial
+deployment may pin a reviewed commit using `-var=bootstrap_ref=<sha>` in the plan.
+The runtime fork is pinned in `variables.tf`. The state backend was created by
+`infra/state`; its local bootstrap state is ignored by Git.
+
+See [MIGRATION.md](../../MIGRATION.md) for decisions and verified progress.
+Original extraction notes are preserved below and describe the earlier setup.
+
+---
+
 # Symphony host infrastructure snapshot
 
 This directory identifies the Terraform selected for export: the Symphony EC2

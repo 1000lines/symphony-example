@@ -28,7 +28,7 @@ export type ParsedDagTaskBranch = {
   readonly slug: string;
 };
 
-const TICKET_PATTERN = /^([A-Z][A-Z0-9]*)-([1-9][0-9]*)$/;
+const TICKET_PATTERN = /^([A-Z0-9]+)-([1-9][0-9]*)$/;
 const PROJECT_CODE_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const BRANCH_SLUG_SEGMENT_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
