@@ -126,6 +126,9 @@ write_runtime_tool_path() {
 }
 
 ensure_mix() {
+  # cloud-init and SSM may start without HOME; kerl requires a writable one.
+  export HOME="${HOME:-$state_dir/toolchain-home}"
+  install_dir 0700 "$HOME"
   install_mise
   mise_runtime_env
 
