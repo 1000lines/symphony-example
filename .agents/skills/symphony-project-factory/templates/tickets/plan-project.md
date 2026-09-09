@@ -1,6 +1,7 @@
 # Plan project - seed ticket
 
-Initial status: `Todo`, blocked by the requirements-and-design ticket.
+Initial status: `Blocked` by the requirements-and-design ticket. Keep it outside
+the dispatch queue until that prerequisite is satisfied.
 
 ## Scope
 

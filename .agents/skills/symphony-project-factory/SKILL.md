@@ -9,7 +9,9 @@ Use this skill when a human asks to start, create, wake, reshape, or update a
 Symphony project. Default project creation produces project metadata and a brief
 plus only three planning seeds: requirements/design, plan project, and trigger
 fan-out. Apply those payloads through Linear once required inputs, labels, and
-helper checks are resolved.
+helper checks are resolved, then activate the ready planning frontier by default.
+An explicit request to park the project, leave it in Backlog, or wait for a
+specified start time overrides this default.
 
 Use it before the project plan is approved and merged and before fan-out has
 been triggered. Once project work is in progress, use the replanning path
@@ -134,11 +136,22 @@ explicitly requests that ticket. Scope confirmation alone is insufficient.
 
 Use only these three templates for the default starter ticket set:
 
-| Template                     | Default title                      | Initial status                                                           |
-| ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| `requirements-and-design.md` | `Create requirements & design doc` | `Todo` when the human wants the project started now; otherwise `Backlog` |
-| `plan-project.md`            | `Plan project - seed ticket`       | `Todo`, blocked by the requirements-and-design ticket                    |
-| `trigger-fan-out.md`         | `Trigger fan out`                  | `Todo`, blocked by the plan-project ticket                               |
+| Template | Default title | Creation status | Status after setup |
+| --- | --- | --- | --- |
+| `requirements-and-design.md` | `Create requirements & design doc` | `Backlog` | `Active`, unless the human explicitly requests a hold |
+| `plan-project.md` | `Plan project - seed ticket` | `Blocked` | `Blocked` by requirements/design |
+| `trigger-fan-out.md` | `Trigger fan out` | `Blocked` | `Blocked` by the plan-project ticket |
+
+Stage all seeds outside the dispatch queue, create the two blocker relations,
+and read back the tickets and relation direction before activating anything.
+After successful verification, move the ready requirements/design ticket to
+`Active` without asking for another confirmation. Do not leave a newly created
+project parked merely because the human did not separately say "start now".
+Dependent tickets remain `Blocked` until their prerequisites are satisfied;
+this setup step does not authorize premature fan-out or implementation.
+If setup or relation verification fails, leave the seeds undispatched and report
+the failure. Resolve these state names against the actual workspace and workflow;
+do not assume an example `Todo` state is dispatchable.
 
 The other templates (`broaden-fanout-integration.md` and `standup.md`) are
 available only for a specific human-requested additional seed or later use
@@ -220,8 +233,8 @@ Live Linear reads and writes must use Symphony's injected `linear_graphql` tool.
 Before writing, resolve:
 
 - Linear team id for `DEMO`.
-- Workflow state ids for `Backlog`, `Todo`, and any other selected initial
-  state.
+- Workflow state ids for `Backlog`, `Blocked`, and the configured dispatch state
+  (`Active` in 1000lines).
 - Linear label ids.
 - Human lead assignee id when a matching Linear identity is known.
 - Existing project id when updating.
@@ -233,8 +246,10 @@ Before writing, resolve:
 
 For a new project, use `projectCreate`, then `issueCreate` for the three planning
 seeds and any explicitly requested additions, then the two standard seed blocker
-relations. For an existing project, use `projectUpdate` only for requested
-metadata changes, and do not replay the new-project fixture. Reuse existing
+relations. Read back the setup, then use `issueUpdate` to activate the ready
+frontier unless the human requested a hold. For an existing project, use
+`projectUpdate` only for requested metadata changes, and do not replay the
+new-project fixture. Reuse existing
 seeds; create a specific additional seed only when the human requests it. For
 an explicit ticket move, resolve and read the existing ticket and target project,
 then use `issueUpdate` with that ticket's id and the target `projectId`. Preserve
@@ -290,9 +305,9 @@ Starter ticket payloads:
 
 | Title                              | Initial status           | Labels | Template                     | Default blocker relation           |
 | ---------------------------------- | ------------------------ | ------ | ---------------------------- | ---------------------------------- |
-| `Create requirements & design doc` | `Todo` when starting now | `blue` | `requirements-and-design.md` | none                               |
-| `Plan project - seed ticket`       | `Todo`                   | `blue` | `plan-project.md`            | blocked by requirements-and-design |
-| `Trigger fan out`                  | `Todo`                   | `blue` | `trigger-fan-out.md`         | blocked by plan-project            |
+| `Create requirements & design doc` | `Backlog`, then `Active` after setup verification unless held | `blue` | `requirements-and-design.md` | none |
+| `Plan project - seed ticket` | `Blocked` | `blue` | `plan-project.md` | blocked by requirements-and-design |
+| `Trigger fan out` | `Blocked` | `blue` | `trigger-fan-out.md` | blocked by plan-project |
 
 ## Write-Capable Payload Fixture
 
@@ -319,7 +334,7 @@ starter_issue_mutations:
       projectId: "<project-id>"
       title: "Create requirements & design doc"
       description: "<rendered templates/tickets/requirements-and-design.md>"
-      stateId: "<todo-state-id when start-now is requested, otherwise backlog-state-id>"
+      stateId: "<backlog-state-id>"
       labelIds:
         - "<blue-label-id>"
       assigneeId: "<human-lead-linear-user-id when resolved>"
@@ -330,7 +345,7 @@ starter_issue_mutations:
       projectId: "<project-id>"
       title: "Plan project - seed ticket"
       description: "<rendered templates/tickets/plan-project.md>"
-      stateId: "<todo-state-id>"
+      stateId: "<blocked-state-id>"
       labelIds:
         - "<blue-label-id>"
       assigneeId: "<human-lead-linear-user-id when resolved>"
@@ -341,7 +356,7 @@ starter_issue_mutations:
       projectId: "<project-id>"
       title: "Trigger fan out"
       description: "<rendered templates/tickets/trigger-fan-out.md>"
-      stateId: "<todo-state-id>"
+      stateId: "<blocked-state-id>"
       labelIds:
         - "<blue-label-id>"
       assigneeId: "<human-lead-linear-user-id when resolved>"
@@ -358,6 +373,11 @@ starter_relation_mutations:
       relatedIssueId: "<trigger-fan-out-issue-id>"
       type: blocks
 ```
+
+After both relations and the three seed states are verified, activate the
+requirements/design seed with `issueUpdate(input: {stateId: <active-state-id>})`,
+unless the human explicitly requested a hold. Record and verify the resulting
+state. A hold changes only activation, not creation of the blocker relations.
 
 If the Linear schema in the current workspace requires `content` instead of
 `description`, use the schema-supported field but keep the same rendered

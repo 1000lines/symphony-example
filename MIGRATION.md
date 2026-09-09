@@ -126,3 +126,5 @@ will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live d
 - This is project setup, not deployment of those changes. The live host still uses the verified current bot/Anthropic flow, dispatches Active only, and has no daemon states enabled. Automatic Misc routing remains deferred.
 - Jeremy will contact the organizers about starter-kit keys. Initial Codex review may reuse Symphony's current OpenAI key; the project must document and verify event-key rotation when it arrives.
 - Incorporated the human merge of rehearsal PR #1 before publishing the brief. This supersedes the earlier rehearsal snapshot saying that PR was unmerged.
+- Jeremy subsequently requested activation: moved `100-6` to Active after verifying both seed blocker relations; `100-7` and `100-8` remain Blocked.
+- Updated this repository's `.agents/skills/symphony-project-factory/SKILL.md` and its three seed templates: stage seeds outside dispatch, verify blocker relations, then activate the ready planning frontier by default. Explicit holds or future start times override that default.

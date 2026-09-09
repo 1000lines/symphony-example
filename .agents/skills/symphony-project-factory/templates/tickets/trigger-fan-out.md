@@ -1,6 +1,7 @@
 # Trigger fan out
 
-Initial status: `Todo`, blocked by the plan-project ticket.
+Initial status: `Blocked` by the plan-project ticket. Keep it outside the dispatch
+queue until the human-reviewed plan prerequisite is satisfied.
 
 ## Scope
 

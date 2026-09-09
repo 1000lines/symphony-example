@@ -1,7 +1,8 @@
 # Create requirements & design doc
 
-Initial status: `Todo` when the human wants the project started now; otherwise
-`Backlog`.
+Create in `Backlog`. After all three planning seeds and their blocker relations
+are created and verified, move this ready ticket to `Active` by default. Leave
+it in `Backlog` only when the human explicitly requests a hold or future start.
 
 ## Scope
 
