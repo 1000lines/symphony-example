@@ -50,6 +50,13 @@ test("Docker configuration uses workspace storage, survives reruns, and refuses 
     const config = JSON.parse(await readFile(configPath, "utf8"));
     assert.equal(config["data-root"], join(root, "workspace/docker"));
     assert.equal(config.group, "test-workers");
+    assert.match(
+      await readFile(
+        join(systemd, "docker.socket.d/runtime-group.conf"),
+        "utf8"
+      ),
+      /SocketGroup=test-workers/
+    );
     assert.equal(config.hosts, undefined);
     assert.match(
       await readFile(join(systemd, "docker.service.d/workspace.conf"), "utf8"),

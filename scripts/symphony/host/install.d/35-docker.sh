@@ -10,6 +10,7 @@ configure_docker() {
   local docker_config="$docker_config_dir/daemon.json"
   local docker_data_root="$workspace_root/docker"
   local docker_unit_dir="$systemd_dir/docker.service.d"
+  local docker_socket_dir="$systemd_dir/docker.socket.d"
 
   install_dir 0755 "$docker_config_dir"
   if [[ -f "$docker_config" ]]; then
@@ -30,8 +31,16 @@ configure_docker() {
   dockerd --validate --config-file "$docker_config"
   install_dir 0755 "$docker_unit_dir"
   printf '[Unit]\nRequiresMountsFor="%s"\n' "$workspace_root" >"$docker_unit_dir/workspace.conf"
+  # AL2023 uses socket activation; systemd, not dockerd, owns this socket.
+  install_dir 0755 "$docker_socket_dir"
+  printf '[Socket]\nSocketGroup=%s\n' "$runtime_group" >"$docker_socket_dir/runtime-group.conf"
   systemctl daemon-reload
   systemctl enable --now docker.service
+  # Apply the same ownership to a socket already opened during package install,
+  # without restarting Docker or interrupting existing worker containers.
+  if [[ -S /run/docker.sock ]]; then
+    chgrp "$runtime_group" /run/docker.sock
+  fi
 }
 
 main() {
