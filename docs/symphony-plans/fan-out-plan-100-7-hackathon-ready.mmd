@@ -1,0 +1,33 @@
+%% symphony-dag/v1
+flowchart TD
+  CI["Round 1: controller CI caller"]
+  APP["Round 2: renewable App credentials"]
+  GATE["Round 2: trusted mapping and fresh gates"]
+  RUST["Round 1: Rust target head CI"]
+  CODEX["Round 3: isolated Codex assessment and publisher"]
+  WAIT["Round 3: event and monitor reconciliation"]
+  INSTALL["Round 3: App grants and secret destinations"]
+  ROUTE["Round 4: trusted workflow and dispatch wiring"]
+  GUIDE["Round 5: host profiles and acceptance guidance"]
+  DEPLOY["Round 6: deploy and rehearse both repositories"]
+  RETIRE["Round 7: retire legacy paths and PAT field"]
+  ROTATE["Round 8: event key and verified reload"]
+  FINAL["Round 9: composed readiness audit"]
+  MON_CONTROLLER["Parked daemon: controller CI monitor; activate at deploy"]
+  MON_RUST["Parked daemon: Rust CI monitor; activate at deploy"]
+  CI --> APP
+  CI --> GATE
+  APP --> CODEX
+  GATE --> CODEX
+  APP --> WAIT
+  GATE --> WAIT
+  APP --> INSTALL
+  CODEX --> ROUTE
+  WAIT --> ROUTE
+  ROUTE --> GUIDE
+  GUIDE --> DEPLOY
+  INSTALL --> DEPLOY
+  RUST --> DEPLOY
+  DEPLOY --> RETIRE
+  ROTATE --> FINAL
+  RETIRE --> ROTATE
