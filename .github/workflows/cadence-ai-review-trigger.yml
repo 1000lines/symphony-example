@@ -515,12 +515,6 @@ jobs:
             echo "::warning::Optional Cadence Workpad write failed; continuing deterministic review path."
           fi
 
-      - name: Stage Google service-account key
-        if: steps.plan.outputs.run_claude == 'true'
-        env:
-          GOOGLE_SA_KEY: ${{ secrets.GOOGLE_SA_KEY }}
-        run: printf '%s' "${GOOGLE_SA_KEY}" > "${RUNNER_TEMP}/google-sa.json"
-
       - name: Use review-focused CLAUDE.md
         if: steps.plan.outputs.run_claude == 'true'
         run: cp .claude/skills/cadence-ai-review/review-CLAUDE.md CLAUDE.md
@@ -564,7 +558,6 @@ jobs:
         env:
           CADENCE_CLAUDE_MODEL: ${{ vars.CADENCE_CLAUDE_MODEL }}
           GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/google-sa.json
           LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
 
       - name: Verify review outcomes (no false-green; block request-changes)

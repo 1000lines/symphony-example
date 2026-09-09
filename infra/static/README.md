@@ -20,8 +20,8 @@ terraform -chdir=infra/static plan -out=deploy.tfplan
 terraform -chdir=infra/static apply deploy.tfplan
 ```
 
-The host defaults to enabled. `bootstrap_ref` defaults to `main`; an initial
-deployment may pin a reviewed commit using `-var=bootstrap_ref=<sha>` in the plan.
+The host defaults to enabled. `bootstrap_ref` pins the verified installer commit; update it explicitly with
+`-var=bootstrap_ref=<sha>` in the plan when deploying a new installer revision.
 The runtime fork is pinned in `variables.tf`. The state backend was created by
 `infra/state`; its local bootstrap state is ignored by Git.
 

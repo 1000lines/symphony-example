@@ -8,17 +8,17 @@ deployment progress. Configuration changes are not proof of a working deployment
 
 | Change | Decision | Status |
 | --- | --- | --- |
-| No dashboard authentication | Remove Google OIDC; anyone can view the dashboard and its operational data. No replacement sign-in service. | Deployed; application startup still pending. |
-| No public refresh | Public ingress accepts GET/HEAD only. `POST /api/v1/refresh` stays inaccessible through the public load balancer; automatic polling continues. The runtime endpoint itself is unchanged. | Deployed; application startup still pending. |
-| Route 53 instead of GoDaddy | Use the existing `1000lines.dev` public hosted zone and an alias record to the load balancer. Remove the GoDaddy provider. | Deployed; application startup still pending. |
+| No dashboard authentication | Remove Google OIDC; anyone can view the dashboard and its operational data. No replacement sign-in service. | Deployed and verified. |
+| No public refresh | Public ingress accepts GET/HEAD only. `POST /api/v1/refresh` stays inaccessible through the public load balancer; automatic polling continues. The runtime endpoint itself is unchanged. | Deployed and verified. |
+| Route 53 instead of GoDaddy | Use the existing `1000lines.dev` public hosted zone and an alias record to the load balancer. Remove the GoDaddy provider. | Deployed and verified. |
 | Dedicated VPC | Add the missing VPC, two public ALB subnets, a private host subnet, and outbound NAT. Reuse the extracted host, disk, IAM and ALB module. | Deployed. |
 | Personal AWS account | Deploy to account `350353785278`, region `us-west-2`, using operator `arn:aws:iam::350353785278:user/jeremy`. The host uses its own instance role. | CLI identity verified. |
 | Work directly on main | Manually migrate this repository on `main`. Keep the original README content below the current status note and point readers to Orchestra-Bio's Symphony fork. | Committed and pushed to main. |
 | Runtime credentials | Use AWS Secrets Manager `symphony/keys`, a JSON object of environment-variable names and values. Reuse the local Orchestra OpenAI API key temporarily; replace it with the event key before Saturday, 2026-09-12. | Secret populated and verified with GitHub, 1000lines Linear and the temporary OpenAI key. |
-| Markdown plans | Keep plans and designs in repository Markdown. No Google service account or Google Docs integration for this deployment. | Host and workflow updated. |
+| Markdown plans | Keep plans and designs in repository Markdown. No Google service account or Google Docs integration for this deployment. | Deployed without Google credentials. |
 | Choose the simplest working path | Get the planned tickets running. Defer all optional features, integrations and automation until after the hackathon. | Applies throughout setup. |
 | Numeric Linear team | Accept the existing `100-…` ticket identifiers in branch, DAG and PR-label helpers. | Committed and pushed. |
-| No daemon tickets (Linear only) | Drop daemon-ticket support from the hackathon Linear workflow. Do not configure Happy, Unhappy or Evaluating states; dispatch Active tickets only. Handle monitoring and follow-up manually on the day. Daemons are optional and deferred until after the hackathon. | Workflow updated; upstream runtime unchanged. |
+| No daemon tickets (Linear only) | Drop daemon-ticket support from the hackathon Linear workflow. Do not configure Happy, Unhappy or Evaluating states; dispatch Active tickets only. Handle monitoring and follow-up manually on the day. Daemons are optional and deferred until after the hackathon. | Deployed; upstream runtime unchanged. |
 | Two GitHub bot users | Use `1000-symphony-bot` for implementation and `1000-cadence-bot` for review. Replacing both with GitHub Apps is the first Symphony project. | Account creation and tokens pending; current bootstrap token is Jeremy’s. |
 
 ## Deployment progress
@@ -36,14 +36,21 @@ deployment progress. Configuration changes are not proof of a working deployment
 - HTTPS reaches the load balancer; public refresh returns HTTP 404.
 - Restored the missing runtime-bundle manifest and verified installation on host.
 - Fixed the noninteractive Erlang installer: cloud-init/SSM can leave HOME unset,
-  which caused kerl to exit before compiling. Runtime startup is being retried.
-- Dashboard GET currently returns HTTP 502 until the runtime starts.
+  which caused kerl to exit before compiling. All 14 installation steps completed.
+- Symphony service is active with four worker slots and Linear team `100`.
+- Verified dashboard and `/api/v1/state` HTTP 200, public refresh POST HTTP 404,
+  successful Linear polling, and no active tickets.
+- Verified the temporary Orchestra key can access `gpt-6-astra`.
+- Verified bootstrap commit: `441bfc1d2a4e10efcf26850443074d3bb06bbf7a`.
+  Runtime commit: `e4d3f6a05b0a00201c9d04d3ceca02b206e22de5`.
 
 ## Before Saturday
 
 - [x] Populate the host's GitHub, 1000lines Linear, and initial OpenAI credentials.
 - Replace the temporary Orchestra OpenAI API key with the event key and reload the host credentials before Saturday. Never put key values in this repository or log.
-- Provision and verify the host, HTTPS, public dashboard, and blocked public refresh.
+- [x] Provision and verify the host, HTTPS, public dashboard, and blocked public refresh.
+- Finish the two GitHub bot accounts, repository access and distinct tokens.
+  The current host uses Jeremy’s temporary GitHub credential for setup.
 - Rehearse ticket execution and dependency progression in a separate test project.
 - Leave the hackathon DAG frontier in Backlog until the start; downstream work
   remains dependency-gated.
@@ -54,5 +61,26 @@ deployment progress. Configuration changes are not proof of a working deployment
 - Tooling builds successfully; locked dependencies install with `npm ci`.
 - Credential installation passes without any Google secret or credentials file.
 - The full host test suite initially had seven failures on this Mac, including
-  missing Linux `flock` and a Codex-version expectation. Host verification is
-  still required; these results are not a claim that the full suite passes.
+  missing Linux `flock` and a Codex-version expectation. The real Linux host
+  subsequently completed installation; this does not claim the full suite passes.
+- Focused bootstrap, numeric-ticket branch, credentials and BEAM installer tests pass.
+- An actual ticket-to-PR-to-review rehearsal is still pending the bot identities.
+
+## Credentials still needed for the full loop
+
+| Location | Name | Status |
+| --- | --- | --- |
+| AWS `symphony/keys` | `GITHUB_TOKEN` | Populated with Jeremy's setup token; replace with `1000-symphony-bot`. |
+| AWS `symphony/keys` | `LINEAR_API_TOKEN` | Populated for the 1000lines workspace. |
+| AWS `symphony/keys` | `OPENAI_API_KEY` | Temporary Orchestra key; replace before Saturday. |
+| GitHub Actions | `CADENCE_BOT_GITHUB_TOKEN` | Awaiting `1000-cadence-bot` account/token. |
+| GitHub Actions | `CADENCE_LINEAR_API_TOKEN` | Populated and verified using the dedicated 1000lines Linear token. |
+| GitHub Actions | `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | The existing reviewer needs an Anthropic key. Provider choice/key pending. |
+
+Repository variables now name `1000-symphony-bot` and `1000-cadence-bot`.
+Cadence event parsing accepts the numeric `100-…` ticket identifiers.
+
+Cadence's inherited Google secret requirement is removed too: review sources
+will be Markdown. GitHub Actions remain disabled until credentials and required
+settings are configured. The live dashboard is verified; the complete
+implementation/review loop is not yet verified.

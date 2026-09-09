@@ -605,3 +605,9 @@ test("stale approval visibility fails when dismissal and re-request both fail", 
   assert.equal(plan.failed_count, "3");
   assert.equal(plan.visible_by, "none");
 });
+
+
+test("recognizes numeric team identifiers in PR titles and branches", () => {
+  assert.equal(issueIdentifierForPullRequest({ title: "[100-12]: first ticket" }), "100-12");
+  assert.equal(issueIdentifierForPullRequest({ headRef: "symphony/hackathon/100-12/first-ticket" }), "100-12");
+});

@@ -267,8 +267,8 @@ Do not expose secrets or private paths in any review.
 In a fan-out, the per-PR and cross-PR workers **return their review body**; they
 do not post. The orchestrator submits every review, and before its first post it
 **verifies identity**: run `gh api user` and confirm it equals the configured
-reviewer login (`example-cadence-bot`, or `CADENCE_REVIEWER_LOGIN`). If it does not
-match — or `gh`/Linear/Google credentials do not resolve — **do not post**;
+reviewer login (`1000-cadence-bot`, or `CADENCE_REVIEWER_LOGIN`). If it does not
+match — or `gh`/Linear credentials do not resolve — **do not post**;
 abort and report the credential problem as a configuration failure, not a review
 outcome. A mismatched identity means the reviewer token was not picked up (for
 example a fall-back login), and posting would mis-attribute the review. Posting

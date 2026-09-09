@@ -38,14 +38,14 @@ const CADENCE_REVIEW_REQUEST_TRIGGER_SOURCE =
 
 export const issueIdentifierFrom = (...values) => {
   for (const value of values) {
-    const match = String(value || "").match(/\b[A-Z]+-\d+\b/);
+    const match = String(value || "").match(/\b[A-Z0-9]+-\d+\b/);
     if (match) return match[0];
   }
   return "";
 };
 
 const issueIdentifierFromTitlePrefix = (title = "") => {
-  const match = String(title || "").match(/^\s*\[?([A-Z]+-\d+)\]?(?::|\s|$)/);
+  const match = String(title || "").match(/^\s*\[?([A-Z0-9]+-\d+)\]?(?::|\s|$)/);
   return match?.[1] || "";
 };
 
