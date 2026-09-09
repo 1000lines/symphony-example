@@ -76,6 +76,15 @@ blocker handling, or state classification:
 
 ## Review And Evidence
 
+The host installer provides Docker for containerized toolchains and test
+dependencies. Use a repository Dockerfile or documented container command when
+it helps verify a change without installing another host toolchain. Mount only
+the issue workspace, run with its user/group IDs to preserve file ownership,
+and remove task containers after use. Prefer pinned images and record the image
+digest and test result. Local container tests complement required repository CI;
+they do not substitute for current-commit CI evidence. Avoid publishing test
+ports beyond localhost or pruning containers/images belonging to other workers.
+
 Before returning a PR to review, collect the required local validation and record
 proof with target ref, command or environment, acceptance criterion, artifact
 location, result, known limitation, and next handoff. Do not claim deploy,

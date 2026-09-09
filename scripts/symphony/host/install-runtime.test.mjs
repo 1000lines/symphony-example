@@ -278,6 +278,7 @@ test("--list reports every step in execution order", () => {
   const listed = result.stdout.trim().split("\n");
   assert.deepEqual(listed, [...listed].sort());
   assert.ok(listed.includes("10-os-packages"));
+  assert.ok(listed.includes("35-docker"));
   assert.ok(listed.includes("45-runtime-bundle"));
   assert.ok(listed.includes("55-node-toolchain"));
   assert.ok(listed.includes("60-dev-tools"));
@@ -285,6 +286,7 @@ test("--list reports every step in execution order", () => {
   assert.ok(
     listed.indexOf("10-os-packages") < listed.indexOf("30-workspace-volume")
   );
+  assert.ok(listed.indexOf("30-workspace-volume") < listed.indexOf("35-docker"));
   assert.ok(
     listed.indexOf("50-beam-toolchain") < listed.indexOf("55-node-toolchain")
   );
@@ -437,6 +439,7 @@ test("host dependency install does not replace AL2023 curl-minimal", async () =>
     assert.equal(result.status, 0, result.stderr);
     const dnfArgs = await readFile(dnfLog, "utf8");
     assert.match(dnfArgs, /awscli/);
+    assert.match(dnfArgs, /docker/);
     assert.match(dnfArgs, /openssl-devel/);
     assert.doesNotMatch(dnfArgs, /(^| )curl( |$)/m);
     assert.doesNotMatch(dnfArgs, /(^| )erlang( |$)/m);

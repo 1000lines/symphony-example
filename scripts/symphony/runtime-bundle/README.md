@@ -114,6 +114,15 @@ service command-line options to the selected external runtime remains setup work
 
 ## Host layout and prerequisites
 
+`10-os-packages.sh` installs the Amazon Linux Docker package.
+`35-docker.sh` enables Docker after the workspace volume is mounted, stores its
+data under `/var/lib/symphony/docker`, and gives the existing runtime group
+access to the local Unix socket. Docker access grants host-level control to
+that trusted runtime account. No Docker TCP listener is configured. Existing
+Docker configurations/data that conflict with these settings require explicit
+reconciliation; the installer does not move or delete them. Package-skipping
+fixtures also skip Docker setup. Use container tests alongside repository CI.
+
 The scripts assume Linux, systemd, GNU filesystem utilities and root installation.
 `10-os-packages.sh` installs packages through `dnf` when available; its fallback
 only checks a few commands and does not provision another distribution. Bootstrap

@@ -15,7 +15,7 @@ install_host_dependencies() {
   if command -v dnf >/dev/null 2>&1; then
     # Never name curl: AL2023 ships curl-minimal, which conflicts with it, and
     # dnf refuses the whole transaction.
-    dnf install -y awscli jq git tar gzip xz shadow-utils xfsprogs
+    dnf install -y awscli jq git tar gzip xz shadow-utils xfsprogs docker
     return
   fi
 
