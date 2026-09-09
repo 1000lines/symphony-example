@@ -240,23 +240,23 @@ write_runtime_credentials() {
     printf '\nGIT_CONFIG_COUNT='
     shell_quote "2"
     printf '\nSYMPHONY_BOT_USER='
-    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
+    shell_quote "${SYMPHONY_BOT_USER:-1000-symphony-bot}"
     printf '\nCADENCE_REVIEWER='
-    shell_quote "${CADENCE_REVIEWER:-jeremycarroll}"
+    shell_quote "${CADENCE_REVIEWER:-1000-cadence-bot}"
     printf '\nSYMPHONY_REPOSITORY_OWNER='
     shell_quote "${SYMPHONY_REPOSITORY_OWNER:-1000lines}"
     printf '\nSYMPHONY_GIT_AUTHOR_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-327018241+1000-symphony-bot@users.noreply.github.com}"
     printf '\nSYMPHONY_EXPECTED_LINEAR_EMAIL='
     shell_quote "${SYMPHONY_EXPECTED_LINEAR_EMAIL:-jjc1729@gmail.com}"
     printf '\nGIT_AUTHOR_NAME='
-    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
+    shell_quote "${SYMPHONY_BOT_USER:-1000-symphony-bot}"
     printf '\nGIT_AUTHOR_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-327018241+1000-symphony-bot@users.noreply.github.com}"
     printf '\nGIT_COMMITTER_NAME='
-    shell_quote "${SYMPHONY_BOT_USER:-jeremycarroll}"
+    shell_quote "${SYMPHONY_BOT_USER:-1000-symphony-bot}"
     printf '\nGIT_COMMITTER_EMAIL='
-    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
+    shell_quote "${SYMPHONY_GIT_AUTHOR_EMAIL:-327018241+1000-symphony-bot@users.noreply.github.com}"
     printf '\nCODEX_HOME='
     shell_quote "${SYMPHONY_CODEX_HOME:-$workspace_root/cache/codex-home}"
     printf '\nNPM_CONFIG_CACHE='

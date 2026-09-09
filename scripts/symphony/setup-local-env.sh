@@ -107,14 +107,14 @@ symphony_json_field() {
 }
 
 symphony_set_identity_defaults() {
-  export SYMPHONY_BOT_USER="${SYMPHONY_BOT_USER:-jeremycarroll}"
-  export CADENCE_REVIEWER="${CADENCE_REVIEWER:-jeremycarroll}"
+  export SYMPHONY_BOT_USER="${SYMPHONY_BOT_USER:-1000-symphony-bot}"
+  export CADENCE_REVIEWER="${CADENCE_REVIEWER:-1000-cadence-bot}"
   export SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL="${SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL:-example-doc-reader@example-project.iam.gserviceaccount.com}"
   export SYMPHONY_EXPECTED_GITHUB_LOGIN="${SYMPHONY_BOT_USER}"
   export SYMPHONY_EXPECTED_LINEAR_EMAIL="${SYMPHONY_EXPECTED_LINEAR_EMAIL:-jjc1729@gmail.com}"
 
   export SYMPHONY_GIT_AUTHOR_NAME="${SYMPHONY_BOT_USER}"
-  export SYMPHONY_GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL:-jjc1729@gmail.com}"
+  export SYMPHONY_GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL:-327018241+1000-symphony-bot@users.noreply.github.com}"
 }
 
 symphony_prepare_google_credentials() {

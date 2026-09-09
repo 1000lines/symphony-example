@@ -1488,8 +1488,8 @@ test("a full fixture run materializes credentials, units, workspace, and provena
     assert.match(runtimeEnv, /GIT_CONFIG_KEY_0='credential.helper'/);
     assert.match(runtimeEnv, /GIT_CONFIG_VALUE_0=''/);
     assert.match(runtimeEnv, /GIT_CONFIG_COUNT='2'/);
-    assert.match(runtimeEnv, /GIT_AUTHOR_NAME='jeremycarroll'/);
-    assert.match(runtimeEnv, /GIT_COMMITTER_EMAIL='jjc1729@gmail.com'/);
+    assert.match(runtimeEnv, /GIT_AUTHOR_NAME='1000-symphony-bot'/);
+    assert.match(runtimeEnv, /GIT_COMMITTER_EMAIL='327018241\+1000-symphony-bot@users\.noreply\.github\.com'/);
     assert.ok(
       runtimeEnv.includes(`CODEX_HOME='${workspaceRoot}/cache/codex-home'`)
     );
@@ -1712,6 +1712,10 @@ test("credentials install from symphony/keys without Google credentials", async 
     const report = JSON.parse(
       await readFile(join(stateDir, "credential-presence.json"), "utf8")
     );
+    const runtimeEnv = await readFile(join(configDir, "runtime.env"), "utf8");
+    assert.match(runtimeEnv, /SYMPHONY_BOT_USER='1000-symphony-bot'/);
+    assert.match(runtimeEnv, /CADENCE_REVIEWER='1000-cadence-bot'/);
+    assert.match(runtimeEnv, /GIT_AUTHOR_EMAIL='327018241\+1000-symphony-bot@users\.noreply\.github\.com'/);
     assert.equal(report.files.google_credentials.present, false);
     assert.equal(report.runtime_env_keys.GOOGLE_APPLICATION_CREDENTIALS, false);
     for (const key of ["GITHUB_TOKEN", "LINEAR_API_TOKEN", "OPENAI_API_KEY"]) {
