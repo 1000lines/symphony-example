@@ -109,3 +109,10 @@ will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live d
 - Three setup gaps were repaired during rehearsal: missing project labels, the review helper’s extracted repository default, and numeric ticket extraction in workflow reporting. The original failed review run is retained as history.
 - This proves the basic documentation-ticket loop, not application CI, dependency promotion, rework, merge or deployment. Non-review Linear wakeups and the optional AMI updater remain disabled.
 - Borrowed OpenAI and Anthropic credentials must still be replaced with event credentials before September 12. Bot PATs expire September 16.
+
+## Misc project — 2026-09-09
+
+- Created [Misc](https://linear.app/1000lines/project/misc-446ce745736f) for manually filed standalone tasks, with `project-code: misc`, `project-color: blue`, `base-branch: main`, and human lead Jeremy Carroll.
+- Created the `blue` label in Linear team `100` and GitHub repository `1000lines/symphony-example`; the required GitHub `symphony` label already exists.
+- File tickets directly into Misc in Backlog, then move ready work to Active. No tickets were created or activated during this setup.
+- Automatic routing of projectless tickets remains deferred. The hosted `before_run` hook is still `true`; the retained routing helper still has its extracted `DEMO-*` restriction. No server changes or restart were needed.
