@@ -11,6 +11,8 @@ the 1000lines AWS account. Treat this repository as work in progress until the
 host and an end-to-end ticket run have been verified.
 
 See the [migration log](MIGRATION.md) for top-level changes and deployment status.
+Use the [hackathon startup checklist](HACKATHON-START.md) for operator preparation
+and the first ticket's execution and review handoff.
 
 The original extraction notes are preserved below. They describe the starting
 snapshot and may contain placeholders or assumptions that the migration replaces.
