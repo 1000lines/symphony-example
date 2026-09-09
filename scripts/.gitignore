@@ -10,3 +10,6 @@ backups/
 
 # macOS
 .DS_Store
+
+# Required source manifest for the hosted runtime installer.
+!symphony/runtime-bundle/manifest.json

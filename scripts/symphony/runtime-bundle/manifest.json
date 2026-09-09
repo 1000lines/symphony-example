@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "symphony-runtime-bundle/v1",
+  "bundle": {
+    "name": "1000lines-symphony",
+    "sourcePath": "scripts/symphony/runtime-bundle",
+    "ordinaryDiscovery": false
+  },
+  "installedSharedSkillLinks": [
+    {
+      "name": "karpathy-guidelines",
+      "canonicalSourcePath": ".agents/skills/karpathy-guidelines"
+    },
+    {
+      "name": "linear-graphql",
+      "canonicalSourcePath": ".agents/skills/linear-graphql"
+    }
+  ]
+}
