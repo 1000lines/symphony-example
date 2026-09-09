@@ -50,7 +50,8 @@ deployment progress. Configuration changes are not proof of a working deployment
 - Replace the temporary Orchestra OpenAI API key with the event key and reload the host credentials before Saturday. Never put key values in this repository or log.
 - [x] Provision and verify the host, HTTPS, public dashboard, and blocked public refresh.
 - [x] Install distinct bot tokens and verify the restarted host authenticates as `1000-symphony-bot`. Both PATs expire September 16, 2026; replace with GitHub Apps.
-- Rehearse ticket execution and dependency progression in a separate test project.
+- [x] Rehearse a single ticket through implementation, Cadence review and human handoff in a separate test project.
+- Dependency progression and an application-code/CI rehearsal remain untested.
 - Leave the hackathon DAG frontier in Backlog until the start; downstream work
   remains dependency-gated.
 
@@ -63,9 +64,9 @@ deployment progress. Configuration changes are not proof of a working deployment
   missing Linux `flock` and a Codex-version expectation. The real Linux host
   subsequently completed installation; this does not claim the full suite passes.
 - Focused bootstrap, numeric-ticket branch, credentials and BEAM installer tests pass.
-- Setup rehearsal ticket `100-5` is created; execution/review results are pending.
+- Setup rehearsal `100-5` produced PR #1 as Symphony, received Cadence approval, and automatically requested Jeremy’s review.
 
-## Credentials still needed for the full loop
+## Credential inventory
 
 | Location | Name | Status |
 | --- | --- | --- |
@@ -74,14 +75,13 @@ deployment progress. Configuration changes are not proof of a working deployment
 | AWS `symphony/keys` | `OPENAI_API_KEY` | Temporary Orchestra key; replace before Saturday. |
 | GitHub Actions | `CADENCE_BOT_GITHUB_TOKEN` | Installed after verifying `1000-cadence-bot`; repository role is triage. |
 | GitHub Actions | `CADENCE_LINEAR_API_TOKEN` | Populated and verified using the dedicated 1000lines Linear token. |
-| GitHub Actions | `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Jeremy replaced the placeholder on September 9. Temporary Orchestra key; replace before Saturday. Actual review authentication is being tested. |
+| GitHub Actions | `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Jeremy replaced the placeholder on September 9. Temporary Orchestra key; replace before Saturday. Actual Cadence review passed. |
 
 Repository variables now name `1000-symphony-bot` and `1000-cadence-bot`.
 Cadence event parsing accepts the numeric `100-…` ticket identifiers.
 
 Cadence's inherited Google secret requirement is removed too: review sources
-will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live dashboard is verified; the complete
-implementation/review loop is not yet verified.
+will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live dashboard and one documentation ticket through implementation, Cadence approval, Linear reporting and human review handoff are verified. Dependency progression, rework and application CI remain untested.
 
 ## Bot credential cutover — 2026-09-09
 
@@ -90,7 +90,7 @@ implementation/review loop is not yet verified.
 - The laptop GitHub CLI remains `jeremycarroll`; the humans team contains Jeremy and the ai team contains both bots.
 - Restarted the host at 14:26 UTC and verified its GitHub API identity, bot commit email, healthy state API and successful Linear polling.
 - Symphony PAT scopes: repo, workflow, read:org. Cadence PAT scopes: public_repo, read:org. Both expire September 16.
-- Cadence model variable is `claude-opus-5`; Jeremy populated the provider credential, and full review execution still needs verification.
+- Cadence model variable is `claude-opus-5`; Jeremy populated the provider credential; Cadence completed a real review successfully.
 
 ## Setup rehearsal — 2026-09-09
 
@@ -100,3 +100,12 @@ implementation/review loop is not yet verified.
 - Terraform now pins the verified bot bootstrap revision; apply changed only the existing instance tag.
 - Symphony opened rehearsal PR #1 as the implementation bot. Cadence's event router succeeded; its review runner exposed a remaining extracted `example-org/example-repo` default. Set `REPO_SLUG` from the actual GitHub repository in the runner before retrying.
 - Updated the review runner's remaining letter-only ticket extraction to accept numeric `100-…` identifiers for Linear workpad reporting.
+
+## Rehearsal outcome — 2026-09-09
+
+- [100-5](https://linear.app/1000lines/issue/100-5/setup-rehearsal-add-the-hackathon-startup-checklist) went from Backlog to Active; Symphony implemented a documentation-only change and opened [PR #1](https://github.com/1000lines/symphony-example/pull/1) as `1000-symphony-bot`.
+- Cadence authenticated with Jeremy’s replacement Anthropic secret and its separate triage-role token, then [approved the PR](https://github.com/1000lines/symphony-example/pull/1#pullrequestreview-5155919718) at head `a6fa5f15478fbb6ac74f521704d7514f06a96706`. [Review run 34364728665](https://github.com/1000lines/symphony-example/actions/runs/34364728665) passed.
+- Cadence wrote its completed APPROVE assessment to the Linear workpad. The review handoff workflow passed and automatically requested `jeremycarroll`. Ticket remains Inactive; PR remains draft and unmerged for human acceptance.
+- Three setup gaps were repaired during rehearsal: missing project labels, the review helper’s extracted repository default, and numeric ticket extraction in workflow reporting. The original failed review run is retained as history.
+- This proves the basic documentation-ticket loop, not application CI, dependency promotion, rework, merge or deployment. Non-review Linear wakeups and the optional AMI updater remain disabled.
+- Borrowed OpenAI and Anthropic credentials must still be replaced with event credentials before September 12. Bot PATs expire September 16.
