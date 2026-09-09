@@ -94,6 +94,10 @@ changed by this ticket.
   [triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
   [environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
   and [branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+  The installation preflight also uses [App visibility](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private),
+  [registration changes](https://docs.github.com/en/apps/maintaining-github-apps/modifying-a-github-app-registration),
+  [ownership transfer](https://docs.github.com/en/apps/maintaining-github-apps/transferring-ownership-of-a-github-app)
+  and [App metadata API](https://docs.github.com/en/rest/apps/apps#get-an-app).
 - **S10:** [Rehearsal PR #1](https://github.com/1000lines/symphony-example/pull/1),
   merged, with PAT/Anthropic approval of
   `a6fa5f15478fbb6ac74f521704d7514f06a96706`. Jeremy confirms that rehearsal
@@ -106,13 +110,16 @@ changed by this ticket.
   `scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.md`
   and root README: review criteria and acceptance guidance to migrate.
 - **S13:** [Jeremy's PR feedback](https://github.com/1000lines/symphony-example/pull/2#issuecomment-5605278113)
-  and [Cadence's review](https://github.com/1000lines/symphony-example/pull/2#pullrequestreview-5156808681):
+  and Cadence's [first review](https://github.com/1000lines/symphony-example/pull/2#pullrequestreview-5156808681)
+  and [follow-up](https://github.com/1000lines/symphony-example/pull/2#pullrequestreview-5157256852):
   local-first/CI-fallback modes, operator handoffs, existing App IDs, selected
   Rust repository, configurable checks, automatic state discovery and technical
   corrections. Fresh human decisions supersede the original unanswered questions.
 - **S14:** Public `GET /apps/1000lines-cadence` and
   `GET /apps/1000lines-symphony`: owner, App IDs, slugs and registration grants
-  read on September 9. Installation grants and private keys were not queried.
+  read on September 9. Both also returned HTTP 200 without authentication;
+  responses contain no visibility field. Installation grants and private keys
+  were not queried.
 - **S15:** [Rust rehearsal repository](https://github.com/jeremycarroll/venn-search-rs/tree/99528c2e4da241ec2c9961d0a155357611f16a76),
   repository ID `1076114173`: README, CLAUDE.md and `.github/workflows/ci.yml`
   read at that ref. [Existing CI run](https://github.com/jeremycarroll/venn-search-rs/actions/runs/18952923407)
@@ -169,7 +176,7 @@ inputs to 100-7, not claims that the running system implements them.
 | ID  | Decision and rationale                                                                                                                                                                                           | Enforcing owner                 |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | D01 | Use the pinned official Codex Action with a deterministic acquisition/publication wrapper. The model assesses evidence; trusted code validates and publishes it.                                                 | Cadence integration             |
-| D02 | Use two installation-only Apps. No OAuth user-token flow, bot invitations, implicit human PAT, or organization-team read dependency.                                                                             | App credentials                 |
+| D02 | Use two public installation-only Apps owned by `1000lines`. No OAuth user-token flow, bot invitations, implicit human PAT, or organization-team read dependency.                                                 | App credentials                 |
 | D03 | Select `Cadence Review` check run emitted by the Cadence App as the sole AI acceptance signal. Do not produce automated APPROVE or REQUEST_CHANGES reviews after cutover.                                        | Acceptance integration          |
 | D04 | Queue review through explicit workflow dispatch; replace user-review-request orchestration. Only human review invitations continue to use the review-request API.                                                | Cadence event integration       |
 | D05 | Require successful repository CI and a fresh successful Cadence result before maturity/normal human handoff. Human acceptance/merge owns Done.                                                                   | Shared gate consumers           |
@@ -241,6 +248,24 @@ The matrix below adds Actions write and Commit statuses read to both current
 registrations for dispatch/retry and status observation. Jeremy applies those
 changes and approves them on each installation; no agent needs App-admin access
 to prepare the implementation or the exact operator checklist.
+
+Public visibility is the selected installation model for both Apps. A private
+App can only be installed on its owning account; membership in `1000lines`
+does not let an org-owned private App install on `jeremycarroll` (S09).
+Anonymous metadata readback (S14) is not proof of target installation success.
+During setup, Jeremy verifies each registration's visibility and, if private,
+uses **Advanced → Make public** before installing it on the personal account.
+Record the setting and successful installations on both owners. A private
+setting blocks live R03/R07/R12 proof until changed; planning and code
+preparation continue with these concrete PR-visible operator instructions.
+
+GitHub also supports transferring App ownership, but that does not make a
+private App installable on two owners. The selected controller/target model
+therefore retains `1000lines` ownership and public visibility. A transfer would
+need a reviewed ownership/mapping update, not an automatic installation fallback.
+Once a public App has installations on other accounts, GitHub prevents making
+it private until those installations are removed. Recovery must account for
+that restriction; it must not silently uninstall the target or toggle visibility.
 
 Keep privileged review workflows in `1000lines/symphony-example` (the controller).
 It reviews itself and the selected cross-owner target
@@ -372,6 +397,11 @@ blocked operation, error/presence result, affected repository/App, required
 permission, secret destination and resume command in the PR description under
 an operator-action heading; mirror it in the pinned Codex workpad. Never put a
 key value in a PR. For this rollout the prepared handoff is:
+
+First verify public visibility for both existing registrations using the
+preflight above, and record the result before attempting either cross-owner
+installation. Include **Advanced → Make public**, conditional on a private
+setting, in the implementation PR's operator instructions if access is denied.
 
 1. Jeremy opens the existing `1000lines-symphony` registration (`4866508`),
    applies the matrix delta and generates a private key if no usable operator
@@ -854,14 +884,14 @@ above. Jeremy's supplied answers are decisions and engineering inputs, not quest
 to send back to him. Remaining installation evidence and external secrets have
 explicit owners; code preparation and planning can proceed without them.
 
-| ID  | Decision or remaining action                                                                                                                                                                                                               | Owner / follow-up type                                                                                        | Gate                                                                                                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| O01 | Reuse Cadence `4866513` and Symphony `4866508`, owned by `1000lines`; registration grants read. Resolve installation IDs/selection, approve the specified permission delta and provide signing credentials using the operator steps above. | App integration prepares discovery and instructions; Jeremy performs unavailable administration/secret steps. | Live App cutover and R03/R04/R12; design and code preparation proceed.                              |
-| O02 | Jeremy expects an event key before the event; arrival time is unknown. Continue with the existing OpenAI key and execute the documented rotation when supplied.                                                                            | Jeremy / external credential acquisition; rollout owner verifies rotation.                                    | Final credential rotation/readiness only.                                                           |
-| O03 | Use `jeremycarroll/venn-search-rs`, repository ID `1076114173`. Existing README/CLAUDE.md/CI read; integration selects the small rehearsal PR and gathers installation/no-collaborator and both-mode evidence.                             | Cross-repository integration and rehearsal; Jeremy approves installations if needed.                          | Live R03/R07/R12 proof, not repository selection or planning.                                       |
-| O04 | Implement the per-repository configuration above. Known Rust check names/App ID are populated; CI owner verifies emitted controller names and prepares branch-rule settings after the caller runs.                                         | CI integration owns discovery/configuration; Jeremy only applies unavailable admin changes.                   | Enablement of current-head CI enforcement; no product answer required.                              |
-| O05 | Discover/reuse or create the exact daemon states under the accepted rollout, record returned IDs and monitor ID, and keep the monitor parked until human activation.                                                                       | Daemon integration owns setup/discovery; Jeremy handles any concrete permission failure.                      | Live R09 activation; no pre-supplied IDs required.                                                  |
-| O06 | Jeremy confirms the existing setup rehearsal succeeded (S10). Preserve that completed baseline; collect new-version/provider/App verification during the integrated rollout, reusing evidence wherever the same criterion/ref is covered.  | Cadence/App integration / verification.                                                                       | New integration cutover proof, not a repeated request to approve or select the successful baseline. |
+| ID  | Decision or remaining action                                                                                                                                                                                                                                                         | Owner / follow-up type                                                                                        | Gate                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| O01 | Reuse Cadence `4866513` and Symphony `4866508`, owned by `1000lines`; registration grants read. Complete the public-visibility preflight, resolve installation IDs/selection, approve the specified permission delta and provide signing credentials using the operator steps above. | App integration prepares discovery and instructions; Jeremy performs unavailable administration/secret steps. | Live App cutover and R03/R04/R12; design and code preparation proceed.                              |
+| O02 | Jeremy expects an event key before the event; arrival time is unknown. Continue with the existing OpenAI key and execute the documented rotation when supplied.                                                                                                                      | Jeremy / external credential acquisition; rollout owner verifies rotation.                                    | Final credential rotation/readiness only.                                                           |
+| O03 | Use `jeremycarroll/venn-search-rs`, repository ID `1076114173`. Existing README/CLAUDE.md/CI read; integration selects the small rehearsal PR and gathers installation/no-collaborator and both-mode evidence.                                                                       | Cross-repository integration and rehearsal; Jeremy approves installations if needed.                          | Live R03/R07/R12 proof, not repository selection or planning.                                       |
+| O04 | Implement the per-repository configuration above. Known Rust check names/App ID are populated; CI owner verifies emitted controller names and prepares branch-rule settings after the caller runs.                                                                                   | CI integration owns discovery/configuration; Jeremy only applies unavailable admin changes.                   | Enablement of current-head CI enforcement; no product answer required.                              |
+| O05 | Discover/reuse or create the exact daemon states under the accepted rollout, record returned IDs and monitor ID, and keep the monitor parked until human activation.                                                                                                                 | Daemon integration owns setup/discovery; Jeremy handles any concrete permission failure.                      | Live R09 activation; no pre-supplied IDs required.                                                  |
+| O06 | Jeremy confirms the existing setup rehearsal succeeded (S10). Preserve that completed baseline; collect new-version/provider/App verification during the integrated rollout, reusing evidence wherever the same criterion/ref is covered.                                            | Cadence/App integration / verification.                                                                       | New integration cutover proof, not a repeated request to approve or select the successful baseline. |
 
 100-7 should map each R/D/O ID to reviewed ownership and evidence, assign shared
 workflow/helper files to a single coherent owner, and preserve the ordering
