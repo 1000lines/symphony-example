@@ -98,3 +98,4 @@ implementation/review loop is not yet verified.
 - Moved the test from Backlog to Active; Symphony fetched it and ran Codex successfully with the temporary OpenAI key.
 - The first attempt discovered missing `symphony` and project-color `teal` repository labels. Created those labels and returned the ticket to Active. This publishing prerequisite belongs in future project setup.
 - Terraform now pins the verified bot bootstrap revision; apply changed only the existing instance tag.
+- Symphony opened rehearsal PR #1 as the implementation bot. Cadence's event router succeeded; its review runner exposed a remaining extracted `example-org/example-repo` default. Set `REPO_SLUG` from the actual GitHub repository in the runner before retrying.

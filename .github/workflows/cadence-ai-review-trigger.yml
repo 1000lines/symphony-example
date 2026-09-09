@@ -46,6 +46,7 @@ permissions:
   pull-requests: write
 
 env:
+  REPO_SLUG: ${{ github.repository }}
   SYMPHONY_BOT_USER: ${{ vars.SYMPHONY_BOT_USER || 'example-symphony-bot' }}
   CADENCE_REVIEWER: ${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }}
   SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
