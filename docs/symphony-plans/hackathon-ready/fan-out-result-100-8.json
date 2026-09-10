@@ -1,0 +1,881 @@
+{
+  "acceptedPlan": "https://github.com/1000lines/symphony-example/blob/8f4eafe3999040f67cd68e696e29bcb27eb44149/docs/symphony-plans/fan-out-plan-100-7-hackathon-ready.md",
+  "acceptedSha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+  "manifestSha256": "d4ea6d65da03faf1eea2ce708a00e23b79f9289caa9114de4434f28c66e4d624",
+  "selectedBase": {
+    "branch": "main",
+    "controllerSha": "3f40b544aee82d6e68c1bb81352d4cb3309f3d2b",
+    "rustSha": "99528c2e4da241ec2c9961d0a155357611f16a76"
+  },
+  "commonIssueCreateInput": {
+    "teamId": "2d7d1d7e-47ff-45d2-8097-19307ad5a589",
+    "projectId": "85af4ee2-fc0e-4291-bdbb-db3f6f0e83f7",
+    "stateId": "2eae70ab-a65a-4522-971c-acc249e4eb3f",
+    "labelIds": ["0c9ca8f8-6512-4df9-88f4-57e2b442cd5a"],
+    "assigneeId": "c65b9fbe-e740-47e9-b444-3172d3526ff2"
+  },
+  "initialState": "Backlog",
+  "initialLabels": ["pink"],
+  "verifiedMaturityLabelId": "d53a5a05-4f26-4f25-b3e5-1e8dba138a7d",
+  "issues": [
+    {
+      "nodeId": "CI",
+      "payloadKey": "HR-CI",
+      "id": "17b275be-1fb4-4372-b7aa-78447c547492",
+      "identifier": "100-10",
+      "url": "https://linear.app/1000lines/issue/100-10/bootstrap-ci-for-every-controller-change",
+      "title": "Bootstrap CI for every controller change",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/preparation-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "30c224d88ec0a8ad9adf4359ad08fbb81d856b0caccf8bdf385c2b5a2d07f802",
+      "readbackDescriptionSha256": "4d419e208a6fd7b5bddf7eee2cf1ee623cf775ad09ca7fc6a9435ecb6399e88e",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/ci-caller",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-10/ci-caller"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "APP",
+      "payloadKey": "HR-APP",
+      "id": "4591e800-44e8-4646-892b-0a27edfe3bc9",
+      "identifier": "100-11",
+      "url": "https://linear.app/1000lines/issue/100-11/add-renewable-app-credentials-and-explicit-actor-identities",
+      "title": "Add renewable App credentials and explicit actor identities",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/preparation-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "integration_pattern",
+          "finalization_responsibility",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "639144416baace8ae6c1148c2415e43ee397baf552ca1898f12702d0947e9fde",
+      "readbackDescriptionSha256": "52668394722c0e71f3365c8595130e37745bf8f94fe868a8873011ae11f353ed",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/app-credentials",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-11/app-credentials"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "GATE",
+      "payloadKey": "HR-GATE",
+      "id": "afc2e1c6-364d-477d-b29f-545f2a807b8a",
+      "identifier": "100-12",
+      "url": "https://linear.app/1000lines/issue/100-12/define-trusted-repository-mapping-and-fresh-acceptance-predicates",
+      "title": "Define trusted repository mapping and fresh acceptance predicates",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/preparation-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "integration_pattern",
+          "finalization_responsibility",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "c1e5db96d645b7bb13d2d621f8a98dadc3895e5fcc83290d9e07e068c547c6ac",
+      "readbackDescriptionSha256": "890136d631810c01189c1dce9bdeaa18c2f91696604808c9b3d234b9fe70499c",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/acceptance-contract",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-12/acceptance-contract"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "RUST",
+      "payloadKey": "HR-RUST",
+      "id": "c61d61f4-5962-4877-8c5a-38abd0241421",
+      "identifier": "100-13",
+      "url": "https://linear.app/1000lines/issue/100-13/make-selected-rust-ci-prove-the-explicit-pr-head",
+      "title": "Make selected Rust CI prove the explicit PR head",
+      "repository": "jeremycarroll/venn-search-rs",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/preparation-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "4ef911f1b0e6157636671d9021558de7412b3f95378588930d73a02ada2587e0",
+      "readbackDescriptionSha256": "d04bc2ccb7eeb9612f3e2892b0828c7b39b1edcc53758381467521618dbeb674",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/rust-head-ci",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-13/rust-head-ci"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "CODEX",
+      "payloadKey": "HR-CODEX",
+      "id": "597d0604-1a9a-496b-8ce3-dc259b40215c",
+      "identifier": "100-14",
+      "url": "https://linear.app/1000lines/issue/100-14/build-isolated-codex-assessment-and-trusted-check-publication",
+      "title": "Build isolated Codex assessment and trusted check publication",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/integration-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "e02c80d1d407feb1a491ce60080a75c59f6f8490a85f00241205ad599ac7805a",
+      "readbackDescriptionSha256": "8722f23986d445c992458ce49e45ac703d2d553274ab184d3bf994e09321e575",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/codex-review",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-14/codex-review"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "WAIT",
+      "payloadKey": "HR-WAIT",
+      "id": "7291416b-f130-4457-ab46-71685c5f40e5",
+      "identifier": "100-15",
+      "url": "https://linear.app/1000lines/issue/100-15/reconcile-ci-and-review-through-events-and-bounded-monitors",
+      "title": "Reconcile CI and review through events and bounded monitors",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/integration-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "bda67c10c23d5430c6f0595857d60791d1a2923bbad702db320941c3094022b5",
+      "readbackDescriptionSha256": "0f0f48f44d134a768a212a401babd0d465780fce921e50a0bd39b6b113ae18c4",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/ci-reconciliation",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-15/ci-reconciliation"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "INSTALL",
+      "payloadKey": "HR-INSTALL",
+      "id": "6016fe5b-95de-477a-b3f6-5cff7f408942",
+      "identifier": "100-16",
+      "url": "https://linear.app/1000lines/issue/100-16/prepare-and-verify-both-app-installations-and-secret-destinations",
+      "title": "Prepare and verify both App installations and secret destinations",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "2303e4a260cf92247def7f3b0d73afc7fa1119609622fbed3764c67637ce59d9",
+      "readbackDescriptionSha256": "def672004b97ce76803d6f7093acaab43ce182fe10232ef21610146e01595276",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/app-installation",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-16/app-installation"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "ROUTE",
+      "payloadKey": "HR-ROUTE",
+      "id": "c585f5f8-af2b-4b7c-9985-ed5dd42d3833",
+      "identifier": "100-17",
+      "url": "https://linear.app/1000lines/issue/100-17/wire-app-owned-codex-dispatch-and-human-only-review-handoff",
+      "title": "Wire App-owned Codex dispatch and human-only review handoff",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/integration-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "integration_pattern",
+          "finalization_responsibility",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "ea9691bf8a56278484bb21e70ee4b0d8ed8bb5b38b93972915b40549e5567d5d",
+      "readbackDescriptionSha256": "bdcd2317724321a08c382709f7559c527d602e0e5f76e7526968134a1547199e",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/review-routing",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-17/review-routing"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "GUIDE",
+      "payloadKey": "HR-GUIDE",
+      "id": "fb921918-e685-462a-98e5-e03037cd6801",
+      "identifier": "100-18",
+      "url": "https://linear.app/1000lines/issue/100-18/installable-host-profiles-and-current-acceptance-guidance",
+      "title": "Installable host profiles and current acceptance guidance",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/integration-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "c91bde22bd648a5fe2f74d91353904b2b21343d0d5c2acead818b7f285c59207",
+      "readbackDescriptionSha256": "57c8baecb21ee051a040512e01f58ee64f992dd357f6683047a93ce914332feb",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/runtime-guidance",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-18/runtime-guidance"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "DEPLOY",
+      "payloadKey": "HR-DEPLOY",
+      "id": "0252dabd-0cd4-42e7-b066-d90f13417bae",
+      "identifier": "100-19",
+      "url": "https://linear.app/1000lines/issue/100-19/deploy-and-rehearse-apps-codex-ci-and-15-minute-recovery",
+      "title": "Deploy and rehearse Apps, Codex, CI and 15-minute recovery",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "8815254f68fdd81f7ae2794c6ecc1eb66d0cc625871978744be91957ce4e7f29",
+      "readbackDescriptionSha256": "c5aa3169f85f8890e4d5ed2e1237b23290dc0ddd6e263f3a8dda510728e704b2",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/readiness-rehearsal",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-19/readiness-rehearsal"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "RETIRE",
+      "payloadKey": "HR-RETIRE",
+      "id": "9242d948-d812-4b2f-a8a4-0a636378c450",
+      "identifier": "100-20",
+      "url": "https://linear.app/1000lines/issue/100-20/retire-verified-legacy-reviewer-and-pat-dependencies",
+      "title": "Retire verified legacy reviewer and PAT dependencies",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "finalization_responsibility",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "ff6ae6436db10bbe440003244962867fe9406480dc7ad1dc79d77f61f7be2696",
+      "readbackDescriptionSha256": "1fef35119e51dd9e94fff20be71493469a973e5f4199893d8cf627466bd88f72",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/retire-legacy",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-20/retire-legacy"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "ROTATE",
+      "payloadKey": "HR-ROTATE",
+      "id": "b20c409f-aa76-45c8-9e50-239241175945",
+      "identifier": "100-21",
+      "url": "https://linear.app/1000lines/issue/100-21/rotate-to-the-event-openai-key-and-verify-reload",
+      "title": "Rotate to the event OpenAI key and verify reload",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "645d241f3898d671462db5f51c7da2058db7a3cc39be33ffb11e90e9f9074983",
+      "readbackDescriptionSha256": "99697f0a14044833b7fb1c2f0772b4e7bbd8f071001d5b00e68b5668ef68caef",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/event-key",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-21/event-key"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "FINAL",
+      "payloadKey": "HR-FINAL",
+      "id": "0a2cf09d-3a0e-46be-8cd0-587f55ec8905",
+      "identifier": "100-22",
+      "url": "https://linear.app/1000lines/issue/100-22/audit-composed-readiness-cleanup-and-human-acceptance",
+      "title": "Audit composed readiness, cleanup and human acceptance",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "25c79a39815a3a5ed8fddfece1931f03141d26648eef84106a4729b649b85fdc",
+      "readbackDescriptionSha256": "355d506f0bc7a177aabe4bea54217b10c4580d315d2cb17b296bd62541f34218",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/final-readiness",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-22/final-readiness"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "MON_CONTROLLER",
+      "payloadKey": "HR-MON-CONTROLLER",
+      "id": "5c688550-22dd-4b7d-889c-5671a3ab6593",
+      "identifier": "100-23",
+      "url": "https://linear.app/1000lines/issue/100-23/monitor-ci-and-review-for-1000linessymphony-example",
+      "title": "Monitor CI and review for 1000lines/symphony-example",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "8eba8f854fe1ef99c063da79d9106b7c8833cc4aa7003bd10184d0bc2b038150",
+      "readbackDescriptionSha256": "427cb96ffa794e02bf29ea7f5d21e5444dda86ccb5227eb7f0af92fbb169fa92",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/mon-controller",
+        "baseBranch": "main",
+        "birth": "never",
+        "resolved": "symphony/hackathon-ready/100-23/mon-controller"
+      },
+      "pr": {
+        "create": "never",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    },
+    {
+      "nodeId": "MON_RUST",
+      "payloadKey": "HR-MON-RUST",
+      "id": "de09ee2a-f05a-4ef9-bab3-33f3a9b115bc",
+      "identifier": "100-24",
+      "url": "https://linear.app/1000lines/issue/100-24/monitor-ci-and-review-for-jeremycarrollvenn-search-rs",
+      "title": "Monitor CI and review for jeremycarroll/venn-search-rs",
+      "repository": "1000lines/symphony-example",
+      "source": {
+        "path": "docs/symphony-plans/hackathon-ready/delivery-items.md",
+        "sha": "8f4eafe3999040f67cd68e696e29bcb27eb44149",
+        "fields": [
+          "id",
+          "title",
+          "repository",
+          "summary",
+          "creates",
+          "edits",
+          "owned_files",
+          "owned_external_resources",
+          "source_notes",
+          "exclusions",
+          "acceptance_checks",
+          "validation_commands",
+          "delivery_notes",
+          "dependencies",
+          "difficulty"
+        ]
+      },
+      "descriptionSha256": "7e0289b094e313d2ee061d72575c613024da9077b04eca0c923ca0c33d8e858c",
+      "readbackDescriptionSha256": "98a789e4d4a3484b8b899ce60a634fbf086c635d84805592466b235ef37b1128",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/mon-rust",
+        "baseBranch": "main",
+        "birth": "never",
+        "resolved": "symphony/hackathon-ready/100-24/mon-rust"
+      },
+      "pr": {
+        "create": "never",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    }
+  ],
+  "additionalBranches": [
+    {
+      "issue": "100-19",
+      "repository": "jeremycarroll/venn-search-rs",
+      "branch": {
+        "template": "symphony/hackathon-ready/${issue}/readiness-rehearsal",
+        "baseBranch": "main",
+        "birth": "on_dispatch",
+        "resolved": "symphony/hackathon-ready/100-19/readiness-rehearsal"
+      },
+      "pr": {
+        "create": "on_branch_birth",
+        "baseBranch": "main",
+        "draft": true,
+        "githubLabels": ["pink", "symphony"]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "fc189662-0c08-4d91-99eb-fceb5212ef35",
+      "blockerKey": "HR-CI",
+      "blockedKey": "HR-APP",
+      "issueRelationCreateInput": {
+        "issueId": "17b275be-1fb4-4372-b7aa-78447c547492",
+        "relatedIssueId": "4591e800-44e8-4646-892b-0a27edfe3bc9",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "d608480c-5ae1-4483-b54f-a6342e1dc0f8",
+      "blockerKey": "HR-CI",
+      "blockedKey": "HR-GATE",
+      "issueRelationCreateInput": {
+        "issueId": "17b275be-1fb4-4372-b7aa-78447c547492",
+        "relatedIssueId": "afc2e1c6-364d-477d-b29f-545f2a807b8a",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "b461f068-3b0e-417a-962c-a3ed28ad0218",
+      "blockerKey": "HR-APP",
+      "blockedKey": "HR-CODEX",
+      "issueRelationCreateInput": {
+        "issueId": "4591e800-44e8-4646-892b-0a27edfe3bc9",
+        "relatedIssueId": "597d0604-1a9a-496b-8ce3-dc259b40215c",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "03e721fb-db59-4d92-a3e8-055c0194513e",
+      "blockerKey": "HR-GATE",
+      "blockedKey": "HR-CODEX",
+      "issueRelationCreateInput": {
+        "issueId": "afc2e1c6-364d-477d-b29f-545f2a807b8a",
+        "relatedIssueId": "597d0604-1a9a-496b-8ce3-dc259b40215c",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "aba8b79c-cccb-418f-9c5b-6a5eeb3c306d",
+      "blockerKey": "HR-APP",
+      "blockedKey": "HR-WAIT",
+      "issueRelationCreateInput": {
+        "issueId": "4591e800-44e8-4646-892b-0a27edfe3bc9",
+        "relatedIssueId": "7291416b-f130-4457-ab46-71685c5f40e5",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "fd8aa040-44a6-445c-9a5f-fd7df4af775b",
+      "blockerKey": "HR-GATE",
+      "blockedKey": "HR-WAIT",
+      "issueRelationCreateInput": {
+        "issueId": "afc2e1c6-364d-477d-b29f-545f2a807b8a",
+        "relatedIssueId": "7291416b-f130-4457-ab46-71685c5f40e5",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "c4f3cbb9-dd4d-48bf-9339-ef75b1e1eb42",
+      "blockerKey": "HR-APP",
+      "blockedKey": "HR-INSTALL",
+      "issueRelationCreateInput": {
+        "issueId": "4591e800-44e8-4646-892b-0a27edfe3bc9",
+        "relatedIssueId": "6016fe5b-95de-477a-b3f6-5cff7f408942",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "504ba69d-0dda-43d8-8a7c-7318fdfdddb0",
+      "blockerKey": "HR-CODEX",
+      "blockedKey": "HR-ROUTE",
+      "issueRelationCreateInput": {
+        "issueId": "597d0604-1a9a-496b-8ce3-dc259b40215c",
+        "relatedIssueId": "c585f5f8-af2b-4b7c-9985-ed5dd42d3833",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "73b5921d-6c5a-4c5f-8227-46c2c0c63c4f",
+      "blockerKey": "HR-WAIT",
+      "blockedKey": "HR-ROUTE",
+      "issueRelationCreateInput": {
+        "issueId": "7291416b-f130-4457-ab46-71685c5f40e5",
+        "relatedIssueId": "c585f5f8-af2b-4b7c-9985-ed5dd42d3833",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "2f6b067d-25a5-49fe-8872-cba13d582cc0",
+      "blockerKey": "HR-ROUTE",
+      "blockedKey": "HR-GUIDE",
+      "issueRelationCreateInput": {
+        "issueId": "c585f5f8-af2b-4b7c-9985-ed5dd42d3833",
+        "relatedIssueId": "fb921918-e685-462a-98e5-e03037cd6801",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "9d9fda21-6364-4b76-bb0a-4eae19178289",
+      "blockerKey": "HR-GUIDE",
+      "blockedKey": "HR-DEPLOY",
+      "issueRelationCreateInput": {
+        "issueId": "fb921918-e685-462a-98e5-e03037cd6801",
+        "relatedIssueId": "0252dabd-0cd4-42e7-b066-d90f13417bae",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "11d642e8-6052-4127-8171-7fb6b4cc942b",
+      "blockerKey": "HR-INSTALL",
+      "blockedKey": "HR-DEPLOY",
+      "issueRelationCreateInput": {
+        "issueId": "6016fe5b-95de-477a-b3f6-5cff7f408942",
+        "relatedIssueId": "0252dabd-0cd4-42e7-b066-d90f13417bae",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "1318060e-22d9-4ca8-9f7b-61031ba16c47",
+      "blockerKey": "HR-RUST",
+      "blockedKey": "HR-DEPLOY",
+      "issueRelationCreateInput": {
+        "issueId": "c61d61f4-5962-4877-8c5a-38abd0241421",
+        "relatedIssueId": "0252dabd-0cd4-42e7-b066-d90f13417bae",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "c9f2b3fc-4c15-4335-8853-54dcde8402e7",
+      "blockerKey": "HR-DEPLOY",
+      "blockedKey": "HR-RETIRE",
+      "issueRelationCreateInput": {
+        "issueId": "0252dabd-0cd4-42e7-b066-d90f13417bae",
+        "relatedIssueId": "9242d948-d812-4b2f-a8a4-0a636378c450",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "f24f89e3-147c-424e-b536-2634e9d05ef0",
+      "blockerKey": "HR-ROTATE",
+      "blockedKey": "HR-FINAL",
+      "issueRelationCreateInput": {
+        "issueId": "b20c409f-aa76-45c8-9e50-239241175945",
+        "relatedIssueId": "0a2cf09d-3a0e-46be-8cd0-587f55ec8905",
+        "type": "blocks"
+      }
+    },
+    {
+      "id": "448f75ce-f9f2-41f5-b72b-731eda4cc674",
+      "blockerKey": "HR-RETIRE",
+      "blockedKey": "HR-ROTATE",
+      "issueRelationCreateInput": {
+        "issueId": "9242d948-d812-4b2f-a8a4-0a636378c450",
+        "relatedIssueId": "b20c409f-aa76-45c8-9e50-239241175945",
+        "type": "blocks"
+      }
+    }
+  ],
+  "sampleDescription": {
+    "payloadKey": "HR-APP",
+    "file": "fan-out-example-100-11.md"
+  },
+  "readback": {
+    "result": "pass",
+    "issues": 15,
+    "relations": 16,
+    "projectIssueCount": 18,
+    "normalization": "Linear Markdown layout, hyperlink display and autolink formatting normalized with repository Prettier; direct relation display identifiers/URLs checked separately.",
+    "allPagesComplete": true
+  }
+}
