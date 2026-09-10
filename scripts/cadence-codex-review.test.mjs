@@ -5,7 +5,8 @@ import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { acquireReviewEvidence, prepareCodexAssessment, parseAssessment, publishAssessment,
-  createPublicationClients, createGitHubEvidenceReaders, CODEX_PINS, CORE_AXES, EVIDENCE_LIMITS } from "./cadence-codex-review.mjs";
+  createPublicationClients, createReviewCommentClient, createGitHubEvidenceReaders, renderReviewComment,
+  CODEX_PINS, CORE_AXES, EVIDENCE_LIMITS } from "./cadence-codex-review.mjs";
 import { queueReviewGeneration, reviewExternalId, reviewDigest, evaluateAi } from "./symphony/review-contract.mjs";
 import { renderCadenceWorkpad, parseCadenceWorkpad } from "./cadence-linear-workpad.mjs";
 import { bindRepository, createGitHubAppClient } from "./symphony/github-app-auth.mjs";
@@ -53,7 +54,8 @@ function fixture() {
     request: { repositoryId: 100, prNumber: 4, headSha: head },
     pullRequest: { number: 4, state: "open", title: "[100-14]: Review", body: "Assess R01", head: { sha: head, ref: "task" },
       base: { sha: base, ref: "main", repo: { id: 100 } }, labels: [{ name: "symphony" }, { name: "pink" }] },
-    issue: { id: "issue", identifier: "100-14", description: "R01: Reject bad evidence", team: { id: "team" }, project: { id: "project" } },
+    issue: { id: "issue", identifier: "100-14", description: "R01: Reject bad evidence", team: { id: "team" },
+      project: { id: "project", description: "Project review scope", content: "R01 applies across the related plan nodes." } },
     associations: ["issue"], configuration: { status: "configured", repository, revision: base, baseBranch: "main", config: {
       schemaVersion: "symphony-repository/v1", workingDirectory: ".", instructions: ["SYMPHONY.md"], commands: { test: [["npm", "test"]] },
       ci: { requiredChecks: [{ name: "CI Required", appId: 15368, workflow: ".github/workflows/ci.yml" }] } } },
@@ -71,17 +73,17 @@ function fixture() {
   const context = { resolution, ci: { complete: true, checks: [] }, requiredSources: [{ id: "design" }],
     workpad: { commentId: "workpad", issueId: "issue" }, ancestry: "ahead" };
   const reads = [], documents = [{ id: "design", available: true, content: "R01 must reject bad evidence." }];
-  const feedback = { reviews: [human("review")], comments: [human("conversation")],
+  const feedback = { commits: [], reviews: [human("review")], comments: [human("conversation")],
     reviewThreads: [{ id: "thread", isResolved: true, isOutdated: true, comments: page([human("reply")]) }] };
   const options = { readContext: async () => structuredClone(context),
     githubQuery: async (query, variables) => {
       reads.push({ query, variables });
-      const connection = ["reviews", "reviewThreads", "comments"].find(name => query.includes(`${name}(first`));
+      const connection = ["reviews", "reviewThreads", "comments", "commits"].find(name => query.includes(`${name}(first`));
       return { data: { repository: { pullRequest: { [connection]: page(feedback[connection]) } } } };
     }, linearQuery: async () => ({ data: { issue: { comments: page([{ ...human("linear"), author: undefined, user: { name: "Jeremy" } }]) } } }),
     readChanges: async (target, decision, previous) => ({ complete: true, headSha: target.headSha, baseSha: target.baseSha,
       mode: decision === "incremental" ? "incremental" : "full", fromSha: previous?.headSha || target.baseSha,
-      files: [{ path: "review.md", before: "old", after: "new", patch: "-old\n+new" }] }),
+      files: [{ path: "review.md", before: "old", after: "new", patch: "-old\n+new" }], humanCommits: [] }),
     readDocument: async source => structuredClone(documents.find(d => d.id === source.id)) };
   return { context, options, reads, feedback, documents };
 }
@@ -110,8 +112,10 @@ async function publication() {
   const calls = [], output = assessment(queued);
   const options = { snapshot: queued, expected, outcome: { status: "completed", output: JSON.stringify(output) },
     observe: async () => { calls.push("observe"); return acquireReviewEvidence(f.options); },
-    readCheck: async () => { calls.push("read-check"); return structuredClone(check); },
+    readCheck: async () => { calls.push("read-check"); return structuredClone({ ...check,
+      ...(check.output ? { output: { ...check.output, text: null, annotations_count: 0, annotations_url: "https://api.github.com/fixture" } } : {}) }); },
     writeCheck: async (id, body) => { assert.equal(id, 90); calls.push("write-check"); Object.assign(check, body); },
+    writeComment: async body => { calls.push("write-comment"); return { id: 91, body }; },
     persist: async (live, next) => {
       assert.equal(live.target.issueId, "issue"); calls.push("persist");
       f.context.workpad.reviewContract = structuredClone(next); return structuredClone(f.context.workpad);
@@ -127,6 +131,7 @@ test("acquisition reads all feedback surfaces and keeps resolved/outdated replie
   assert.equal(acquired.evidence.decision, "first-review");
   assert.deepEqual(acquired.evidence.requiredAxes, [...CORE_AXES, "standing-docs"]);
   assert.equal(acquired.evidenceDigest, reviewDigest(acquired.evidence));
+  assert.equal(acquired.evidence.project.content, f.context.resolution.issue.project.content);
 });
 
 test("paginated human reviews and thread replies are included", async () => {
@@ -170,6 +175,7 @@ test("acquisition rejects caller authority, incomplete changes and exceeded budg
     f => { f.context.resolution.request.installationId = 12; },
     f => { f.options.readChanges = async () => ({ complete: false }); },
     f => { f.context.requiredSources = []; },
+    f => { delete f.context.resolution.issue.project.content; },
     f => { f.options.limits = { ...EVIDENCE_LIMITS, calls: 2 }; },
     f => { f.options.limits = { ...EVIDENCE_LIMITS, bytes: 200 }; },
     f => { f.options.limits = { ...EVIDENCE_LIMITS, bytes: 3_000_000 }; },
@@ -253,6 +259,7 @@ test("strict schema rejects unknown keys, malformed/missing output, stale identi
     o => { o.findings.push(finding("unknown")); }, o => { o.humanFeedback.pop(); },
     o => { o.requirements[0].owners = []; }, o => { o.requirements[0].coverage = "partial"; },
     o => { o.requirements[0].evidence = []; }, o => { o.requirements[0].ignored = true; }, o => { o.sourcesComplete = false; },
+    o => { o.summary = "Audit heading\n- [ ] Decide something"; }, o => { o.summary = "x".repeat(601); },
   ]) { const output = assessment(acquired); change(output); assert.throws(() => parseAssessment(JSON.stringify(output), acquired), change.toString()); }
 });
 
@@ -261,7 +268,9 @@ test("publisher persists before check write and GATE accepts the resulting exact
   assert.equal(f.queued.evidence.decision, "first-review", "a queue is not a completed review");
   assert.equal(result.conclusion, "success"); assert.equal(result.published, true);
   assert.ok(f.calls.indexOf("persist") < f.calls.indexOf("write-check"));
-  assert.equal(f.calls.filter(c => c === "observe").length, 2);
+  assert.ok(f.calls.indexOf("persist") < f.calls.indexOf("write-comment"));
+  assert.ok(f.calls.indexOf("write-comment") < f.calls.indexOf("write-check"));
+  assert.equal(f.calls.filter(c => c === "observe").length, 3);
   assert.equal(evaluateAi({ target: f.queued.target, pullRequest: f.context.resolution.pullRequest,
     generation: f.queued.generation, workpad: f.context.workpad, checks: [f.check], complete: true }).passes, true);
 });
@@ -283,6 +292,9 @@ test("CI progression does not invalidate a generation; tampered evidence still f
   const tampered = await publication();
   tampered.publicationOptions.snapshot.evidence.documents[0].content = "Tampered";
   assert.equal((await publishAssessment(tampered.publicationOptions)).conclusion, "failure");
+  const changedProject = await publication();
+  changedProject.context.resolution.issue.project.content = "New project intent";
+  assert.equal((await publishAssessment(changedProject.publicationOptions)).conclusion, "failure");
 });
 
 test("same-head configuration revisions force full review without resetting the findings pass cap", async () => {
@@ -336,17 +348,17 @@ test("denied persistence fails visibly and never publishes success", async () =>
 });
 
 test("mandatory dismissals need recorded human evidence; resolved fixes retain their classification", async () => {
-  for (const className of ["blocker", "human-needed", "suggestion"]) {
+  for (const [className, mandatory] of [["blocker", false], ["human-needed", false], ["suggestion", true]]) {
     const f = fixture(), prior = await acquireReviewEvidence(f.options);
     f.context.workpad.reviewContract = queueReviewGeneration(null, prior.generation, { checkId: 90 });
-    f.context.workpad.reviewContract.ledger.findings = [finding(className, { mandatory: true })];
+    f.context.workpad.reviewContract.ledger.findings = [finding(className, { mandatory })];
     const acquired = await acquireReviewEvidence(f.options), output = assessment(acquired);
-    output.findings = [finding(className, { mandatory: true, status: "dismissed" })];
+    output.findings = [finding(className, { mandatory, status: "dismissed" })];
     assert.throws(() => parseAssessment(JSON.stringify(output), acquired), /Mandatory dismissal needs human evidence/);
     const feedback = acquired.generation.feedback.records[0];
     output.findings[0].evidence.push(`${feedback.source}:${feedback.id}`);
     assert.equal(parseAssessment(JSON.stringify(output), acquired).findings[0].status, "dismissed");
-    output.findings = [finding(className, { mandatory: true, status: "resolved" })];
+    output.findings = [finding(className, { mandatory, status: "resolved" })];
     assert.equal(parseAssessment(JSON.stringify(output), acquired).findings[0].status, "resolved");
   }
 });
@@ -427,6 +439,7 @@ test("publication uses the landed workpad writer with durable transition/readbac
     const routerFields = { triggerSource: "pull_request.synchronize", pendingTriggerState: "review-queued",
       disposition: "pending", lastReviewedSha: base, coordination: { routingKey: "preserve-me" } };
     Object.assign(f.context.workpad, routerFields);
+    f.context.workpad.reviewUpdate = { summary: "Do not append this stale summary" };
     let body = renderCadenceWorkpad({ ...routerFields, reviewContract: f.state });
     const linearFetch = async (_url, init) => {
       const { query, variables } = JSON.parse(init.body);
@@ -452,8 +465,206 @@ test("publication uses the landed workpad writer with durable transition/readbac
     if (!denied) {
       const persisted = parseCadenceWorkpad(body);
       assert.equal(persisted.reviewContract.output.evidenceDigest, f.queued.evidenceDigest);
+      assert.equal(persisted.summary, f.output.summary);
       assert.equal(persisted.reviewContractHistory[0].phase, "queued");
       for (const [key, value] of Object.entries(routerFields)) assert.deepEqual(persisted[key], value, key);
     }
+  }
+});
+
+test("real App acquisition accepts comparisons, reuses immutable trees and includes human commit changes", async t => {
+  const f = fixture(), app = await appFixture(t, { contents: "read", pull_requests: "read" });
+  const names = Array.from({ length: 28 }, (_, i) => `file-${i}.js`);
+  const blobSha = (i, after) => (i + (after ? 100 : 1)).toString(16).padStart(40, "0");
+  const treeBefore = "d".repeat(40), treeAfter = "e".repeat(40), doc = "f".repeat(40);
+  app.api = (path) => {
+    let value;
+    if (path.includes("/compare/")) value = { merge_base_commit: { sha: base },
+      files: names.map(name => ({ filename: `src/${name}`, status: "modified" })) };
+    else if (path.endsWith(`/trees/${base}`) || path.endsWith(`/trees/${head}`)) value = { truncated: false, tree: [
+      { path: "src", type: "tree", mode: "040000", sha: path.endsWith(head) ? treeAfter : treeBefore },
+      { path: "design.md", type: "blob", mode: "100644", sha: doc, size: 8 },
+    ] };
+    else if (path.includes("/trees/")) value = { truncated: false, tree: names.map((name, i) => ({
+      path: name, type: "blob", mode: "100644", size: 20, sha: blobSha(i, path.endsWith(treeAfter)),
+    })) };
+    else {
+      const sha = path.split("/").at(-1);
+      value = { sha, encoding: "base64", content: Buffer.from(`source ${sha}`).toString("base64") };
+    }
+    return new Response(JSON.stringify(value));
+  };
+  const readers = createGitHubEvidenceReaders({ repository: "owner/repo", request: app.request });
+  Object.assign(f.options, readers);
+  f.context.requiredSources = [{ id: "design", repository: "owner/repo", ref: base, path: "design.md" }];
+  const prior = await acquireReviewEvidence(f.options);
+  const capped = { ...queueReviewGeneration(null, prior.generation, { checkId: 90 }), passes: 3 };
+  f.feedback.commits.push({ commit: { oid: head, message: "Keep the human's corrected behavior", committedDate: "2026-09-10T01:00:00Z",
+    url: `https://github.com/owner/repo/commit/${head}`, author: { user: human("author").author }, parents: { nodes: [{ oid: base }] } } });
+  const start = app.paths.length, acquired = await acquireReviewEvidence(f.options);
+  const paths = app.paths.slice(start);
+  assert.equal(acquired.evidence.changes.files.length, 28);
+  assert.equal(paths.filter(path => path.includes("/trees/")).length, 4);
+  assert.equal(paths.filter(path => path.includes("/compare/")).length, 1);
+  assert.equal(acquired.evidence.changes.humanCommits[0].files.length, 28);
+  assert.equal(acquired.evidence.feedback.commits.nodes[0].body, "Keep the human's corrected behavior");
+  assert.notEqual(acquired.generation.resetKey, prior.generation.resetKey);
+  assert.equal(queueReviewGeneration(capped, acquired.generation, { checkId: 91 }).passes, 1);
+  const output = assessment(acquired);
+  assert.equal(parseAssessment(JSON.stringify(output), acquired).humanFeedback.at(-1)?.status, "addressed");
+  output.humanFeedback = output.humanFeedback.filter(item => item.source !== "commits");
+  assert.throws(() => parseAssessment(JSON.stringify(output), acquired), /schema or generation/);
+  const count = app.paths.length;
+  for (const path of ["/../other", "/git/../other", "/git/..", "/%2e%2e/other", "/git/%2E./other", "/git\\other", "/git/%5cother"]) {
+    await assert.rejects(app.request(path), /invalid repository API path/);
+  }
+  assert.equal(app.paths.length, count, "traversal must fail before network access");
+});
+
+test("commit feedback paginates, excludes bots, and cannot accept unavailable commit history", async () => {
+  const f = fixture(), query = f.options.githubQuery, changes = f.options.readChanges;
+  const commit = (id, login, type = "User") => ({ commit: { oid: id, message: "Human intent", committedDate: "2026-09-10T01:00:00Z",
+    author: { user: { login, __typename: type } }, parents: { nodes: [{ oid: base }] } } });
+  f.options.githubQuery = async (q, vars) => q.includes("commits(first") ? { data: { repository: { pullRequest: {
+    commits: vars.after ? page([commit(head, "jeremycarroll")]) : { ...page([commit(base, "cadence[bot]", "Bot")]),
+      pageInfo: { hasNextPage: true, endCursor: "next" } },
+  } } } } : query(q, vars);
+  f.options.readChanges = async (...args) => ({ ...await changes(...args), humanCommits: [{ sha: head, parentSha: base,
+    files: [{ path: "review.md", before: "old", after: "human correction", patch: "" }] }] });
+  const acquired = await acquireReviewEvidence(f.options);
+  assert.deepEqual(acquired.generation.feedback.records.filter(r => r.source === "commits").map(r => r.id), [head]);
+  f.options.readChanges = changes;
+  await assert.rejects(acquireReviewEvidence(f.options), /Incomplete human commit/);
+  f.options.githubQuery = async (q, vars) => { if (q.includes("commits(first")) throw new Error("denied"); return query(q, vars); };
+  const incomplete = await acquireReviewEvidence(f.options);
+  assert.equal(incomplete.evidence.decision, "full-review-paged-out");
+  assert.throws(() => parseAssessment(JSON.stringify(assessment(incomplete)), incomplete), /Incomplete feedback/);
+});
+
+test("publication produces a brief human comment while keeping full detail in Linear", async () => {
+  const f = await publication();
+  f.output.findings = Array.from({ length: 6 }, (_, i) => finding(i === 0 ? "human-needed" : "suggestion", {
+    id: `AR-100-14-scope-F${i + 1}`, action: i === 0 ? "Keep the related interface fix; Jeremy can confirm this scope." : "Consider a follow-up.",
+    evidence: ["Detailed evidence belongs only in Linear"],
+  }));
+  f.publicationOptions.outcome.output = JSON.stringify(f.output);
+  let body;
+  f.publicationOptions.writeComment = async text => { body = text; return { id: 91, body }; };
+  assert.equal((await publishAssessment(f.publicationOptions)).conclusion, "action_required");
+  assert.match(body, /Human confirmation needed/);
+  assert.match(body, /\[Reviewing\]\(https:\/\/github.com\/owner\/repo\/pull\/4\/changes\/a{40}\)/);
+  assert.equal(body.split("\n").filter(line => line.startsWith("- ")).length, 3);
+  assert.match(body, /AR-100-14-scope-F1 — Keep the related interface fix/);
+  assert.match(body, /Nonblocking:/);
+  for (const privateDetail of ["Detailed evidence", "evidenceDigest", "generationId", "schema", "xhigh"]) assert.ok(!body.includes(privateDetail));
+  assert.equal(f.context.workpad.reviewContract.output.findings.length, 6);
+  assert.ok(body.length < 1800);
+  assert.equal(f.check.output.summary, body);
+});
+
+test("comment failure, changed head during comment write, and wrong check output cannot accept", async () => {
+  for (const writeComment of [undefined, async () => { throw new Error("denied"); }, async () => ({ id: 91, body: "lost write" })]) {
+    const f = await publication(); f.publicationOptions.writeComment = writeComment;
+    const result = await publishAssessment(f.publicationOptions);
+    assert.equal(result.conclusion, "failure"); assert.equal(result.reason, "comment-publication-failure");
+    assert.equal(f.check.conclusion, "failure");
+  }
+  const stale = await publication();
+  stale.publicationOptions.writeComment = async body => {
+    stale.context.resolution.pullRequest.head.sha = base; return { id: 91, body };
+  };
+  assert.equal((await publishAssessment(stale.publicationOptions)).published, false);
+  assert.ok(!stale.calls.includes("write-check"));
+  const wrong = await publication(), write = wrong.publicationOptions.writeCheck;
+  wrong.publicationOptions.writeCheck = async (...args) => { await write(...args); wrong.check.output = { ...wrong.check.output, summary: "Wrong summary" }; };
+  assert.equal((await publishAssessment(wrong.publicationOptions)).published, false);
+});
+
+test("App comment client creates once, reuses its comment, and preserves human comments", async t => {
+  const f = await publication(), app = await appFixture(t, { pull_requests: "write" });
+  const comments = [{ id: 1, body: "<!-- cadence-review-summary -->\nHuman copy", user: { login: "jeremycarroll", type: "User" } }];
+  const writes = [];
+  app.api = (path, init) => {
+    if (init.method === "POST") {
+      writes.push("POST"); comments.push({ id: 2, ...JSON.parse(init.body), user: { type: "Bot", login: "cadence[bot]" } });
+      return new Response(JSON.stringify(comments[1]));
+    }
+    if (init.method === "PATCH") {
+      assert.equal(path, "/repos/owner/repo/issues/comments/2"); writes.push("PATCH"); Object.assign(comments[1], JSON.parse(init.body));
+      return new Response(JSON.stringify(comments[1]));
+    }
+    assert.equal(path, "/repos/owner/repo/issues/4/comments"); return new Response(JSON.stringify(comments));
+  };
+  const client = createReviewCommentClient({ target: f.queued.target, appOptions: app.appOptions });
+  const first = renderReviewComment(f.queued, { output: f.output, ledger: f.output }, "success");
+  assert.equal((await client(first)).id, 2);
+  assert.equal((await client(first)).id, 2);
+  const updated = first.replace("Looks good", "Changes needed");
+  assert.equal((await client(updated)).body, updated);
+  assert.deepEqual(writes, ["POST", "PATCH"]);
+  assert.equal(comments[0].body, "<!-- cadence-review-summary -->\nHuman copy");
+  comments.push({ ...comments[1], id: 3 });
+  await assert.rejects(client(first), /Duplicate/);
+  assert.deepEqual(writes, ["POST", "PATCH"]);
+  assert.throws(() => createReviewCommentClient({ target: f.queued.target, appOptions: { config: {
+    ...app.appOptions.config, permissions: { pull_requests: "write", contents: "write" },
+  } } }), /scope/);
+});
+
+test("App comment client verifies writes and discovers comments past the first page", async t => {
+  const f = await publication(), app = await appFixture(t, { pull_requests: "write" });
+  const body = renderReviewComment(f.queued, { output: f.output, ledger: f.output }, "success");
+  const existing = { id: 101, body, user: { type: "Bot", login: "cadence[bot]" } };
+  let gets = 0;
+  app.api = (path, init) => {
+    assert.equal(init.method, "GET"); gets++;
+    return new Response(JSON.stringify(gets === 1 ? Array.from({ length: 100 }, (_, i) => ({ id: i + 1, body: "Human comment" })) : [existing]));
+  };
+  const client = createReviewCommentClient({ target: f.queued.target, appOptions: app.appOptions });
+  assert.equal((await client(body)).id, 101); assert.equal(gets, 2);
+  app.api = (_path, init) => new Response(JSON.stringify(init.method === "POST" ? { ...existing, body } : []));
+  await assert.rejects(client(body), /readback/);
+  app.api = () => new Response(null, { status: 403 });
+  await assert.rejects(client(body), /discovery/);
+});
+
+test("check write retry compares actual output and every completion field", async t => {
+  const f = await publication(), app = await appFixture(t, { checks: "write" });
+  const clients = createPublicationClients({ target: f.queued.target, appOptions: app.appOptions });
+  const desired = { status: "completed", conclusion: "success", external_id: "generation",
+    output: { title: "Looks good", summary: "Current assessment" } };
+  for (const field of ["status", "conclusion", "external_id", "output", "matching"]) {
+    let writes = 0, observed;
+    app.api = (_path, init) => {
+      if (init.method === "PATCH") {
+        writes++;
+        observed = { ...structuredClone(desired), output: { ...desired.output, text: null, annotations_count: 0 } };
+        if (writes === 1 && field !== "matching") observed[field] = field === "output" ? { title: desired.output.title, summary: "stale" } : "stale";
+        return new Response(JSON.stringify(observed), { status: writes === 1 ? 401 : 200 });
+      }
+      return new Response(JSON.stringify(observed));
+    };
+    await clients.writeCheck(90, desired);
+    assert.equal(writes, field === "matching" ? 1 : 2, field);
+  }
+});
+
+test("expired comment credentials use readback before retrying creation", async t => {
+  const f = await publication(), app = await appFixture(t, { pull_requests: "write" });
+  const body = renderReviewComment(f.queued, { output: f.output, ledger: f.output }, "success");
+  const client = createReviewCommentClient({ target: f.queued.target, appOptions: app.appOptions });
+  for (const applied of [true, false]) {
+    let writes = 0, comments = [];
+    app.api = (_path, init) => {
+      if (init.method === "POST") {
+        writes++;
+        if (applied || writes > 1) comments = [{ id: 20, body, user: { type: "Bot", login: "cadence[bot]" } }];
+        return new Response(JSON.stringify(comments[0] || {}), { status: writes === 1 ? 401 : 201 });
+      }
+      return new Response(JSON.stringify(comments));
+    };
+    assert.equal((await client(body)).id, 20);
+    assert.equal(writes, applied ? 1 : 2);
+    assert.equal(comments.length, 1);
   }
 });

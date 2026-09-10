@@ -5,7 +5,7 @@ import { CADENCE_APP_ID, CADENCE_CHECK_NAME, reviewDigest, resolveTarget,
   completeReviewGeneration, reviewExternalId, validateReviewOutput } from "./symphony/review-contract.mjs";
 import { fetchReviewFeedback, classifyCheckReviewState } from "./fetch-pr-review-state.mjs";
 import { createGitHubAppClient } from "./symphony/github-app-auth.mjs";
-import { upsertCadenceWorkpad, parseCadenceWorkpad } from "./cadence-linear-workpad.mjs";
+import { upsertCadenceWorkpad, parseCadenceWorkpad, normalizeCadenceWorkpad } from "./cadence-linear-workpad.mjs";
 
 export const CODEX_PINS = Object.freeze({ action: "86365089eb2b84e0a8fb0717b304f8bdcb13b20e",
   cli: "0.153.4", model: "gpt-6-astra", effort: "xhigh", sandbox: "read-only",
@@ -23,7 +23,7 @@ const itemKey = item => `${item.source || ""}:${item.id}`;
 // provenance and required source refs; PR artifacts never supply these callbacks.
 // Each callback receives an abort signal. No repository command is executed.
 export async function acquireReviewEvidence({ readContext, githubQuery, linearQuery, readChanges, readDocument,
-  limits = EVIDENCE_LIMITS }) {
+  isHuman, limits = EVIDENCE_LIMITS }) {
   for (const key of Object.keys(EVIDENCE_LIMITS)) assert(Number.isSafeInteger(limits[key]) &&
     limits[key] > 0 && limits[key] <= EVIDENCE_LIMITS[key], "Invalid evidence limit");
   let bytes = 0, calls = 0;
@@ -45,6 +45,8 @@ export async function acquireReviewEvidence({ readContext, githubQuery, linearQu
   const target = resolveTarget(context.resolution);
   assert(typeof context.resolution.issue.identifier === "string" && typeof context.resolution.issue.description === "string" &&
     typeof context.resolution.pullRequest.body === "string", "Missing issue/PR intent");
+  const project = context.resolution.issue.project;
+  assert(typeof project.description === "string" && typeof project.content === "string", "Missing project intent");
   const [owner, repo] = target.full_name.split("/");
   const feedback = await fetchReviewFeedback({ owner, repo, number: target.prNumber,
     issueIdentifier: context.resolution.issue.identifier,
@@ -58,12 +60,19 @@ export async function acquireReviewEvidence({ readContext, githubQuery, linearQu
     .filter(state => state?.phase === "completed").at(-1);
   const review = classifyCheckReviewState({ target, pullRequest: context.resolution.pullRequest, feedback,
     workpad: { ...context.workpad, reviewContract: priorAssessment }, checks: context.ci?.checks, complete: context.ci?.complete === true,
-    ancestry: context.ancestry, manualRetry: context.manualRetry });
-  const changes = await read(readChanges, target, review.decision, priorAssessment?.generation);
+    ancestry: context.ancestry, manualRetry: context.manualRetry, isHuman });
+  const humanCommits = feedback.commits.nodes.filter(node => review.generation.feedback.records.some(record =>
+    record.source === "commits" && record.id === node.id));
+  const changes = await read(options => readChanges(target, review.decision, priorAssessment?.generation,
+    { ...options, humanCommits }));
   assert(changes?.complete === true && changes.headSha === target.headSha && changes.baseSha === target.baseSha &&
     Array.isArray(changes.files) && changes.files.length > 0 && changes.files.length <= limits.files &&
     changes.files.every(file => ["path", "before", "after", "patch"].every(k => typeof file[k] === "string")) &&
     changes.mode === (review.decision === "incremental" ? "incremental" : "full"), "Incomplete or wrong change evidence");
+  assert(Array.isArray(changes.humanCommits) && humanCommits.every(commit => changes.humanCommits.some(change =>
+    change.sha === commit.id && change.parentSha === commit.parentSha && Array.isArray(change.files) &&
+    change.files.every(file => ["path", "before", "after", "patch"].every(key => typeof file[key] === "string")))),
+  "Incomplete human commit changes");
   if (changes.mode === "incremental") assert(changes.fromSha === review.lastReview.oid, "Wrong incremental base");
   assert(Array.isArray(context.requiredSources) && context.requiredSources.length > 0 &&
     context.requiredSources.every(s => typeof s.id === "string" && s.id.length > 0) &&
@@ -84,6 +93,7 @@ export async function acquireReviewEvidence({ readContext, githubQuery, linearQu
   }]));
   const evidence = { generation: review.generation, decision: review.decision, execution: CODEX_PINS, requiredAxes,
     issue: { id: target.issueId, identifier: context.resolution.issue.identifier, description: context.resolution.issue.description },
+    project: { id: project.id, description: project.description, content: project.content },
     pullRequest: { number: target.prNumber, title: context.resolution.pullRequest.title, body: context.resolution.pullRequest.body,
       repository: target.full_name, base: target.baseSha, head: target.headSha, labels: target.labels },
     changes, documents, feedback: humanFeedback, ci: context.ci,
@@ -96,6 +106,15 @@ export async function acquireReviewEvidence({ readContext, githubQuery, linearQu
 // manifests use immutable refs; linked documents in another repository need its
 // separately scoped reader. Tree entries prevent symlink/submodule traversal.
 export function createGitHubEvidenceReaders({ repository, request }) {
+  // A read function is unique to one bounded acquisition; do not retain data or
+  // bypass budgets between acquisitions. Git objects are immutable within it.
+  const caches = new WeakMap();
+  const cachedRead = (read, path) => {
+    if (!caches.has(read)) caches.set(read, new Map());
+    const cache = caches.get(read);
+    if (!cache.has(path)) cache.set(path, read(readJson, path));
+    return cache.get(path);
+  };
   const readJson = async path => {
     const response = await request(path);
     assert(response.ok, `GitHub evidence read failed: HTTP ${response.status}`);
@@ -107,7 +126,7 @@ export function createGitHubEvidenceReaders({ repository, request }) {
     let sha = ref;
     const parts = path.split("/");
     for (const [index, name] of parts.entries()) {
-      const tree = await read(readJson, `/git/trees/${sha}`);
+      const tree = await cachedRead(read, `/git/trees/${sha}`);
       assert(tree.truncated === false && Array.isArray(tree.tree), "Incomplete source tree");
       const entries = tree.tree.filter(e => e.path === name), entry = entries[0];
       assert(entries.length === 1 && /^[a-f0-9]{40}$/.test(entry.sha), "Missing source path");
@@ -116,7 +135,7 @@ export function createGitHubEvidenceReaders({ repository, request }) {
       else assert(entry.type === "blob" && ["100644", "100755"].includes(entry.mode) &&
         Number.isSafeInteger(entry.size) && entry.size <= EVIDENCE_LIMITS.bytes, "Unsafe or oversized source file");
     }
-    const blob = await read(readJson, `/git/blobs/${sha}`);
+    const blob = await cachedRead(read, `/git/blobs/${sha}`);
     assert(blob.sha === sha && blob.encoding === "base64" && typeof blob.content === "string", "Invalid source blob");
     const data = Buffer.from(blob.content, "base64");
     assert(!data.includes(0), "Binary source requires explicit human evidence");
@@ -132,12 +151,13 @@ export function createGitHubEvidenceReaders({ repository, request }) {
         throw error;
       }
     },
-    readChanges: async (target, decision, previous, { read }) => {
+    readChanges: async (target, decision, previous, { read, humanCommits = [] }) => {
       assert(target.full_name === repository, "Wrong change repository");
       const fromSha = decision === "incremental" ? previous?.headSha : target.baseSha;
       assert(/^[a-f0-9]{40}$/.test(fromSha) && /^[a-f0-9]{40}$/.test(target.headSha), "Invalid comparison refs");
-      const compare = async from => {
-        const result = await read(readJson, `/compare/${from}...${target.headSha}?per_page=1`);
+      const compare = async (from, to = target.headSha) => {
+        assert(/^[a-f0-9]{40}$/.test(from) && /^[a-f0-9]{40}$/.test(to), "Invalid comparison refs");
+        const result = await cachedRead(read, `/compare/${from}...${to}?per_page=1`);
         assert(Array.isArray(result.files) && result.files.length <= EVIDENCE_LIMITS.files &&
           /^[a-f0-9]{40}$/.test(result.merge_base_commit?.sha), "Incomplete comparison");
         return result;
@@ -154,15 +174,25 @@ export function createGitHubEvidenceReaders({ repository, request }) {
       scope.push(...delta.files.filter(file => !comparison.files.some(f => f.filename === file.filename))
         .map(file => ({ file, beforeRef: delta.merge_base_commit.sha })));
       assert(scope.length <= EVIDENCE_LIMITS.files, "Change scope exceeds file budget");
-      const files = [];
-      for (const { file, beforeRef } of scope) {
-        assert(["added", "removed", "modified", "renamed", "copied", "changed"].includes(file.status), "Unknown file change");
-        files.push({ path: file.filename, status: file.status, previousPath: file.previous_filename || file.filename,
-          beforeRef, before: file.status === "added" ? "" : await fileAt(beforeRef, file.previous_filename || file.filename, read),
-          after: file.status === "removed" ? "" : await fileAt(target.headSha, file.filename, read), patch: file.patch || "" });
+      const readFiles = async (scope, afterRef) => {
+        const files = [];
+        for (const { file, beforeRef } of scope) {
+          assert(["added", "removed", "modified", "renamed", "copied", "changed"].includes(file.status), "Unknown file change");
+          files.push({ path: file.filename, status: file.status, previousPath: file.previous_filename || file.filename,
+            beforeRef, before: file.status === "added" ? "" : await fileAt(beforeRef, file.previous_filename || file.filename, read),
+            after: file.status === "removed" ? "" : await fileAt(afterRef, file.filename, read), patch: file.patch || "" });
+        }
+        return files;
+      };
+      const files = await readFiles(scope, target.headSha), commitChanges = [];
+      for (const commit of humanCommits) {
+        const change = await compare(commit.parentSha, commit.id);
+        assert(change.merge_base_commit.sha === commit.parentSha, "Incomplete human commit ancestry");
+        commitChanges.push({ sha: commit.id, parentSha: commit.parentSha,
+          files: await readFiles(change.files.map(file => ({ file, beforeRef: commit.parentSha })), commit.id) });
       }
       return { complete: true, headSha: target.headSha, baseSha: target.baseSha, fromSha, deltaPaths: delta.files.map(f => f.filename),
-        mode: decision === "incremental" ? "incremental" : "full", files };
+        mode: decision === "incremental" ? "incremental" : "full", files, humanCommits: commitChanges };
     },
   };
 }
@@ -248,6 +278,37 @@ function checkMatches(check, acquired, state) {
   return check?.id === state.checkId && check.app?.id === CADENCE_APP_ID && check.name === CADENCE_CHECK_NAME &&
     check.head_sha === acquired.generation.headSha && check.external_id === reviewExternalId(state);
 }
+const checkOutputMatches = (actual, expected) => actual?.title === expected.title && actual?.summary === expected.summary;
+
+const COMMENT_MARKER = "<!-- cadence-review-summary -->";
+const shortText = (value, limit) => {
+  const text = String(value).replace(/\s+/g, " ").trim();
+  return (text.length > limit ? `${text.slice(0, limit - 1)}…` : text)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/[\\`*_[\]~]/g, "\\$&");
+};
+
+// Public prose is deliberately a small projection of the persisted assessment.
+// Full definitions, evidence, execution pins and bookkeeping stay in Linear.
+export function renderReviewComment(acquired, completed, conclusion, reason = "assessment") {
+  const url = `https://github.com/${acquired.target.full_name}/pull/${acquired.target.prNumber}/changes/${acquired.generation.headSha}`;
+  const disposition = reason !== "assessment" ? "Review unavailable" : {
+    success: "Looks good", failure: "Changes needed", action_required: "Human confirmation needed",
+  }[conclusion];
+  const findings = completed?.ledger.findings || [];
+  const required = findings.filter(f => f.status === "open" && (f.mandatory || ["blocker", "human-needed"].includes(f.class)));
+  const selected = [...required, ...findings.filter(f => !required.includes(f))].slice(0, 3);
+  const points = reason !== "assessment" ? [] : selected.map(f => {
+    const label = f.status !== "open" ? `${f.status}: ` : required.includes(f) ? "" : "Nonblocking: ";
+    return `- ${shortText(f.id, 100)} — ${label}${shortText(f.status === "open" ? f.action : f.summary, 360)}`;
+  });
+  const summary = reason === "assessment" ? shortText(completed.output.summary, 600) :
+    reason === "comment-publication-failure" ? "The PR summary could not be updated reliably. Restore comment access and retry publication." :
+    "The review could not finish reliably. Restore the provider or workpad access, then retry the review.";
+  return [COMMENT_MARKER, `**${disposition}.** [Reviewing](${url})`, summary,
+    ...(points.length ? [points.join("\n")] : []),
+    `Details are in the Cadence workpad on ${shortText(acquired.evidence.issue.identifier, 80)}.`,
+  ].join("\n\n");
+}
 
 // observe reacquires the live trusted target, complete feedback and durable
 // workpad. snapshot and expected are retained from trusted acquisition, NEVER
@@ -256,7 +317,7 @@ function checkMatches(check, acquired, state) {
 // Caller serializes the entire publication per PR. Linear has no CAS; readbacks
 // detect observed races, not distributed exactly-once execution.
 // Consumers must treat published:false and operational reasons as job failures.
-export async function publishAssessment({ snapshot, expected, outcome, observe, readCheck, writeCheck, persist }) {
+export async function publishAssessment({ snapshot, expected, outcome, observe, readCheck, writeCheck, writeComment, persist }) {
   let acquired, state;
   try {
     acquired = await observe();
@@ -273,6 +334,7 @@ export async function publishAssessment({ snapshot, expected, outcome, observe, 
     assert(snapshot?.evidenceDigest === expected.evidenceDigest && reviewDigest(snapshot.evidence) === expected.evidenceDigest &&
       snapshot.generation.id === expected.generationId && same(snapshot.target, acquired.target) &&
       same(snapshot.evidence.issue, acquired.evidence.issue) && same(snapshot.evidence.pullRequest, acquired.evidence.pullRequest) &&
+      same(snapshot.evidence.project, acquired.evidence.project) &&
       same(snapshot.evidence.documents, acquired.evidence.documents), "Changed acquisition evidence");
     assert(outcome?.status === "completed", "Provider did not complete");
     output = parseAssessment(outcome.output, snapshot);
@@ -300,21 +362,78 @@ export async function publishAssessment({ snapshot, expected, outcome, observe, 
       live.workpad?.commentId === acquired.workpad.commentId && same(liveState, completed || state), "Superseded before check publication");
     const check = await readCheck(state.checkId);
     assert(checkMatches(check, live, state) && ["queued", "in_progress"].includes(check.status), "Check is no longer pending");
-    const followup = completed?.ledger.findings.filter(f => f.status === "open" &&
-      (f.mandatory || ["blocker", "human-needed"].includes(f.class))) || [];
-    const summary = reason === "assessment" ? [output.summary,
-      ...followup.slice(0, 8).map(f => `Required: ${f.id} (${f.class}): ${f.action}`),
-      ...(followup.length > 8 ? ["Additional required findings are recorded in the Cadence workpad."] : []),
-      ...(completed.passes >= 3 && conclusion === "action_required" ? ["Three-pass cap reached; human review required."] : []),
-    ].join("\n\n") : `Cadence operational failure: ${reason}. Operator follow-up required.`;
+    let summary = renderReviewComment(acquired, completed, conclusion, reason);
+    try {
+      const comment = await writeComment(summary);
+      assert(Number.isSafeInteger(comment?.id) && comment.id > 0 && comment.body === summary, "Comment readback failed");
+    } catch {
+      conclusion = "failure"; reason = "comment-publication-failure";
+      summary = renderReviewComment(acquired, completed, conclusion, reason);
+    }
+    const afterComment = await observe();
+    assert(afterComment.generation.id === live.generation.id && same(afterComment.target, live.target) &&
+      afterComment.workpad?.commentId === live.workpad.commentId &&
+      same(afterComment.workpad.reviewContract, liveState), "Superseded during comment publication");
+    const pending = await readCheck(state.checkId);
+    assert(checkMatches(pending, afterComment, state) && ["queued", "in_progress"].includes(pending.status), "Check is no longer pending");
     const body = { name: CADENCE_CHECK_NAME, external_id: reviewExternalId(state), status: "completed", conclusion,
       output: { title: `Cadence assessment: ${conclusion}`, summary } };
     await writeCheck(state.checkId, body);
     const readback = await readCheck(state.checkId);
-    assert(checkMatches(readback, live, state) && readback.status === "completed" && readback.conclusion === conclusion,
+    assert(checkMatches(readback, live, state) && readback.status === "completed" && readback.conclusion === conclusion &&
+      checkOutputMatches(readback.output, body.output),
       "Check publication readback failed");
     return { published: true, conclusion, reason, checkId: state.checkId, generationId: state.generation.id };
   } catch { return { published: false, conclusion: "failure", reason: "publication-failed-or-superseded" }; }
+}
+
+// A separate minimum-scope PR-write installation token; never give it to the
+// assessment job. ROUTE serializes this with check/workpad publication per PR.
+export function createReviewCommentClient({ target, appOptions }) {
+  const config = appOptions.config;
+  assert(config.appId === CADENCE_APP_ID && config.appId === target.apps.cadence.app_id &&
+    config.installationId === target.apps.cadence.installation_id && config.repositoryId === target.repository_id &&
+    config.repository === target.full_name && same({ metadata: "read", ...config.permissions },
+      { metadata: "read", pull_requests: "write" }), "Wrong comment credential scope");
+  const request = createGitHubAppClient(appOptions);
+  const endpoint = `/issues/${target.prNumber}/comments`;
+  const owned = comment => comment.user?.type === "Bot" && comment.user.login === `${config.appSlug}[bot]` &&
+    (!comment.performed_via_github_app || comment.performed_via_github_app.id === CADENCE_APP_ID) &&
+    comment.body?.startsWith(COMMENT_MARKER);
+  const find = async (read = request) => {
+    const matches = [];
+    for (let page = 1; page <= 10; page++) {
+      const response = await read(`${endpoint}?per_page=100&page=${page}`);
+      assert(response.ok, "Comment discovery failed");
+      const comments = await response.json();
+      assert(Array.isArray(comments), "Invalid comment collection");
+      matches.push(...comments.filter(owned));
+      assert(matches.length <= 1, "Duplicate Cadence summary comments");
+      if (comments.length < 100 && !/rel="next"/.test(response.headers.get("link") || "")) return matches[0];
+    }
+    throw new Error("Comment discovery budget exceeded");
+  };
+  return async body => {
+    assert(typeof body === "string" && body.startsWith(COMMENT_MARKER) && body.length <= 3000, "Invalid comment summary");
+    const current = await find();
+    if (current?.body === body) return current;
+    if (current) assert(Number.isSafeInteger(current.id) && current.id > 0, "Invalid comment ID");
+    const response = await request(current ? `/issues/comments/${current.id}` : endpoint, {
+      method: current ? "PATCH" : "POST", body: { body }, readback: async read => {
+        const found = await find(read);
+        if (found?.body === body) return { applied: true, response: new Response(JSON.stringify(found)) };
+        // A failed POST may have created a comment with an unexpected body.
+        // Do not retry a creation while any owned comment exists.
+        assert(current || !found, "Comment creation outcome unknown");
+        return { applied: false };
+      },
+    });
+    assert(response.ok, "Comment write failed");
+    const written = await response.json(), readback = await find();
+    assert(owned(readback || {}) && readback.id === written.id && (!current || readback.id === current.id) &&
+      readback.body === body, "Comment publication readback failed");
+    return readback;
+  };
 }
 
 // Production adapters retain the landed renewable App client and sole Cadence
@@ -335,13 +454,14 @@ export function createPublicationClients({ target, appOptions, linearToken, line
   return { readCheck, writeCheck: async (id, body) => {
     const response = await request(`/check-runs/${id}`, { method: "PATCH", body, readback: async read => {
       const response = await read(`/check-runs/${id}`), value = await response.clone().json();
-      return value.status === body.status && value.conclusion === body.conclusion && value.external_id === body.external_id
+      return value.status === body.status && value.conclusion === body.conclusion && value.external_id === body.external_id &&
+        (!body.output || checkOutputMatches(value.output, body.output))
         ? { applied: true, response } : { applied: false };
     } });
     assert(response.ok, "Check write failed");
   }, persist: async (acquired, reviewContract) => {
     const saved = await upsertCadenceWorkpad({ issueIdentifier: acquired.evidence.issue.identifier, token: linearToken,
-      fetchImpl: linearFetch, liveGeneration: acquired.generation, workpad: { ...acquired.workpad, reviewContract,
+      fetchImpl: linearFetch, liveGeneration: acquired.generation, workpad: { ...normalizeCadenceWorkpad(acquired.workpad), reviewContract,
         status: reviewContract.phase, summary: reviewContract.output?.summary || "Cadence operational failure" } });
     return { ...saved, reviewContract: parseCadenceWorkpad(saved.body).reviewContract };
   } };

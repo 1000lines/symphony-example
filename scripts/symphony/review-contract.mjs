@@ -7,7 +7,7 @@ import { classifyGitHubActor } from "../github-actor-classification.mjs";
 export const CADENCE_APP_ID = 4866513;
 export const CADENCE_CHECK_NAME = "Cadence Review";
 export const REVIEW_SCHEMA = "cadence-review/v1";
-export const FEEDBACK_SOURCES = ["reviews", "comments", "threads", "linearComments"];
+export const FEEDBACK_SOURCES = ["reviews", "comments", "threads", "linearComments", "commits"];
 const sha = (value) => typeof value === "string" && /^[a-f0-9]{40}$/.test(value);
 const positive = (value) => Number.isSafeInteger(value) && value > 0;
 const nonempty = (value) => typeof value === "string" && value.trim().length > 0;
@@ -211,7 +211,7 @@ export function feedbackWatermark(sources, { isHuman = actor => actor?.type !== 
     const collection = sources?.[source];
     if (collection?.complete !== true || !Array.isArray(collection?.nodes)) { complete = false; continue; }
     for (const node of collection.nodes) {
-      if (isGeneratedBookkeeping(node.body) || node.state === "PENDING") continue;
+      if ((source !== "commits" && isGeneratedBookkeeping(node.body)) || node.state === "PENDING") continue;
       const actor = node.author || node.user;
       if (!actor) { complete = false; continue; }
       if (!isHuman(actor)) continue;

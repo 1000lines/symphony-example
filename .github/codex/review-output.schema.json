@@ -90,9 +90,11 @@
       }
     },
     "summary": {
+      "description": "One short, conversational paragraph for the PR comment. Detailed evidence belongs in the structured fields stored in Linear.",
       "type": "string",
       "minLength": 1,
-      "maxLength": 4000
+      "maxLength": 600,
+      "pattern": "^[^\\r\\n]+$"
     },
     "axes": {
       "type": "array",
@@ -261,7 +263,13 @@
           },
           "source": {
             "type": "string",
-            "enum": ["reviews", "comments", "threads", "linearComments"]
+            "enum": [
+              "reviews",
+              "comments",
+              "threads",
+              "linearComments",
+              "commits"
+            ]
           },
           "updatedAt": {
             "type": "string",
