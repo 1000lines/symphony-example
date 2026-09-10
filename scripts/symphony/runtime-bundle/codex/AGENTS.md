@@ -41,6 +41,11 @@ or resolution of an unsafe state transition.
 ## Runtime Boundaries
 
 - Work only in the per-issue workspace provided by Symphony.
+- After pinning the workpad, use the installed `symphony-repository` skill for
+  target discovery and repo-owned configuration. Missing config becomes a PR,
+  GitHub issue, or Linear workpad proposal according to available write access.
+  Read the target's applicable `AGENTS.md`; use `SYMPHONY_TOOLING_ROOT` for shared
+  Symphony tools and docs that are not part of the target repository.
 - Use the injected `linear_graphql` tool for Linear reads and writes when it is
   available. If Linear write access is missing before the Codex workpad is
   pinned, fail closed and do not update another comment.

@@ -16,7 +16,7 @@ Before writing proof, read:
 - The Linear issue, project metadata, current state, and `## Codex Workpad`.
 - The PR title, body, base branch, head ref, head SHA, labels, assignee, and
   check status when a PR exists.
-- `docs/engineering/symphony/proof-of-work.md`.
+- `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/proof-of-work.md`.
 - The concrete artifacts produced by validation: command output, workflow runs,
   screenshots, recordings, logs, report URLs, or manual walkthrough notes.
 

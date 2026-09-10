@@ -14,7 +14,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -158,6 +158,48 @@ function exactPermissions(actual, requested) {
   );
 }
 
+// Human-assigned tasks select a repository; App installations supply access.
+// Repository config supplies neither credentials nor installation IDs. Discover
+// with a metadata-only token scoped by name, then bind to the observed numeric ID.
+export async function bindRepository({ config, repository, fetchImpl = fetch, now = Date.now }) {
+  validateAppConfig(config);
+  if (!repositoryPattern.test(repository || "") || repository.split("/").some(p => [".", ".."].includes(p)))
+    fail("invalid repository selection");
+  const signingToken = jwt(config, now());
+  const app = await json(await request(fetchImpl, "/app", signingToken));
+  if (app.id !== config.appId || app.slug !== config.appSlug) fail("App identity mismatch");
+  const installation = await json(await request(fetchImpl, `/repos/${repository}/installation`, signingToken));
+  if (!Number.isSafeInteger(installation.id) || installation.id <= 0 ||
+      installation.app_id !== config.appId || installation.suspended_at !== null ||
+      installation.account?.login?.toLowerCase() !== repository.split("/")[0].toLowerCase())
+    fail("invalid installation/owner selection");
+  const result = await json(await request(fetchImpl, `/app/installations/${installation.id}/access_tokens`, signingToken,
+    "POST", { repositories: [repository.split("/")[1]], permissions: { metadata: "read" } }));
+  if (typeof result.token !== "string" || !result.token || /\s/.test(result.token)) fail("invalid discovery token");
+  try {
+    const expiry = Date.parse(result.expires_at);
+    if (!Number.isFinite(expiry) || expiry <= now() || expiry > now() + 3_660_000 ||
+        !exactPermissions(result.permissions, { metadata: "read" })) fail("invalid discovery token scope/expiry");
+    const selected = await json(await request(fetchImpl, "/installation/repositories?per_page=100", result.token));
+    const target = selected.repositories?.[0];
+    if (selected.total_count !== 1 || selected.repositories?.length !== 1 ||
+        !Number.isSafeInteger(target?.id) || target.id <= 0 ||
+        target.full_name?.toLowerCase() !== repository.toLowerCase()) fail("discovery repository scope mismatch");
+    // Keep useful read/issue access when branch writes are unavailable. Never
+    // exceed either the operator's credential ceiling or the installed grants.
+    const permissions = { metadata: "read" };
+    for (const [name, ceiling] of Object.entries(config.permissions)) {
+      const granted = installation.permissions?.[name];
+      if (["read", "write"].includes(granted)) permissions[name] = ceiling === "write" ? granted : "read";
+    }
+    return validateAppConfig({ ...config, repository: target.full_name, repositoryId: target.id,
+      installationId: installation.id, permissions });
+  } finally {
+    const revoked = await request(fetchImpl, "/installation/token", result.token, "DELETE");
+    if (revoked.status !== 204) fail(`discovery token revocation HTTP ${revoked.status}`);
+  }
+}
+
 async function mint(config, fetchImpl, now) {
   const signingToken = jwt(config, now());
   const app = await json(await request(fetchImpl, "/app", signingToken));
@@ -180,6 +222,7 @@ async function mint(config, fetchImpl, now) {
   if (installation.suspended_at !== null)
     fail("installation suspended or suspension status missing");
   for (const [permission, level] of Object.entries(config.permissions)) {
+    if (permission === "metadata" && level === "read" && installation.permissions?.metadata === undefined) continue;
     if (![level, "write"].includes(installation.permissions?.[permission]))
       fail(
         `installation denied ${permission}:${level}; owner approval required`
@@ -493,7 +536,15 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
   const config = await loadAppConfig();
   const options = { config, cacheDir: process.env.SYMPHONY_GITHUB_APP_CACHE };
-  if (command === "preflight" || command === "--preflight") {
+  if (command === "bind" && args.length === 4 && args[0] === "--repository" && args[2] === "--output") {
+    await privateCache(dirname(args[3]));
+    const target = await bindRepository({ config, repository: args[1] });
+    await writeFile(args[3], JSON.stringify(target), { mode: 0o600, flag: "wx" });
+    const metadata = { appId: target.appId, appSlug: target.appSlug,
+      installationId: target.installationId, repositoryId: target.repositoryId,
+      repository: target.repository, permissions: target.permissions };
+    process.stdout.write(`${JSON.stringify({ ...metadata, configPath: args[3] })}\n`);
+  } else if (command === "preflight" || command === "--preflight") {
     if (args.length && (args.length !== 2 || args[0] !== "--repository" || args[1].toLowerCase() !== config.repository.toLowerCase()))
       fail("preflight requires --repository to match the configured target");
     const { expires_at } = await getInstallationToken({
@@ -544,7 +595,7 @@ async function main() {
     });
   } else
     fail(
-      "usage: --preflight [--repository OWNER/REPO] | askpass PROMPT | exec COMMAND ARGS... | push SOURCE refs/heads/BRANCH"
+      "usage: bind --repository OWNER/REPO --output PRIVATE_FILE | --preflight [--repository OWNER/REPO] | askpass PROMPT | exec COMMAND ARGS... | push SOURCE refs/heads/BRANCH"
     );
 }
 

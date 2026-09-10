@@ -18,6 +18,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   askpassRepository,
+  bindRepository,
   createGitHubAppClient,
   getInstallationToken,
   loadAppConfig,
@@ -35,6 +36,70 @@ const { privateKey, publicKey } = generateKeyPairSync("rsa", {
 const start = Date.parse("2026-09-10T12:00:00Z");
 const response = (body, status = 200) =>
   new Response(JSON.stringify(body), { status });
+
+test("binding discovers a new owner and repo, reduces grants and revokes discovery credentials", async (t) => {
+  const f = await fixture(t);
+  const paths = [];
+  const fetchImpl = async (url, init) => {
+    const path = new URL(url).pathname;
+    paths.push(path);
+    if (path === "/app") return response({ id: f.config.appId, slug: f.config.appSlug });
+    if (path === "/repos/new-owner/new-repo/installation") return response({
+      id: 202, app_id: f.config.appId, account: { login: "new-owner" }, suspended_at: null,
+      permissions: { contents: "read", issues: "write", administration: "write" },
+    });
+    if (path === "/app/installations/202/access_tokens") {
+      assert.deepEqual(JSON.parse(init.body), { repositories: ["new-repo"], permissions: { metadata: "read" } });
+      return response({ token: "discovery-only", expires_at: new Date(start + 3600000).toISOString(), permissions: {} });
+    }
+    if (path === "/installation/repositories") return response({ total_count: 1,
+      repositories: [{ id: 987, full_name: "new-owner/new-repo" }] });
+    assert.equal(path, "/installation/token");
+    assert.equal(init.method, "DELETE");
+    return new Response(null, { status: 204 });
+  };
+  const original = structuredClone(f.config);
+  const bound = await bindRepository({ config: { ...f.config, permissions: { contents: "write", issues: "read" } },
+    repository: "new-owner/new-repo", now: f.now, fetchImpl });
+  assert.equal(bound.repositoryId, 987);
+  assert.equal(bound.installationId, 202);
+  assert.equal(bound.repository, "new-owner/new-repo");
+  assert.deepEqual(bound.permissions, { contents: "read", issues: "read", metadata: "read" });
+  assert.equal(bound.privateKey, f.config.privateKey);
+  assert.deepEqual(f.config, original);
+  assert.equal(paths.at(-1), "/installation/token");
+});
+
+test("binding rejects denied, wrong-owner, suspended and overbroad discovery without changing a target", async (t) => {
+  const f = await fixture(t);
+  for (const mode of ["denied", "wrong-app", "wrong-owner", "suspended", "wrong-repo", "multi-repo", "broad-grants", "expired"]) {
+    let minted = false;
+    let revoked = false;
+    await assert.rejects(bindRepository({ config: f.config, repository: "new-owner/new-repo", now: f.now,
+      fetchImpl: async (url) => {
+        const path = new URL(url).pathname;
+        if (path === "/app") return response({ id: f.config.appId, slug: f.config.appSlug });
+        if (path.endsWith("/installation")) {
+          if (mode === "denied") return response({}, 404);
+          return response({ id: 202, app_id: mode === "wrong-app" ? 1 : f.config.appId,
+            account: { login: mode === "wrong-owner" ? "another-owner" : "new-owner" },
+            suspended_at: mode === "suspended" ? "today" : null, permissions: {} });
+        }
+        if (path.endsWith("/access_tokens")) {
+          minted = true;
+          return response({ token: "discovery-only", expires_at: new Date(start + (mode === "expired" ? -1 : 3600000)).toISOString(),
+            permissions: mode === "broad-grants" ? { contents: "write" } : {} });
+        }
+        if (path === "/installation/token") { revoked = true; return new Response(null, { status: 204 }); }
+        return response({ total_count: mode === "multi-repo" ? 2 : 1,
+          repositories: [{ id: 987, full_name: mode === "wrong-repo" ? "new-owner/other" : "new-owner/new-repo" }] });
+      } }), /GitHub App:/, mode);
+    assert.equal(revoked, minted, mode);
+  }
+  for (const repository of ["owner/..", "../repo", "https://github.com/owner/repo", "owner/repo?x=y"]) {
+    await assert.rejects(bindRepository({ config: f.config, repository, fetchImpl: () => assert.fail("invalid target reached network") }));
+  }
+});
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), "github-app-"));
