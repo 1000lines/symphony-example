@@ -72,14 +72,12 @@ jobs:
           let base = process.env.BASE_REF;
           if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
             // A PR is the change since its merge base, tested at its exact head.
+            if (!base || !available(base)) throw new Error('PR base commit unavailable; cannot determine changed Markdown');
             base = git('merge-base', base, head);
-          } else if (!base || /^0+$/.test(base)) {
-            // New branch/tag: compare with the default branch when it exists.
+          } else if (!base || /^0+$/.test(base) || !available(base)) {
+            // New branch/tag or unavailable before SHA: use the default branch.
             const defaultRef = `refs/remotes/origin/${process.env.DEFAULT_BRANCH}`;
             base = available(defaultRef) ? git('merge-base', defaultRef, head) : '';
-          } else if (!available(base)) {
-            // A force push may make the old commit unreachable. Check all Markdown.
-            base = '';
           }
           const args = base
             ? ['diff', '--name-only', '--diff-filter=ACMR', '-z', base, head, '--']
@@ -90,7 +88,7 @@ jobs:
             `Tested SHA: ${head}\n\nMarkdown comparison base: ${base || 'all tracked files'}\n\nChanged Markdown files: ${files.length}\n`);
           if (files.length) {
             execFileSync('node_modules/.bin/prettier',
-              ['--check', '--ignore-path', '/dev/null', '--', ...files.map(file => `./${file}`)],
+              ['--check', '--', ...files.map(file => `./${file}`)],
               { stdio: 'inherit' });
           } else {
             console.log('No changed Markdown files; comparison completed successfully.');

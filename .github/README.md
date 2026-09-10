@@ -13,11 +13,12 @@ check out `github.sha`. Each executing job verifies and records its checkout
 SHA. The aggregate records the tested SHA, event, event base SHA and workflow
 ref. A PR's event/merge ref is therefore distinct from the commit tested by CI.
 
-The caller passes the required `tested-ref` input and `tooling-directory: .` to
+The caller passes the explicit `tested-ref` input and `tooling-directory: .` to
 [`symphony-build`](workflows/symphony-build.yml),
 [`symphony-lint`](workflows/symphony-lint.yml) and
-[`symphony-test`](workflows/symphony-test.yml). Other adopters must also pass an
-exact commit SHA; `tooling-directory` remains optional and defaults to `.`.
+[`symphony-test`](workflows/symphony-test.yml). Adopters can pass an exact commit
+SHA. For existing callers that omit it, `tested-ref` defaults to the PR head SHA
+or `github.sha` for other events. `tooling-directory` defaults to `.`.
 These workflows execute against the caller repository, including when the
 tooling lives in a subdirectory.
 
@@ -30,10 +31,10 @@ runs use the existing implementation identity.
 
 ## Commands and required result
 
-Jobs use Ubuntu 24.04, Node from `.nvmrc`, npm 11.13.0 and `npm ci` with the
-committed tooling-root `package-lock.json`. npm caches are keyed by that lock.
-This caller and the reusable jobs enforce the frozen lock; the root README's
-original extraction example predates this setup.
+Jobs use Ubuntu 24.04, Node from `.nvmrc` and npm 11.13.0. The reusable jobs retain
+`npm install` and caches keyed by the three tooling manifests for compatibility
+with existing adopters. The Markdown job uses `npm ci` and a cache keyed by the
+committed tooling-root `package-lock.json` to run the locked Prettier version.
 
 | Caller job                    | Validation                                 | Timeout    |
 | ----------------------------- | ------------------------------------------ | ---------- |
@@ -43,12 +44,13 @@ original extraction example predates this setup.
 | `markdown` / Changed Markdown | Locked Prettier on changed Markdown        | 20 minutes |
 | `required` / CI Required      | Every expected child must report `success` | 5 minutes  |
 
-Markdown uses the PR merge base, or the push's before SHA. A new branch/tag
-compares against its merge base with the default branch. If comparison history
-is unavailable for a push, all tracked Markdown is checked. Added, modified,
+Markdown uses the PR merge base, or the push's before SHA. A new branch/tag or
+a push with an unavailable before SHA compares against its merge base with the
+default branch. If that branch is also unavailable, all tracked Markdown is
+checked. An unavailable PR base fails the job with a diagnostic. Added, modified,
 copied and renamed `.md`, `.mdx` and `.markdown` files are checked, including
-paths containing spaces; deleted files are excluded. Repository ignore rules
-do not hide changed Markdown from this check. A comparison with no Markdown
+paths containing spaces; deleted files are excluded. Prettier honors repository
+ignore rules, including `.claude/`. A comparison with no Markdown
 still completes the job successfully and records a zero count.
 
 `CI Required` uses `always()` and explicitly requires `build`, `lint`, `test`
@@ -91,9 +93,8 @@ actual run ID from the list. Retain the run/attempt URL, tested SHA from the
 checkout summaries, workflow path/ref, child job IDs/results and aggregate
 result in the issue workpad and PR evidence.
 
-The intended required check is `CI Required`, from GitHub Actions (expected
-App ID `15368`) and `.github/workflows/ci.yml`, on `push` or `pull_request` at
-the exact head. Verify that emitted name and App ID from the first real run.
+The required check is `CI Required`, from GitHub Actions (App ID `15368`)
+and `.github/workflows/ci.yml`, on `push` or `pull_request` at the exact head.
 App ID alone does not establish workflow provenance. A missing, stale or
 non-successful check cannot satisfy the requirement; review/router checks
 are separate from this allowlist.
