@@ -1,6 +1,7 @@
 // Shared, side-effect-free acceptance policy. API records must be acquired by
 // trusted base code, never supplied by the PR or an assessment process.
 import { createHash } from "node:crypto";
+import { validateConfig } from "./runtime-bundle/skills/symphony-repository/scripts/config.mjs";
 import { classifyGitHubActor } from "../github-actor-classification.mjs";
 
 export const CADENCE_APP_ID = 4866513;
@@ -18,28 +19,48 @@ export const reviewDigest = (value) => createHash("sha256").update(canonical(val
 const same = (a, b) => canonical(a) === canonical(b);
 const fail = (reason) => ({ passes: false, reason });
 
-// The mapping uses the JSON subset of YAML so standalone hosted/Actions helpers
-// need no npm install. Revision comes from the protected branch, not file text.
-export async function loadRepositoryMapping({ controller, expectedRevision, token, fetchImpl = fetch }) {
-  assert(/^[\w.-]+\/[\w.-]+$/.test(controller), "Invalid controller");
-  assert(sha(expectedRevision), "Missing expected configuration revision");
+const repositoryName = value => typeof value === "string" && /^[a-z\d][a-z\d-]*\/[\w.-]+$/i.test(value) &&
+  ![".", ".."].includes(value.split("/")[1]);
+const matchesRepository = (repository, fullName) => repositoryName(fullName) && positive(repository?.id) &&
+  repository.full_name === fullName && repository.owner?.login === fullName.split("/")[0];
+
+// The trusted task/project selects the repository and base. Only the fetched
+// selected base revision supplies active configuration; task-head proposals do not.
+// A missing file is an onboarding handoff to symphony-repository (PR, issue,
+// then pinned Linear workpad), never permission to infer passing requirements.
+export async function loadRepositoryConfig({ repository: fullName, baseBranch, expectedRevision, token, fetchImpl = fetch }) {
+  assert(repositoryName(fullName), "Invalid selected repository");
+  assert(sha(expectedRevision), "Missing expected target base revision");
   const read = async path => {
-    const response = await fetchImpl(`https://api.github.com/repos/${controller}/${path}`, {
+    const response = await fetchImpl(`https://api.github.com/repos/${fullName}${path}`, {
       headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
     });
-    assert(response.ok, `Mapping read failed: HTTP ${response.status}`);
+    assert(response.ok, `Repository configuration read failed: HTTP ${response.status}`);
     return response.json();
   };
-  const branch = await read("branches/main");
-  assert(branch.protected === true && branch.commit?.sha === expectedRevision,
-    "Configuration must match protected controller main");
-  const file = await read(`contents/.github/symphony/repositories.yml?ref=${expectedRevision}`);
-  assert(file.encoding === "base64" && nonempty(file.content), "Missing mapping content");
-  const mapping = JSON.parse(Buffer.from(file.content, "base64").toString("utf8"));
-  assert(mapping.schema === "symphony-repositories/v1" && mapping.controller === controller,
-    "Invalid mapping schema/controller");
-  return { mapping, revision: expectedRevision };
+  const repository = await read("");
+  assert(matchesRepository(repository, fullName), "Discovered repository owner/name mismatch");
+  const selectedBase = baseBranch ?? repository.default_branch;
+  assert(nonempty(selectedBase), "Missing selected base branch");
+  const branch = await read(`/branches/${encodeURIComponent(selectedBase)}`);
+  assert(branch.name === selectedBase && branch.commit?.sha === expectedRevision,
+    "Configuration must match fetched selected base");
+  const tree = await read(`/git/trees/${expectedRevision}`);
+  assert(tree.truncated === false && Array.isArray(tree.tree), "Incomplete target base tree");
+  const entries = tree.tree.filter(entry => entry.path === ".symphony.cfg.json");
+  const context = { repository, baseBranch: selectedBase, revision: expectedRevision };
+  if (!entries.length) return { status: "missing", ...context };
+  assert(entries.length === 1 && entries[0].type === "blob" &&
+    ["100644", "100755"].includes(entries[0].mode) && sha(entries[0].sha), "Repository config must be a regular file");
+  const file = await read(`/git/blobs/${entries[0].sha}`);
+  assert(file.sha === entries[0].sha && file.encoding === "base64" && nonempty(file.content), "Missing configuration content");
+  const config = validateConfig(JSON.parse(Buffer.from(file.content, "base64").toString("utf8")));
+  return { status: "configured", ...context, config };
 }
+
+// Existing import name retained for downstream callers; there is no mapping or
+// central target list. The arguments/result are the target-base config contract.
+export { loadRepositoryConfig as loadRepositoryMapping };
 
 const validCi = (ci) => Array.isArray(ci?.required_checks) && ci.required_checks.length > 0 &&
   new Set(ci.required_checks.map(c => c?.name)).size === ci.required_checks.length &&
@@ -52,66 +73,85 @@ const validCi = (ci) => Array.isArray(ci?.required_checks) && ci.required_checks
   ["missing_after_minutes", "queued_after_minutes", "completion_grace_minutes", "run_budget_minutes"]
     .every(key => positive(ci[key]));
 
-// request is identification only. All authority comes from mapping and live API
-// evidence; no installation, permission, workflow or project overrides accepted.
-export function resolveTarget({ mapping, revision, hostRevision, controllerRevision, request,
-  repository, controllerRepository = repository, pullRequest, issue, associations, installations }) {
-  assert(mapping?.schema === "symphony-repositories/v1" && sha(revision) &&
-    revision === hostRevision && revision === controllerRevision, "Configuration revision mismatch");
+// selection is resolved from explicit Linear project metadata or human task
+// direction by trusted code, not an incidental URL or dispatch input. host is
+// deployment configuration: App identities, review controller and waiting limits.
+// ciDiscovery is complete workflow/branch-rule evidence from configuration.revision;
+// it supplies exact event/ref/checkout/child provenance absent from the config schema.
+export function resolveTarget({ selection, configuration, host, hostRevision, controllerRevision, request,
+  repository, controllerRepository, pullRequest, issue, associations, installations, ciDiscovery }) {
+  assert(sha(host?.revision) && host.revision === hostRevision && host.revision === controllerRevision,
+    "Controller configuration revision mismatch");
+  assert(selection && ["project", "human-task"].includes(selection.source) &&
+    matchesRepository(repository, selection.repository), "Repository owner/name mismatch");
   assert(request && Object.keys(request).every(k => ["repositoryId", "prNumber", "headSha"].includes(k)),
     "Caller authority override");
-  assert(positive(request.repositoryId) && positive(request.prNumber) && sha(request.headSha), "Invalid target identity");
-  const entries = mapping.repositories?.filter(t => t.repository_id === request.repositoryId);
-  assert(entries?.length === 1 && entries[0].enabled === true, "Unknown, duplicate or disabled target");
-  const target = entries[0];
-  assert(repository?.id === target.repository_id && repository.full_name === target.full_name &&
-    repository.owner?.login === target.full_name.split("/")[0], "Repository owner/name mismatch");
+  assert(positive(request.repositoryId) && request.repositoryId === repository.id &&
+    positive(request.prNumber) && sha(request.headSha), "Invalid target identity");
+  assert(configuration?.status === "configured",
+    "Missing repository config: symphony-repository must propose .symphony.cfg.json for the selected base");
+  const config = validateConfig(configuration.config);
+  const baseBranch = selection.baseBranch ?? repository.default_branch;
+  assert(nonempty(baseBranch) && sha(configuration.revision) &&
+    matchesRepository(configuration.repository, selection.repository) && configuration.repository.id === repository.id &&
+    configuration.baseBranch === baseBranch, "Target configuration source mismatch");
   assert(pullRequest?.number === request.prNumber && pullRequest.state === "open" &&
-    pullRequest.head?.sha === request.headSha && pullRequest.base?.repo?.id === repository.id,
-    "PR closed or target/head mismatch");
-  assert(nonempty(target.linear?.team_id) && nonempty(target.linear?.project_id) &&
-    nonempty(issue?.id) && issue.team?.id === target.linear?.team_id &&
-    issue.project?.id === target.linear?.project_id && Array.isArray(associations) &&
-    associations.length === 1 && associations[0] === issue.id, "Ambiguous or wrong Linear association");
-  assert(nonempty(target.human?.github) && nonempty(target.human?.linear_id) &&
-    Array.isArray(target.labels) && target.labels.length > 0 &&
-    target.labels.every(label => pullRequest.labels?.some(l => l.name === label)), "Missing identity/labels");
-  const controllers = mapping.repositories.filter(entry => entry.full_name === mapping.controller);
-  assert(controllers.length === 1 && controllers[0].enabled && positive(controllers[0].repository_id) &&
-    controllerRepository.id === controllers[0].repository_id && controllerRepository.full_name === mapping.controller &&
-    controllerRepository.owner?.login === mapping.controller.split("/")[0], "Invalid controller identity");
-  for (const entry of new Set([target, controllers[0]])) {
-    const owner = entry.full_name.split("/")[0];
-    assert(entry.apps?.cadence?.app_id === CADENCE_APP_ID && positive(entry.apps?.symphony?.app_id) &&
-      entry.apps.symphony.app_id !== CADENCE_APP_ID, "Invalid App identity");
-    for (const role of ["symphony", "cadence"]) {
-      const configured = entry.apps[role];
-      const matches = installations?.filter(i => i.id === configured.installation_id);
-      const installation = matches?.length === 1 ? matches[0] : null;
-      assert(positive(configured.installation_id) && installation?.app_id === configured.app_id &&
-        installation.account?.login === owner && installation.suspended_at === null &&
-        installation.repository_ids?.includes(entry.repository_id), `Invalid ${role} installation selection`);
-      assert(!mapping.repositories.some(other => other.full_name.split("/")[0] !== owner &&
-        Object.values(other.apps || {}).some(app => app.installation_id === configured.installation_id)),
-        "Installation reused across owners");
-    }
-  }
-  assert(target.dispatch?.repository === mapping.controller && target.dispatch.ref === "refs/heads/main" &&
-    /^\.github\/workflows\/[\w.-]+\.ya?ml$/.test(target.dispatch.workflow), "Invalid dispatch authority");
-  assert(validCi(target.ci) && positive(target.review?.timeout_minutes) &&
-    target.review.max_passes === 3 && target.review.operational_retries === 1, "Incomplete gate configuration");
-  assert(nonempty(pullRequest.head.ref) && sha(pullRequest.base.sha) && nonempty(repository.default_branch),
-    "Missing target refs");
-  return { ...structuredClone(target), controller: structuredClone(controllers[0]), configRevision: revision, issueId: issue.id,
+    pullRequest.head?.sha === request.headSha && pullRequest.base?.repo?.id === repository.id &&
+    pullRequest.base.ref === baseBranch && pullRequest.base.sha === configuration.revision,
+    "PR closed or target/head/base mismatch");
+  assert(nonempty(selection.linear?.team_id) && nonempty(selection.linear?.project_id) &&
+    nonempty(selection.linear?.issue_id) && issue?.id === selection.linear.issue_id &&
+    issue.team?.id === selection.linear.team_id && issue.project?.id === selection.linear.project_id &&
+    Array.isArray(associations) && associations.length === 1 && associations[0] === issue.id,
+    "Ambiguous or wrong Linear association");
+  assert(nonempty(selection.human?.github) && nonempty(selection.human?.linear_id) &&
+    Array.isArray(selection.labels) && selection.labels.includes("symphony") &&
+    selection.labels.every(label => nonempty(label) && pullRequest.labels?.some(l => l.name === label)), "Missing identity/labels");
+  assert(matchesRepository(controllerRepository, host.controller?.full_name) &&
+    nonempty(host.controller.base_branch) &&
+    /^\.github\/workflows\/[\w.-]+\.ya?ml$/.test(host.controller.workflow), "Invalid controller identity/dispatch");
+  assert(host.apps?.cadence?.app_id === CADENCE_APP_ID && positive(host.apps?.symphony?.app_id) &&
+    host.apps.symphony.app_id !== CADENCE_APP_ID, "Invalid App identity");
+  assert(installations?.complete === true && Array.isArray(installations.nodes), "Incomplete installation discovery");
+  const discoverApps = repo => Object.fromEntries(["symphony", "cadence"].map(role => {
+    const matches = installations.nodes.filter(i => i.app_id === host.apps[role].app_id &&
+      i.account?.login === repo.owner.login);
+    const installation = matches.length === 1 ? matches[0] : null;
+    assert(positive(installation?.id) && installation.suspended_at === null &&
+      installation.repository_ids?.includes(repo.id), `Invalid ${role} installation selection`);
+    assert(!installations.nodes.some(i => i.id === installation.id &&
+      (i.account?.login !== installation.account.login || i.app_id !== installation.app_id)), "Installation reused across owners/Apps");
+    return [role, { app_id: installation.app_id, installation_id: installation.id }];
+  }));
+  const apps = discoverApps(repository), controllerApps = discoverApps(controllerRepository);
+  assert(ciDiscovery?.complete === true && ciDiscovery.repositoryId === repository.id &&
+    ciDiscovery.revision === configuration.revision && Array.isArray(ciDiscovery.required_checks) &&
+    config.ci.requiredChecks.length > 0 && config.ci.requiredChecks.every(check =>
+      ciDiscovery.required_checks.filter(rule => rule.name === check.name && rule.app_id === check.appId &&
+        rule.workflow_path === check.workflow).length === 1), "Missing or mismatched base CI provenance");
+  // Additional discovered branch-rule requirements cannot weaken the config list.
+  const ci = { ...structuredClone(host.ci), required_checks: structuredClone(ciDiscovery.required_checks) };
+  assert(validCi(ci) && positive(host.review?.timeout_minutes) &&
+    host.review.max_passes === 3 && host.review.operational_retries === 1, "Incomplete gate configuration");
+  assert(nonempty(pullRequest.head.ref) && nonempty(repository.default_branch), "Missing target refs");
+  return { repository_id: repository.id, full_name: repository.full_name, apps,
+    linear: structuredClone(selection.linear), human: structuredClone(selection.human), labels: [...selection.labels],
+    repositoryConfig: structuredClone(config), ci, review: structuredClone(host.review),
+    controller: { ...structuredClone(host.controller), repository_id: controllerRepository.id, apps: controllerApps },
+    dispatch: { repository: host.controller.full_name, workflow: host.controller.workflow, ref: `refs/heads/${host.controller.base_branch}` },
+    configRevision: configuration.revision, controllerRevision, issueId: issue.id,
     prNumber: request.prNumber, headSha: request.headSha, headRef: pullRequest.head.ref,
-    defaultBranch: repository.default_branch, baseSha: pullRequest.base.sha };
+    defaultBranch: repository.default_branch, baseBranch, baseSha: pullRequest.base.sha };
 }
 
-// runs: REST Actions runs (latest run_attempt), jobs: attempt-specific REST jobs,
+// runs: fully paginated REST Actions runs at the head, including every peer
+// and latest run_attempt; complete is true only after all runs/jobs/checks are
+// acquired. Omitted peers cannot be detected here. jobs: attempt-specific REST jobs,
 // checks: REST check runs. tested_sha/ref are acquisition evidence from the
-// explicit checkout, not the workflow's synthetic merge/default SHA.
+// explicit checkout, not the workflow's synthetic merge/default SHA. Evidence
+// contains one row per required name AND run ID; name alone is not unique.
 export function evaluateCi({ target, runs = [], jobs = [], checks = [], complete = false } = {}) {
-  if (!target?.enabled || !sha(target.headSha) || !validCi(target.ci) || !complete)
+  if (!positive(target?.repository_id) || !sha(target.headSha) || !validCi(target.ci) || !complete)
     return fail("missing-ci-configuration-or-history");
   const evidence = [];
   for (const rule of target.ci.required_checks) {
@@ -189,11 +229,13 @@ export function feedbackWatermark(sources, { isHuman = actor => actor?.type !== 
 }
 
 export function createReviewGeneration({ repositoryId, prNumber, headSha, baseSha, configRevision,
-  feedback, manualRetry = 0 }) {
+  feedback, manualRetry = 0, controllerRevision }) {
   assert(positive(repositoryId) && positive(prNumber) && sha(headSha) && sha(baseSha) && sha(configRevision) &&
+    (controllerRevision === undefined || sha(controllerRevision)) &&
     feedback && typeof feedback.complete === "boolean" && Array.isArray(feedback.records) && feedback.digest === reviewDigest(feedback.records) &&
     Number.isSafeInteger(manualRetry) && manualRetry >= 0, "Invalid review generation");
-  const context = { repositoryId, prNumber, headSha, baseSha, configRevision, feedback, manualRetry };
+  const context = { repositoryId, prNumber, headSha, baseSha, configRevision, feedback, manualRetry,
+    ...(controllerRevision === undefined ? {} : { controllerRevision }) };
   return { ...context, id: reviewDigest(context), resetKey: reviewDigest({ feedback: feedback.digest, manualRetry }) };
 }
 
@@ -263,7 +305,7 @@ export const reviewExternalId = (state) =>
   `${state.generation.repositoryId}:${state.generation.prNumber}:${state.generation.headSha}:${state.generation.id}:${state.attempt}`;
 
 export function evaluateAi({ target, pullRequest, generation, checks = [], workpad, complete = false } = {}) {
-  if (!target?.enabled || target.apps?.cadence?.app_id !== CADENCE_APP_ID ||
+  if (!positive(target?.repository_id) || target.apps?.cadence?.app_id !== CADENCE_APP_ID ||
     pullRequest?.state !== "open" || pullRequest.number !== target.prNumber ||
     pullRequest.base?.repo?.id !== target.repository_id || pullRequest.head?.sha !== target.headSha ||
     !target.labels?.length || !target.labels.every(label => pullRequest.labels?.some(l => l.name === label))) return fail("invalid-ai-target");
@@ -271,6 +313,7 @@ export function evaluateAi({ target, pullRequest, generation, checks = [], workp
   try { validGeneration = generation?.id === createReviewGeneration(generation).id; } catch { /* reject malformed data */ }
   if (!complete || !generation?.feedback?.complete || !validGeneration ||
     generation.headSha !== target.headSha || generation.configRevision !== target.configRevision ||
+    generation.controllerRevision !== target.controllerRevision ||
     generation.repositoryId !== target.repository_id || generation.prNumber !== target.prNumber ||
     generation.baseSha !== pullRequest.base.sha) return fail("stale-or-incomplete-generation");
   const state = workpad?.reviewContract;

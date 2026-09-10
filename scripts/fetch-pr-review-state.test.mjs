@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { classifyPrReviewState } from "./fetch-pr-review-state.mjs";
 
@@ -314,7 +316,7 @@ function checkStateFixture() {
     requirements: [{ id: "R05", summary: "gate", status: "satisfied", evidence: [] }], findings: [], humanFeedback: [] };
   const state = completeReviewGeneration(queueReviewGeneration(null, gen, { checkId: 10 }),
     { generationId: gen.id, attempt: 1, checkId: 10, phase: "completed", output }, gen);
-  return { target: { enabled: true, repository_id: 1, prNumber: 1, headSha, configRevision, issueId: "issue",
+  return { target: { repository_id: 1, prNumber: 1, headSha, configRevision, issueId: "issue",
     apps: { cadence: { app_id: 4866513 } }, labels: ["pink", "symphony"] },
     pullRequest: { number: 1, state: "open", head: { sha: headSha }, base: { sha: baseSha, repo: { id: 1 } },
       labels: [{ name: "pink" }, { name: "symphony" }], draft: true }, feedback,
@@ -345,4 +347,38 @@ test("check-mode preserves incremental and force-push full review decisions", ()
   assert.equal(classifyCheckReviewState({ ...context, ancestry: "ahead" }).decision, "incremental");
   assert.equal(classifyCheckReviewState({ ...context, ancestry: "diverged" }).decision, "full-review-rebased");
   assert.equal(classifyCheckReviewState(context).decision, "full-review-rebased");
+});
+
+test("same-head base and controller configuration changes require fresh assessment", () => {
+  for (const field of ["configRevision", "controllerRevision"]) {
+    const context = checkStateFixture();
+    const previous = classifyCheckReviewState(context);
+    context.target[field] = "d".repeat(40);
+    const result = classifyCheckReviewState(context);
+    assert.equal(result.decision, "full-review-context-changed");
+    assert.equal(result.acceptance.passes, false);
+    assert.notEqual(result.generation.id, previous.generation.id);
+    assert.equal(result.generation.resetKey, previous.generation.resetKey);
+  }
+});
+
+test("bootstrap CLI uses host review mode without a repository registry", () => {
+  const cli = new URL("./fetch-pr-review-state.mjs", import.meta.url);
+  const pr = { headRefOid: "a".repeat(40), isDraft: true,
+    timelineItems: { nodes: [], pageInfo: { hasPreviousPage: false } } };
+  const script = `process.argv = [process.execPath, ${JSON.stringify(fileURLToPath(cli))}, "6"];
+    globalThis.fetch = async () => ({ ok: true, json: async () => (${JSON.stringify({ data: { repository: { pullRequest: pr } } })}) });
+    await import(${JSON.stringify(cli.href)});`;
+  for (const mode of ["", "HACKATHON_LEGACY_REVIEW", "checks", "unknown"]) {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      encoding: "utf8", env: { ...process.env, GH_TOKEN: "fixture", REPO_SLUG: "unseen-owner/repo", CADENCE_REVIEW_MODE: mode },
+    });
+    if (!mode || mode === "HACKATHON_LEGACY_REVIEW") {
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(JSON.parse(result.stdout).decision, "first-review");
+    } else {
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Legacy review disabled/);
+    }
+  }
 });

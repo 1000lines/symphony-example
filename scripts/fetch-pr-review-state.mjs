@@ -28,7 +28,6 @@
 // just redundant) — flagged as full-review-paged-out rather than failing silently.
 
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
 import { createReviewGeneration, evaluateAi, feedbackWatermark } from "./symphony/review-contract.mjs";
 import {
   classifyGitHubActor,
@@ -345,13 +344,14 @@ export function classifyCheckReviewState({ target, pullRequest, feedback, checks
   const watermark = feedbackWatermark(feedback, { isHuman });
   const generation = createReviewGeneration({ repositoryId: target.repository_id,
     prNumber: target.prNumber, headSha: pullRequest.head.sha, baseSha: pullRequest.base.sha,
-    configRevision: target.configRevision, feedback: watermark, manualRetry });
+    configRevision: target.configRevision, controllerRevision: target.controllerRevision, feedback: watermark, manualRetry });
   const acceptance = evaluateAi({ target, pullRequest, generation, checks, workpad, complete });
   const previous = workpad?.reviewContract?.generation;
   const sameHead = previous?.headSha === generation.headSha;
   let decision = "first-review";
   if (!watermark.complete || !complete || (previous && !previous.feedback?.complete)) decision = "full-review-paged-out";
-  else if (previous && (previous.baseSha !== generation.baseSha || previous.configRevision !== generation.configRevision)) decision = "full-review-context-changed";
+  else if (previous && (previous.baseSha !== generation.baseSha || previous.configRevision !== generation.configRevision ||
+    previous.controllerRevision !== generation.controllerRevision)) decision = "full-review-context-changed";
   else if (previous && !sameHead && ancestry !== "ahead") decision = "full-review-rebased";
   else if (acceptance.passes) decision = "skip";
   else if (previous) decision = "incremental";
@@ -374,8 +374,8 @@ const main = async () => {
   const reviewer = process.env.CADENCE_REVIEWER_LOGIN || (process.env.CADENCE_REVIEWER || "example-cadence-bot").trim().toLowerCase();
   // This CLI remains the bootstrap consumer until ROUTE wires trusted check
   // acquisition. The shared check-mode API below never falls back to approval.
-  const mapping = JSON.parse(readFileSync(new URL("../.github/symphony/repositories.yml", import.meta.url), "utf8"));
-  if (mapping.review_mode !== "HACKATHON_LEGACY_REVIEW") {
+  const reviewMode = process.env.CADENCE_REVIEW_MODE || "HACKATHON_LEGACY_REVIEW";
+  if (reviewMode !== "HACKATHON_LEGACY_REVIEW") {
     throw new Error("Legacy review disabled; use trusted classifyCheckReviewState acquisition.");
   }
   const pr = await runQuery({ owner, repo, number });

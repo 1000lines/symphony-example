@@ -1,39 +1,50 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { CADENCE_APP_ID, REVIEW_SCHEMA, createReviewGeneration, feedbackWatermark,
-  loadRepositoryMapping, resolveTarget, evaluateCi, evaluateAi, queueReviewGeneration,
+  loadRepositoryConfig, loadRepositoryMapping, resolveTarget, evaluateCi, evaluateAi, queueReviewGeneration,
   completeReviewGeneration, reviewExternalId, reviewDigest, validateReviewOutput } from "./review-contract.mjs";
 
-const head = "a".repeat(40), base = "b".repeat(40), revision = "c".repeat(40);
-const mappingFile = JSON.parse(readFileSync(new URL("../../.github/symphony/repositories.yml", import.meta.url)));
+const head = "a".repeat(40), base = "b".repeat(40), revision = base, controllerRevision = "c".repeat(40);
+const config = () => ({ schemaVersion: "symphony-repository/v1", workingDirectory: ".",
+  instructions: ["SYMPHONY.md"], commands: { test: [["cargo", "test"]] },
+  ci: { requiredChecks: [{ name: "CI Required", workflow: ".github/workflows/ci.yml", appId: 15368 }] } });
 const sources = () => Object.fromEntries(["reviews", "comments", "threads", "linearComments"]
   .map(key => [key, { complete: true, nodes: [] }]));
 const human = (id = "feedback-1") => ({ id, body: "Fix this", updatedAt: "2026-09-10T01:00:00Z", author: { login: "human" } });
 const generation = (extra = {}) => createReviewGeneration({ repositoryId: 100, prNumber: 4,
-  headSha: head, baseSha: base, configRevision: revision, feedback: feedbackWatermark(sources()), ...extra });
+  headSha: head, baseSha: base, configRevision: revision, controllerRevision, feedback: feedbackWatermark(sources()), ...extra });
 const output = gen => ({ schema: REVIEW_SCHEMA, repositoryId: 100, prNumber: 4, headSha: gen.headSha,
   generationId: gen.id, sourcesComplete: true, summary: "All requirements met",
   requirements: [{ id: "R05", status: "satisfied", summary: "Gate enforced", evidence: ["fixture"] }],
   findings: [], humanFeedback: [] });
 function fixture() {
-  const mapping = structuredClone(mappingFile);
-  const entry = mapping.repositories[0];
-  Object.assign(entry, { enabled: true, repository_id: 100 });
-  entry.apps.symphony.installation_id = 11;
-  entry.apps.cadence.installation_id = 12;
-  const repository = { id: 100, full_name: entry.full_name, owner: { login: "1000lines" }, default_branch: "main" };
+  const repository = { id: 100, full_name: "unseen-owner/new-repo", owner: { login: "unseen-owner" }, default_branch: "trunk" };
+  const controllerRepository = { id: 200, full_name: "controller/reviewer", owner: { login: "controller" } };
   const pullRequest = { number: 4, state: "open", head: { sha: head, ref: "task" },
-    base: { sha: base, repo: { id: 100 } }, labels: [{ name: "pink" }, { name: "symphony" }] };
-  const context = { mapping, revision, hostRevision: revision, controllerRevision: revision,
-    repository, pullRequest, request: { repositoryId: 100, prNumber: 4, headSha: head },
-    issue: { id: "issue", team: { id: entry.linear.team_id }, project: { id: entry.linear.project_id } },
-    associations: ["issue"], installations: [11, 12].map((id, i) => ({ id,
-      app_id: i ? CADENCE_APP_ID : 4866508, account: { login: "1000lines" }, suspended_at: null, repository_ids: [100] })) };
+    base: { sha: base, ref: "trunk", repo: { id: 100 } }, labels: [{ name: "pink" }, { name: "symphony" }] };
+  const context = {
+    selection: { source: "project", repository: repository.full_name,
+      linear: { team_id: "team", project_id: "project", issue_id: "issue" },
+      human: { github: "human", linear_id: "human-id" }, labels: ["pink", "symphony"] },
+    configuration: { status: "configured", repository: structuredClone(repository), baseBranch: "trunk", revision, config: config() },
+    host: { revision: controllerRevision, controller: { full_name: "controller/reviewer", base_branch: "main",
+      workflow: ".github/workflows/cadence-ai-review.yml" }, apps: { symphony: { app_id: 4866508 }, cadence: { app_id: CADENCE_APP_ID } },
+      ci: { missing_after_minutes: 20, queued_after_minutes: 60, completion_grace_minutes: 2, run_budget_minutes: 120 },
+      review: { timeout_minutes: 60, max_passes: 3, operational_retries: 1 } },
+    hostRevision: controllerRevision, controllerRevision, repository, controllerRepository, pullRequest,
+    request: { repositoryId: 100, prNumber: 4, headSha: head },
+    issue: { id: "issue", team: { id: "team" }, project: { id: "project" } }, associations: ["issue"],
+    installations: { complete: true, nodes: [11, 12, 21, 22].map((id, i) => ({ id,
+      app_id: i % 2 ? CADENCE_APP_ID : 4866508, account: { login: i < 2 ? "unseen-owner" : "controller" },
+      suspended_at: null, repository_ids: [i < 2 ? 100 : 200] })) },
+    ciDiscovery: { complete: true, revision, repositoryId: 100, required_checks: [{ name: "CI Required", app_id: 15368,
+      workflow_path: ".github/workflows/ci.yml", events: ["push", "pull_request"], ref_policy: "pr-head", tested_ref: "head",
+      running_timeout_minutes: 5, children: ["build", "lint", "test", "Changed Markdown"].map(name => ({ name, running_timeout_minutes: 20 })) }] },
+  };
   const target = resolveTarget(context);
   const run = { id: 20, run_number: 1, run_attempt: 1, path: ".github/workflows/ci.yml", event: "pull_request",
     repository: { id: 100 }, head_sha: head, head_branch: "task", status: "completed", conclusion: "success", check_suite_id: 30 };
-  const names = ["CI Required", ...entry.ci.required_checks[0].children.map(c => c.name)];
+  const names = ["CI Required", ...target.ci.required_checks[0].children.map(c => c.name)];
   const jobs = names.map((name, i) => ({ id: 40 + i, name, run_id: 20, run_attempt: 1, head_sha: head,
     tested_sha: head, status: "completed", conclusion: "success", check_run_url: `https://api.github.com/checks/${50 + i}` }));
   const checks = jobs.map((job, i) => ({ id: 50 + i, url: job.check_run_url, name: job.name,
@@ -50,53 +61,114 @@ function fixture() {
       workpad: { commentId: "workpad", issueId: "issue", reviewContract: state } } };
 }
 
-test("repository mapping stays disabled; resolver returns only mapped authority", () => {
-  assert.ok(mappingFile.repositories.every(t => t.enabled === false));
+test("an unseen repository resolves from task context, base config and discovered installations", () => {
   const { context, target } = fixture();
+  assert.equal(target.full_name, "unseen-owner/new-repo");
   assert.equal(target.apps.cadence.installation_id, 12);
-  assert.equal(target.configRevision, revision);
+  assert.equal(target.controller.apps.cadence.installation_id, 22);
+  assert.equal(target.configRevision, base);
+  assert.equal(target.controllerRevision, controllerRevision);
+  assert.deepEqual(target.repositoryConfig, config());
   assert.equal(target.issueId, "issue");
-  assert.doesNotThrow(() => resolveTarget(context));
+  assert.equal(target.baseBranch, "trunk");
+  context.selection.source = "human-task";
+  context.selection.baseBranch = "release/stable";
+  context.configuration.baseBranch = context.pullRequest.base.ref = "release/stable";
+  assert.equal(resolveTarget(context).baseBranch, "release/stable");
+  // No controller target list or per-repository enabled flag exists.
+  assert.equal(loadRepositoryMapping, loadRepositoryConfig);
 });
 
 test("target authorization rejects identity, configuration, installation and association substitutions", () => {
   for (const change of [
     c => { c.request.repositoryId = "100"; }, c => { c.request.repositoryId = 101; },
     c => { c.request.installationId = 12; }, c => { c.request.projectId = "other"; },
+    c => { c.request.repository = "other/repo"; }, c => { c.request.baseBranch = "task"; },
+    c => { c.request.permissions = { contents: "write" }; }, c => { c.request.workflow = "untrusted"; },
     c => { c.hostRevision = base; }, c => { c.controllerRevision = base; },
-    c => { c.mapping.repositories[0].enabled = false; },
-    c => { c.mapping.repositories.push(c.mapping.repositories[0]); },
+    c => { c.configuration.status = "missing"; }, c => { c.configuration.revision = head; },
+    c => { c.configuration.repository.id = 101; }, c => { c.configuration.repository.full_name = "other/repo"; },
+    c => { c.configuration.baseBranch = "task"; }, c => { c.selection.baseBranch = "task"; },
+    c => { c.selection.source = "incidental-url"; }, c => { c.selection.repository = "other/repo"; },
     c => { c.repository.full_name = "other/repo"; }, c => { c.repository.owner.login = "other"; },
     c => { c.pullRequest.state = "closed"; }, c => { c.pullRequest.head.sha = base; },
-    c => { c.pullRequest.base.repo.id = 101; }, c => { c.pullRequest.labels = []; },
+    c => { c.pullRequest.base.repo.id = 101; }, c => { c.pullRequest.base.ref = "task"; }, c => { c.pullRequest.labels = []; },
     c => { c.issue.project.id = "another-project"; }, c => { c.issue.team.id = "other"; },
+    c => { c.issue.id = "another-issue"; c.associations = [c.issue.id]; },
     c => { c.associations.push("another-issue"); }, c => { c.associations = []; },
-    c => { c.installations[0].repository_ids = []; }, c => { c.installations[1].app_id = 1; },
-    c => { c.installations[1].account.login = "jeremycarroll"; },
-    c => { c.installations[1].suspended_at = "2026-09-10"; },
-    c => { c.mapping.repositories[1].apps.cadence.installation_id = 12; },
-    c => { c.mapping.repositories[0].ci.required_checks = []; },
-    c => { c.mapping.repositories[0].dispatch.ref = "refs/heads/task"; },
+    c => { c.selection.human.github = ""; }, c => { c.selection.labels = []; },
+    c => { c.installations.complete = false; }, c => { c.installations.nodes[0].repository_ids = []; },
+    c => { c.installations.nodes[1].app_id = 1; }, c => { c.installations.nodes[1].account.login = "other"; },
+    c => { c.installations.nodes[1].suspended_at = "2026-09-10"; },
+    c => { c.installations.nodes.push({ ...c.installations.nodes[1], id: 99 }); },
+    c => { c.configuration.config.ci.requiredChecks = []; },
+    c => { c.configuration.config.ci.requiredChecks[0].workflow = ".github/workflows/other.yml"; },
+    c => { c.configuration.config.ci.requiredChecks[0].appId = 999; },
+    c => { c.ciDiscovery.complete = false; }, c => { c.ciDiscovery.revision = head; },
+    c => { c.ciDiscovery.repositoryId = 999; }, c => { c.ciDiscovery.required_checks = []; },
+    c => { c.ciDiscovery.required_checks[0].events = []; }, c => { c.host.review.max_passes = 99; },
+    c => { c.host.apps.cadence.app_id = 1; }, c => { c.host.ci.run_budget_minutes = 0; },
+    c => { c.controllerRepository.full_name = "other/controller"; },
   ]) {
     const { context } = fixture(); change(context);
     assert.throws(() => resolveTarget(context), change.toString());
   }
+  for (const field of ["repository", "repository_id", "enabled", "apps", "installationId", "linear", "dispatch", "privateKey", "review"]) {
+    const { context } = fixture(); context.configuration.config[field] = "untrusted";
+    assert.throws(() => resolveTarget(context), field);
+  }
 });
 
-test("loader pins contents to protected main and rejects stale/unprotected/denied reads", async () => {
-  for (const mode of ["success", "unprotected", "stale", "denied", "malformed"]) {
-    const urls = [];
-    const promise = loadRepositoryMapping({ controller: mappingFile.controller, expectedRevision: revision,
-      token: "fixture-only", fetchImpl: async url => {
-        urls.push(url);
-        return { ok: mode !== "denied", status: 403, json: async () => url.includes("branches/")
-          ? { protected: mode !== "unprotected", commit: { sha: mode === "stale" ? head : revision } }
-          : { encoding: "base64", content: Buffer.from(mode === "malformed" ? "?" : JSON.stringify(mappingFile)).toString("base64") } };
-      } });
-    if (mode === "success") {
-      assert.equal((await promise).revision, revision);
-      assert.ok(urls[1].endsWith(`?ref=${revision}`));
-    } else await assert.rejects(promise);
+function configApi(mode = "success") {
+  const { context } = fixture(), urls = [], blobSha = "d".repeat(40);
+  return { urls, options: { repository: context.repository.full_name, expectedRevision: base, token: "fixture-only",
+    fetchImpl: async url => {
+      urls.push(url);
+      const entry = { path: ".symphony.cfg.json", type: "blob", mode: mode === "symlink" ? "120000" : "100644", sha: blobSha };
+      let data;
+      if (url.endsWith("/new-repo")) data = { ...context.repository, ...(mode === "wrong-repo" ? { id: null } : {}) };
+      else if (url.includes("/branches/")) data = { name: decodeURIComponent(url.split("/branches/")[1]),
+        protected: false, commit: { sha: mode === "stale" ? head : base } };
+      else if (url.includes("/git/trees/")) data = { truncated: mode === "truncated",
+        tree: mode === "missing" ? [] : mode === "duplicate" ? [entry, entry] : [entry] };
+      else if (url.endsWith(`/git/blobs/${blobSha}`)) data = { sha: blobSha, encoding: "base64",
+        content: Buffer.from(mode === "malformed" ? "?" : JSON.stringify(mode === "invalid" ? { ...config(), dispatch: {} } : config())).toString("base64") };
+      else assert.fail(`unexpected config request: ${url}`);
+      const denied = ["denied", "hidden"].includes(mode) && url.includes("/git/trees/");
+      return { ok: !denied, status: mode === "hidden" ? 404 : 403, json: async () => data };
+    } } };
+}
+
+test("loader discovers the selected target and pins regular config to its fetched base", async () => {
+  const { urls, options } = configApi();
+  const result = await loadRepositoryConfig(options);
+  assert.equal(result.status, "configured");
+  assert.equal(result.repository.id, 100);
+  assert.equal(result.baseBranch, "trunk");
+  assert.equal(result.revision, base);
+  assert.deepEqual(result.config, config());
+  assert.ok(urls.every(url => url.startsWith("https://api.github.com/repos/unseen-owner/new-repo")));
+  assert.ok(urls.some(url => url.endsWith(`/git/trees/${base}`)));
+  assert.ok(!urls.some(url => url.includes(head)));
+  const explicit = configApi();
+  assert.equal((await loadRepositoryConfig({ ...explicit.options, baseBranch: "release/stable" })).baseBranch, "release/stable");
+  assert.ok(explicit.urls.some(url => url.endsWith("/branches/release%2Fstable")));
+  const { context } = fixture(); context.configuration = result;
+  assert.equal(resolveTarget(context).full_name, "unseen-owner/new-repo");
+});
+
+test("missing config is an onboarding handoff; inaccessible or invalid sources cannot masquerade as missing", async () => {
+  for (const repository of ["../other", "owner/..", "https://github.com/owner/repo"]) {
+    await assert.rejects(loadRepositoryConfig({ repository, expectedRevision: base,
+      fetchImpl: () => assert.fail("invalid selection must not make an API request") }), /Invalid selected repository/);
+  }
+  const { options } = configApi("missing");
+  const result = await loadRepositoryConfig(options);
+  assert.equal(result.status, "missing");
+  const { context } = fixture(); context.configuration = result;
+  assert.throws(() => resolveTarget(context), /symphony-repository must propose/);
+  for (const mode of ["stale", "denied", "hidden", "malformed", "invalid", "wrong-repo", "symlink", "duplicate", "truncated"]) {
+    await assert.rejects(loadRepositoryConfig(configApi(mode).options), undefined, mode);
   }
 });
 
@@ -173,15 +245,25 @@ test("a successful peer cannot hide nonpassing push or PR runs in either order",
 
 test("each peer needs its own verified successful checks and children", () => {
   for (const change of [
-    c => { c.jobs = c.jobs.filter(j => j.run_id !== 20); },
-    c => { c.jobs[1].conclusion = "failure"; },
-    c => { c.checks[1].conclusion = "failure"; },
-    c => { c.checks[0].app.id = 999; },
-    c => { c.jobs[0].tested_sha = base; },
+    p => { p.jobs[1].conclusion = "failure"; },
+    p => { p.checks[1].conclusion = "failure"; },
+    p => { p.checks[1].app.id = 999; },
+    p => { p.jobs[1].tested_sha = base; },
+    p => { p.checks[1].check_suite.id = 999; },
   ]) {
-    const { ci } = fixture(); addCiAttempt(ci); change(ci);
+    const { ci } = fixture(); const peer = addCiAttempt(ci);
+    assert.equal(evaluateCi(ci).passes, true);
+    change(peer);
     assert.equal(evaluateCi(ci).passes, false, change.toString());
   }
+});
+
+test("distinct successful run IDs cannot share a run number", () => {
+  const { ci } = fixture();
+  const peer = addCiAttempt(ci);
+  assert.equal(evaluateCi(ci).passes, true);
+  peer.run.run_number = ci.runs[0].run_number;
+  assert.equal(evaluateCi(ci).reason, "ambiguous-run:CI Required");
 });
 
 test("only genuine later attempts supersede a run, never a distinct peer", () => {
@@ -249,6 +331,7 @@ test("AI success requires exact check/generation, closed ledger and durable work
     a => { const f = sources(); f.comments.nodes.push(human()); a.generation = generation({ feedback: feedbackWatermark(f) }); },
     a => { a.generation = generation({ baseSha: head }); },
     a => { a.generation = generation({ configRevision: head }); },
+    a => { a.target.controllerRevision = head; },
     a => { a.generation = generation({ manualRetry: 1 }); },
   ]) {
     const { ai } = fixture(); change(ai);
@@ -334,24 +417,21 @@ test("late publication and extra operational retries cannot overwrite current re
   assert.equal(reviewDigest(gen), reviewDigest(structuredClone(gen)));
 });
 
-test("cross-owner target requires distinct target and controller installations", () => {
-  const { context } = fixture();
-  const rust = context.mapping.repositories[1];
-  rust.enabled = true; rust.apps.symphony.installation_id = 21; rust.apps.cadence.installation_id = 22;
-  context.controllerRepository = structuredClone(context.repository);
-  context.repository = { id: rust.repository_id, full_name: rust.full_name, owner: { login: "jeremycarroll" }, default_branch: "main" };
-  context.request.repositoryId = rust.repository_id; context.pullRequest.base.repo.id = rust.repository_id;
-  context.installations.push(...[21, 22].map((id, i) => ({ id, app_id: i ? 4866513 : 4866508,
-    account: { login: "jeremycarroll" }, suspended_at: null, repository_ids: [rust.repository_id] })));
-  const resolved = resolveTarget(context);
-  assert.equal(resolved.apps.cadence.installation_id, 22);
-  assert.equal(resolved.controller.apps.symphony.installation_id, 11);
-  for (const change of [c => { c.controllerRepository.id = 999; },
-    c => { c.installations = c.installations.filter(i => i.id !== 11); },
-    c => { c.mapping.repositories[0].enabled = false; },
-    c => { c.mapping.repositories[1].apps.cadence.installation_id = 12; }]) {
-    const invalid = structuredClone(context); change(invalid); assert.throws(() => resolveTarget(invalid));
+test("cross-owner discovery rejects controller/target installation reuse and incomplete grants", () => {
+  for (const change of [
+    c => { c.controllerRepository.id = 999; },
+    c => { c.installations.nodes = c.installations.nodes.filter(i => i.id !== 21); },
+    c => { c.installations.nodes[3].id = 12; },
+    c => { c.installations.nodes[3].suspended_at = "now"; },
+    c => { c.installations.nodes[3].repository_ids = []; },
+  ]) {
+    const { context } = fixture(); change(context); assert.throws(() => resolveTarget(context));
   }
+  const { context } = fixture();
+  context.controllerRepository = structuredClone(context.repository);
+  context.host.controller.full_name = context.repository.full_name;
+  context.installations.nodes = context.installations.nodes.slice(0, 2);
+  assert.equal(resolveTarget(context).controller.apps.cadence.installation_id, 12);
 });
 
 test("identical completed generation coalesces; retries require explicit operational intent", () => {

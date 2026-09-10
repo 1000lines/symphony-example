@@ -619,15 +619,14 @@ export const parseCadenceWorkpad = (body) => {
     throw new Error("Markdown does not start with a Cadence Workpad heading.");
   }
 
-  const match = body.match(
-    new RegExp(
-      `^${escapeRegExp(
-        REVIEW_OBJECT_HEADING
-      )}\\s*\\n\`\`\`json\\s*\\n([\\s\\S]*?)\\n\`\`\``,
-      "m"
-    )
-  );
-  if (!match) return parseLegacyWorkpad(body);
+  const headings = [...body.matchAll(new RegExp(`^${escapeRegExp(REVIEW_OBJECT_HEADING)}[ \t]*\r?$`, "gm"))];
+  if (!headings.length) {
+    if (body.includes('"reviewContract"')) throw new Error("Unreadable Cadence review contract");
+    return parseLegacyWorkpad(body);
+  }
+  const last = headings[headings.length - 1];
+  const match = body.slice(last.index + last[0].length).match(/^\s*\n```json\s*\n([\s\S]*?)\n```/);
+  if (!match) throw new Error("Cadence Workpad review object is unreadable");
 
   try {
     return normalizeCadenceWorkpad(JSON.parse(match[1]));

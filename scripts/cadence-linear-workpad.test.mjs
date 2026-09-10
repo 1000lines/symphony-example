@@ -864,11 +864,14 @@ test("upsertCadenceWorkpad warns when multiple Cadence workpads already exist", 
 
 test("contract detection ignores quoted field names in valid workpad prose", async () => {
   const { queued } = contractFixture();
-  for (const mode of ["prose", "contract", "malformed-contract"]) {
+  for (const mode of ["prose", "contract", "malformed-contract", "missing-fence", "wrong-fence", "missing-heading"]) {
     let body = renderCadenceWorkpad(mode === "prose"
       ? { summary: 'This review discusses the "reviewContract" field.' }
       : { reviewContract: queued });
     if (mode === "malformed-contract") body = body.replace('"generation": {', '"generation": INVALID {');
+    if (mode === "missing-fence") body = body.replace(/\n```\s*$/, "");
+    if (mode === "wrong-fence") body = body.replace("### Review Object\n```json", "### Review Object\n```text");
+    if (mode === "missing-heading") body = body.replace("### Review Object", "### Lost Object");
     const linear = makeLinearFetch({ comments: [
       { id: "cadence-old", body }, { id: "cadence-new", body },
     ] });
@@ -1119,4 +1122,37 @@ test("running review persistence requires the live generation and preserves its 
   assert.equal(stored.reviewContract.phase, "in_progress");
   assert.equal(stored.reviewContract.passes, queued.passes);
   assert.throws(() => startReviewGeneration(queued, { id: "stale" }), /Superseded/);
+});
+
+test("unreadable canonical contract cannot degrade to a legacy snapshot", () => {
+  const { queued } = contractFixture();
+  const original = renderCadenceWorkpad({ reviewContract: queued });
+  for (const body of [original.replace(/\n```\s*$/, ""),
+    original.replace("### Review Object\n```json", "### Review Object\n```text"),
+    original.replace("### Review Object", "### Lost Object")]) {
+    assert.throws(() => parseCadenceWorkpad(body), /review object|contract/);
+    assert.throws(() => resolveWorkpadInput({ existingBody: body, incomingWorkpad: sampleWorkpad }), /review object|contract/);
+  }
+});
+
+test("the final canonical block is authoritative and must be readable", () => {
+  const first = renderCadenceWorkpad({ summary: "old" });
+  assert.equal(parseCadenceWorkpad(first.replaceAll("\n", "\r\n")).summary, "old");
+  const second = renderCadenceWorkpad({ summary: "new" }).split("### Review Object")[1];
+  assert.equal(parseCadenceWorkpad(`${first}\n### Review Object${second}`).summary, "new");
+  assert.throws(() => parseCadenceWorkpad(`${first}\n### Review Object\ntruncated`), /review object/);
+});
+
+test("incomplete comment history cannot erase a stored contract during bookkeeping", async () => {
+  const { queued } = contractFixture();
+  let writes = 0;
+  await assert.rejects(upsertCadenceWorkpad({ issueIdentifier: "TEST-1", token: "fixture-token",
+    workpad: sampleWorkpad, fetchImpl: async (_, options) => {
+      const { query } = JSON.parse(options.body);
+      if (!query.includes("query CadenceWorkpadIssue")) writes++;
+      return { ok: true, json: async () => ({ data: { issue: { id: "issue", identifier: "TEST-1", comments: {
+        nodes: [{ id: "anchor", body: renderCadenceWorkpad({ reviewContract: queued }) }],
+        pageInfo: undefined } } } }) };
+    } }), /Incomplete Linear comment history/);
+  assert.equal(writes, 0);
 });
