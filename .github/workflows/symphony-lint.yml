@@ -5,6 +5,10 @@ name: symphony-lint
 on:
   workflow_call:
     inputs:
+      tested-ref:
+        description: Exact caller commit SHA to check out and validate.
+        required: true
+        type: string
       tooling-directory:
         description: Relative path to the standalone Symphony tooling package in the caller checkout.
         required: false
@@ -26,19 +30,23 @@ jobs:
       - name: Check out caller repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tested-ref }}
           persist-credentials: false
+      - name: Verify and record tested commit
+        env:
+          TESTED_REF: ${{ inputs.tested-ref }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TESTED_REF"
+          printf 'Tested SHA: %s\n' "$TESTED_REF" >> "$GITHUB_STEP_SUMMARY"
       - name: Set up tooling Node version
         uses: actions/setup-node@v4
         with:
           node-version-file: ${{ inputs.tooling-directory }}/.nvmrc
           cache: npm
-          cache-dependency-path: |
-            ${{ inputs.tooling-directory }}/package.json
-            ${{ inputs.tooling-directory }}/tools/symphony-dag/package.json
-            ${{ inputs.tooling-directory }}/tools/symphony-host/package.json
+          cache-dependency-path: ${{ inputs.tooling-directory }}/package-lock.json
       - name: Select tooling npm version
         run: npm install --global npm@11.13.0
-      - name: Install tooling dependencies
-        run: npm install
+      - name: Install locked tooling dependencies
+        run: npm ci
       - name: Lint Symphony tooling
         run: npm run lint
