@@ -24,6 +24,7 @@ import {
   pushWithReadback,
   revokeInstallationToken,
 } from "./github-app-auth.mjs";
+import { ensurePrLabels } from "./ensure-pr-labels.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
@@ -95,7 +96,7 @@ async function fixture(t) {
     if (path.endsWith("/access_tokens")) {
       assert.deepEqual(JSON.parse(init.body), {
         repository_ids: [config.repositoryId],
-        permissions: config.permissions,
+        permissions: { ...config.permissions, metadata: "read" },
       });
       f.mints++;
       return response(
@@ -160,6 +161,80 @@ test("long-lived API client obtains fresh credentials across one-hour expiry", a
     client("/%2e%2e/%2e%2e/other/repo"),
     /invalid repository/
   );
+});
+
+test("metadata read may be omitted from the echo, but all operation grants stay exact", async (t) => {
+  const f = await fixture(t);
+  for (const explicitMetadata of [false, true]) {
+    f.config.permissions = { contents: "read", ...(explicitMetadata ? { metadata: "read" } : {}) };
+    for (const permissions of [
+      { contents: "read" }, { contents: "read", metadata: "read" },
+      {}, { contents: "write" }, { contents: "read", metadata: "write" },
+      { contents: "read", issues: "write" },
+    ]) {
+      f.intercept = (path, init) => {
+        if (!path.endsWith("/access_tokens")) return;
+        assert.deepEqual(JSON.parse(init.body), { repository_ids: [123], permissions: { contents: "read", metadata: "read" } });
+        return response({ token: "scoped-fixture", expires_at: new Date(start + 3_600_000).toISOString(), permissions }, 201);
+      };
+      const mint = () => getInstallationToken({ ...f, forceRefresh: true });
+      if (permissions.contents === "read" && !permissions.issues && permissions.metadata !== "write") {
+        assert.equal((await mint()).token, "scoped-fixture");
+      } else {
+        await assert.rejects(mint, /permission scope/);
+      }
+    }
+  }
+  f.calls.length = 0;
+  f.config.permissions = { metadata: "write" };
+  await assert.rejects(getInstallationToken(f), /invalid operation permissions/);
+  assert.deepEqual(f.calls, []);
+});
+
+test("label repair loads private App config, narrows grants and reads back a lost write without PAT fallback", async (t) => {
+  const f = await fixture(t);
+  f.config.permissions = { contents: "write", actions: "write", pull_requests: "write", issues: "write" };
+  const configPath = join(f.root, "labels-app.json");
+  await writeFile(configPath, JSON.stringify(f.config), { mode: 0o600 });
+  const env = { LINEAR_API_TOKEN: "linear-fixture", GH_TOKEN: "ambient-pat", GITHUB_TOKEN: "ambient-pat",
+    SYMPHONY_GITHUB_APP_CONFIG: configPath, SYMPHONY_GITHUB_APP_CACHE: f.cacheDir };
+  let labels = [], writes = 0, mints = 0;
+  f.intercept = (path, init) => {
+    assert.notEqual(init.headers.authorization, "Bearer ambient-pat");
+    if (path.endsWith("/access_tokens")) {
+      assert.deepEqual(JSON.parse(init.body), { repository_ids: [123], permissions: { pull_requests: "read", issues: "write", metadata: "read" } });
+      return response({ token: `label-token-${++mints}`, expires_at: new Date(Date.now() + 3_600_000).toISOString(), permissions: { pull_requests: "read", issues: "write" } }, 201);
+    }
+    if (!path.startsWith("/repos/example/repo/") || path.endsWith("/installation")) return;
+    assert.match(init.headers.authorization, /^Bearer label-token-/);
+    if (path.endsWith("/pulls")) return response([{ number: 7, title: "[100-11]: App credentials", head: { ref: "symphony/hackathon-ready/100-11/app-credentials" }, base: { repo: { full_name: "example/repo" } } }]);
+    if (path.startsWith("/repos/example/repo/labels/")) return response({ name: path.split("/").at(-1) });
+    assert.equal(path, "/repos/example/repo/issues/7/labels");
+    if (init.method === "POST") {
+      writes++;
+      labels = JSON.parse(init.body).labels.map((name) => ({ name }));
+      return response({}, 401); // Server applied the write before the auth failure.
+    }
+    return response(labels);
+  };
+  const fetchImpl = (url, init) => {
+    if (url === "https://api.linear.app/graphql") {
+      assert.equal(init.headers.authorization, "linear-fixture");
+      return response({ data: { issue: { identifier: "100-11", project: { content: "project-color: pink" }, attachments: { nodes: [], pageInfo: { hasNextPage: false } } } } });
+    }
+    return f.fetchImpl(url, init);
+  };
+  const repair = (overrides = {}) => ensurePrLabels({ issueIdentifier: "100-11", repository: f.config.repository, env, fetchImpl, ...overrides });
+  assert.equal((await repair()).result, "repaired");
+  assert.equal(writes, 1);
+  assert.equal(mints, 2);
+  assert.equal((await repair({ env: { ...env, SYMPHONY_GITHUB_AUTH_MODE: "app" } })).result, "already-correct");
+  const calls = f.calls.length;
+  await assert.rejects(repair({ repository: "example/other" }), /repository mismatch/);
+  await assert.rejects(repair({ env: { ...env, SYMPHONY_GITHUB_AUTH_MODE: "legacy" } }), /conflict/);
+  await chmod(configPath, 0o644);
+  await assert.rejects(repair(), /private App configuration/);
+  assert.equal(f.calls.length, calls);
 });
 
 for (const [name, path, payload, status = 200, pattern] of [
@@ -543,6 +618,16 @@ test("actual askpass/gh/preflight subprocesses serialize renewal without inherit
     preflight.stdout + preflight.stderr,
     /opaque-installation|PRIVATE KEY|inherited-pat/
   );
+  const declaredPreflight = await run(process.execPath, [env.SYMPHONY_GITHUB_APP_AUTH, "--preflight", "--repository", "example/repo"], env);
+  assert.equal(declaredPreflight.code, 0, declaredPreflight.stderr);
+  assert.equal(JSON.parse(declaredPreflight.stdout).repository, "example/repo");
+  const callsBeforeMismatch = f.calls.length;
+  for (const target of ["example/other", "jeremycarroll/venn-search-rs"]) {
+    const mismatch = await run(process.execPath, [env.SYMPHONY_GITHUB_APP_AUTH, "--preflight", "--repository", target], env);
+    assert.equal(mismatch.code, 1);
+    assert.match(mismatch.stderr, /configured target/);
+  }
+  assert.equal(f.calls.length, callsBeforeMismatch);
   f.intercept = (path) =>
     path === "/app" && response({ secret: "do-not-print" }, 401);
   const denied = await run(

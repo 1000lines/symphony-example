@@ -268,3 +268,43 @@ esac
     assertNoSecrets(denied);
   } finally { await fixture.cleanup(); }
 });
+
+test("legacy setup preserves identity and provider fields supplied by the secret map", async () => {
+  const fixture = await createPreflightFixture({ githubLogin: "configured-bot" });
+  try {
+    const root = dirname(fixture.binDir);
+    const identities = {
+      SYMPHONY_EXPECTED_GITHUB_LOGIN: "configured-bot",
+      SYMPHONY_GIT_AUTHOR_NAME: "Configured Author",
+      SYMPHONY_GIT_AUTHOR_EMAIL: "configured@example.invalid",
+      GIT_AUTHOR_NAME: "Configured Author",
+      GIT_AUTHOR_EMAIL: "configured@example.invalid",
+      GIT_COMMITTER_NAME: "Configured Committer",
+      GIT_COMMITTER_EMAIL: "committer@example.invalid",
+    };
+    const secretFile = join(root, "keys.json");
+    await writeFile(secretFile, JSON.stringify({ ...secretEnv, ...identities }), { mode: 0o600 });
+    await writeExecutable(join(fixture.binDir, "aws"), `#!/bin/sh
+case "$*" in
+  *get-caller-identity*) printf '{}';;
+  *symphony/keys*) cat "$TEST_KEYS_FILE";;
+  *) exit 3;;
+esac
+`);
+    await writeExecutable(join(fixture.binDir, "curl"), `#!/bin/sh
+case "$*" in
+  *api.linear.app*) printf '%s' '{"data":{"viewer":{"id":"viewer","email":"linear-bot@example.invalid"}}}';;
+  *api.openai.com/v1/models*) exit 0;;
+  *) exit 2;;
+esac
+`);
+    const result = spawnSync("bash", ["-c", 'source "$1" || exit $?; node -e \'const keys = JSON.parse(process.env.TEST_IDENTITY_KEYS); process.stdout.write(JSON.stringify(Object.fromEntries(keys.map(key => [key, process.env[key]]))))\'', "setup", setupScript], {
+      encoding: "utf8",
+      env: { PATH: `${fixture.binDir}:${process.env.PATH}`, TEST_KEYS_FILE: secretFile, TEST_IDENTITY_KEYS: JSON.stringify(Object.keys(identities)),
+        SYMPHONY_RUNTIME_DIR: join(root, "runtime"), SYMPHONY_EXPECTED_LINEAR_EMAIL: "linear-bot@example.invalid" },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), identities);
+    assertNoSecrets(result);
+  } finally { await fixture.cleanup(); }
+});

@@ -111,7 +111,8 @@ export async function ensurePrLabels({
   const linearToken = env.LINEAR_API_TOKEN || env.LINEAR_API_KEY;
   const githubToken = env.GH_TOKEN || env.GITHUB_TOKEN;
   if (!["legacy", "app"].includes(env.SYMPHONY_GITHUB_AUTH_MODE || "legacy")) throw new Error("Invalid GitHub authentication mode.");
-  const appMode = env.SYMPHONY_GITHUB_AUTH_MODE === "app";
+  const appMode = env.SYMPHONY_GITHUB_AUTH_MODE === "app" || Boolean(appClient || env.SYMPHONY_GITHUB_APP_CONFIG);
+  if (appMode && env.SYMPHONY_GITHUB_AUTH_MODE === "legacy") throw new Error("App credentials conflict with legacy authentication mode.");
   if (!linearToken || (!appMode && !githubToken)) {
     throw new Error(
       "Linear and GitHub API tokens are required for PR label repair."

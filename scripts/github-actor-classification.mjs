@@ -72,12 +72,15 @@ export const classifyGitHubActor = (actor, options = {}) => {
         new Set(identities.map((entry) => entry.actorKind)).size !== 2) {
       throw new Error("Two distinct configured GitHub App identities are required.");
     }
+    const humans = options.humanAllowlist ?? (process.env.SYMPHONY_HUMAN_LOGIN || "").split(",");
+    if (!Array.isArray(humans) || !humans.some((human) => normalize(human))) {
+      throw new Error("An explicit GitHub human mapping is required.");
+    }
     const app = identities.find(({ slug }) => login === `${slug}[bot]`);
     const appId = options.actorAppId ?? actor?.app?.id;
     if (app && (appId === undefined || appId === app.appId) && (typeof actor !== "object" || actor.type === "Bot")) {
       return { ...result({ login, classification: ACTOR_CLASSIFICATION.AI_ACTOR, humanFacing: false, source: "configured-app", actorKind: app.actorKind }), appId: app.appId };
     }
-    const humans = options.humanAllowlist || [process.env.SYMPHONY_HUMAN_LOGIN];
     if (!login.endsWith("[bot]") && appId === undefined && listContains(humans, login) &&
         (typeof actor !== "object" || actor.type === "User")) {
       return result({ login, classification: ACTOR_CLASSIFICATION.HUMAN, humanFacing: true, source: "human-allowlist" });

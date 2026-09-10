@@ -176,7 +176,7 @@ const appIdentities = [
 test("both explicit App identities and mapped humans need no organization teams", async () => {
   for (const identity of appIdentities) {
     const actor = { login: `${identity.slug}[bot]`, type: "Bot", app: { id: identity.appId } };
-    const classified = await classifyGitHubActorWithTeams(actor, { appIdentities, fetchImpl: () => assert.fail("no team requests allowed") });
+    const classified = await classifyGitHubActorWithTeams(actor, { appIdentities, humanAllowlist: ["jeremycarroll"], fetchImpl: () => assert.fail("no team requests allowed") });
     assert.equal(classified.classification, ACTOR_CLASSIFICATION.AI_ACTOR);
     assert.equal(classified.appId, identity.appId);
     assert.equal(classified.actorKind, identity.actorKind);
@@ -186,6 +186,22 @@ test("both explicit App identities and mapped humans need no organization teams"
   const human = classifyGitHubActor({ login: "JeremyCarroll", type: "User" }, { appIdentities, humanAllowlist: ["jeremycarroll"] });
   assert.equal(human.classification, ACTOR_CLASSIFICATION.HUMAN);
   assert.equal(human.humanFacing, true);
+});
+
+test("App classification fails loudly for an empty human mapping", async () => {
+  for (const humanAllowlist of [[], [""], ["  "]]) {
+    await assert.rejects(classifyGitHubActorWithTeams("jeremycarroll", { appIdentities, humanAllowlist }), /explicit GitHub human mapping/);
+  }
+  const previous = process.env.SYMPHONY_HUMAN_LOGIN;
+  try {
+    process.env.SYMPHONY_HUMAN_LOGIN = "  JeremyCarroll, second-human  ";
+    assert.equal(classifyGitHubActor("second-human", { appIdentities }).classification, ACTOR_CLASSIFICATION.HUMAN);
+    delete process.env.SYMPHONY_HUMAN_LOGIN;
+    assert.throws(() => classifyGitHubActor("jeremycarroll", { appIdentities }), /explicit GitHub human mapping/);
+  } finally {
+    if (previous === undefined) delete process.env.SYMPHONY_HUMAN_LOGIN;
+    else process.env.SYMPHONY_HUMAN_LOGIN = previous;
+  }
 });
 
 test("unknown or spoofed App identities cannot become trusted through legacy teams or allowlists", () => {

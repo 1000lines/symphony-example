@@ -70,7 +70,8 @@ export function validateAppConfig(config) {
     !config.permissions ||
     !Object.keys(config.permissions).length ||
     Object.entries(config.permissions).some(
-      ([name, level]) => !grants.has(name) || !["read", "write"].includes(level)
+      ([name, level]) => !grants.has(name) || !["read", "write"].includes(level) ||
+        (name === "metadata" && level !== "read")
     )
   )
     fail("invalid operation permissions");
@@ -149,7 +150,10 @@ function exactPermissions(actual, requested) {
   const expected = { ...requested, metadata: "read" };
   return (
     actual &&
-    Object.entries(expected).every(([key, value]) => actual[key] === value) &&
+    // Metadata read is implicit; GitHub may omit it from the response echo.
+    Object.entries(expected).every(([key, value]) =>
+      key === "metadata" ? actual[key] === undefined || actual[key] === "read" : actual[key] === value
+    ) &&
     Object.keys(actual).every((key) => expected[key] === actual[key])
   );
 }
@@ -189,7 +193,7 @@ async function mint(config, fetchImpl, now) {
       "POST",
       {
         repository_ids: [config.repositoryId],
-        permissions: config.permissions,
+        permissions: { ...config.permissions, metadata: "read" },
       }
     )
   );
@@ -236,7 +240,8 @@ async function privateCache(directory) {
 async function locked(directory, config, action) {
   await privateCache(directory);
   const lock = join(directory, `${config.appId}-${config.installationId}.lock`);
-  const deadline = Date.now() + 30_000;
+  // A mint performs four sequential requests with 20-second deadlines.
+  const deadline = Date.now() + 90_000;
   for (;;) {
     try {
       await mkdir(lock, { mode: 0o700 });
@@ -245,12 +250,13 @@ async function locked(directory, config, action) {
       if (error.code !== "EEXIST") fail("cannot lock private cache");
       if (Date.now() >= deadline)
         fail(
-          "refresh lock timeout; operator must inspect interrupted refresher"
+          "refresh lock timeout; operator must inspect refresher and lock holder.json"
         );
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
   }
   try {
+    await writeFile(join(lock, "holder.json"), JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }), { mode: 0o600, flag: "wx" });
     return await action();
   } finally {
     await rm(lock, { recursive: true });
@@ -487,7 +493,9 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
   const config = await loadAppConfig();
   const options = { config, cacheDir: process.env.SYMPHONY_GITHUB_APP_CACHE };
-  if (command === "preflight") {
+  if (command === "preflight" || command === "--preflight") {
+    if (args.length && (args.length !== 2 || args[0] !== "--repository" || args[1].toLowerCase() !== config.repository.toLowerCase()))
+      fail("preflight requires --repository to match the configured target");
     const { expires_at } = await getInstallationToken({
       ...options,
       forceRefresh: true,
@@ -536,7 +544,7 @@ async function main() {
     });
   } else
     fail(
-      "usage: preflight | askpass PROMPT | exec COMMAND ARGS... | push SOURCE refs/heads/BRANCH"
+      "usage: --preflight [--repository OWNER/REPO] | askpass PROMPT | exec COMMAND ARGS... | push SOURCE refs/heads/BRANCH"
     );
 }
 

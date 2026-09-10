@@ -476,6 +476,14 @@ symphony_setup_main() {
   export SYMPHONY_KEYS_SECRET_ID="symphony/keys"
   export SYMPHONY_RUNTIME_DIR="${SYMPHONY_RUNTIME_DIR:-/tmp/symphony}"
 
+  # Retain legacy precedence: defaults first, then secret-map overrides.
+  local initial_author_email="${SYMPHONY_GIT_AUTHOR_EMAIL:-}"
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == legacy ]]; then
+    symphony_set_identity_defaults || return 1
+    export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+    export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+  fi
+
   if ! aws sts get-caller-identity \
     --profile "${AWS_PROFILE}" \
     --region "${AWS_REGION}" \
@@ -488,6 +496,10 @@ symphony_setup_main() {
   unset GH_TOKEN LINEAR_API_KEY
   symphony_load_secret_env_map "${SYMPHONY_KEYS_SECRET_ID}" || return 1
   if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then
+    # A mode selected by the secret map must not inherit a legacy email default.
+    if [[ -z "$initial_author_email" && "${SYMPHONY_GIT_AUTHOR_EMAIL:-}" == 327018241+1000-symphony-bot@users.noreply.github.com ]]; then
+      unset SYMPHONY_GIT_AUTHOR_EMAIL
+    fi
     unset GITHUB_TOKEN GH_TOKEN SYMPHONY_GITHUB_TOKEN
     mkdir -p "$SYMPHONY_RUNTIME_DIR" || return 1
     chmod 700 "$SYMPHONY_RUNTIME_DIR" || return 1
@@ -501,10 +513,11 @@ symphony_setup_main() {
       return 1
     fi
     mv "$app_tmp" "$SYMPHONY_GITHUB_APP_CONFIG" || return 1
+    symphony_set_identity_defaults || return 1
+    export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+    export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
   fi
-  symphony_set_identity_defaults || return 1
-  export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
-  export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+  case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in app|legacy) ;; *) symphony_die "Invalid SYMPHONY_GITHUB_AUTH_MODE"; return 1 ;; esac
   symphony_verify_github_identity || return 1
   symphony_prepare_git_auth || return 1
 

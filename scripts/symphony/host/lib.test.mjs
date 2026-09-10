@@ -70,6 +70,30 @@ const stateEnv = (root) => ({
   SYMPHONY_ALLOW_NON_ROOT_INSTALL: "1",
 });
 
+test("symphony_git selects App transport and removes inherited PAT, SSH and trace settings", async () => {
+  const root = await mkdtemp(join(tmpdir(), "symphony-app-git-"));
+  try {
+    const bin = join(root, "bin");
+    await mkdir(bin);
+    await writeFile(join(bin, "git"), `#!/usr/bin/env node
+const env = process.env;
+const forbidden = ['GITHUB_TOKEN', 'GH_TOKEN', 'SYMPHONY_GITHUB_TOKEN', 'SSH_AUTH_SOCK', 'GIT_TRACE', 'GIT_TRACE_CURL', 'GIT_CURL_VERBOSE'];
+if (forbidden.some(key => env[key])) process.exit(2);
+if (env.SYMPHONY_GITHUB_AUTH_MODE !== 'app' || !env.SYMPHONY_GITHUB_APP_CONFIG || !env.SYMPHONY_GITHUB_APP_AUTH || !env.SYMPHONY_GITHUB_APP_CACHE || !env.GIT_ASKPASS || env.GIT_TERMINAL_PROMPT !== '0') process.exit(3);
+process.stdout.write(JSON.stringify(process.argv.slice(2)));
+`, { mode: 0o700 });
+    const result = runLib("symphony_git status --porcelain", {
+      ...stateEnv(root), PATH: `${bin}:${process.env.PATH}`, SYMPHONY_GITHUB_AUTH_MODE: "app",
+      SYMPHONY_CONFIG_DIR: join(root, "config"),
+      GITHUB_TOKEN: "inherited-pat", GH_TOKEN: "inherited-pat", SYMPHONY_GITHUB_TOKEN: "inherited-pat", SSH_AUTH_SOCK: "/operator/agent",
+      GIT_TRACE: "1", GIT_TRACE_CURL: "1", GIT_CURL_VERBOSE: "1",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), ["-c", "credential.helper=", "-c", "credential.useHttpPath=true", "-c", "url.https://github.com/.insteadOf=git@github.com:", "status", "--porcelain"]);
+    assert.doesNotMatch(result.stdout + result.stderr, /inherited-pat|operator\/agent/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("state values survive a round trip through the install-state file", async () => {
   const root = await mkdtemp(join(tmpdir(), "symphony-state-"));
 
