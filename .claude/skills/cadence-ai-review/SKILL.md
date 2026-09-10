@@ -94,6 +94,16 @@ guess its contents.
 
 - **Acquire** — gather per-PR evidence and the shared design/requirement docs.
   See [`references/acquisition.md`](./references/acquisition.md).
+- **Challenge the approach** — before detailed conformance, compare the ticket
+  with the current human outcome and feedback. Ask whether the work should
+  exist in this form and whether an existing mechanism could satisfy it more
+  simply. Estimate conformance and exact file ownership do not prove a good
+  design. For a concrete contradiction or unjustified complexity, record the
+  evidence and classify the needed remedy: implementation replacement,
+  partial replan, or full replan. Use the existing finding classes and advisory
+  output rules. If human judgment is needed, name the decision and stop
+  dependent axis work rather than exhaustively reviewing a rejected approach.
+  Do not invent a new requirement or block solely on line count.
 - **Extract requirements** — derive a discrete, stably-ID'd requirement list for
   the group from the ACs and design docs.
 - **Assign requirements to PRs** — build a coverage matrix mapping each
@@ -204,6 +214,9 @@ that should not live on the PR:
   lifecycle, class, status, and smallest safe actions by stable finding ID;
 - new human input and human-feedback learning notes, including mandatory
   same-class follow-up and optional/nice-to-have follow-up;
+- for replanning, the triggering human source, superseded decision/criteria,
+  affected ticket(s), and whether the node boundary still holds; assess the
+  replacement against the revised intent, not stale criteria or an old head;
 - AI-to-AI coordination details that help Symphony continue the work but would
   distract human PR reviewers.
 

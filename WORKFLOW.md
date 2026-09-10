@@ -341,6 +341,12 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   reviewer-facing clarity improvements.
 - Before returning to review, update the Codex workpad review-comment ledger so
   incoming, addressed, deferred, and blocked comments are each accounted for.
+- When human feedback changes the approach, boundaries, or accepted plan,
+  follow `docs/engineering/symphony/replanning.md` before coding against old
+  criteria. Keep a sound ticket/PR when replacing its internals is sufficient;
+  otherwise amend ownership and dependencies, account for merged work, and
+  create only the authorized follow-up work. Carry unresolved comments forward
+  even when they predate the latest workpad update.
 - On rework, take the smallest appropriate action:
   - if review feedback or failed checks are mechanical or clearly actionable,
     implement the fix or update the PR/workpad, push if code changed, and move

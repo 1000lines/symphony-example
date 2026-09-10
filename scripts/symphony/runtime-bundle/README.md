@@ -57,6 +57,18 @@ mode), `45-runtime-bundle` and `80-config` installation steps, plus the normal
 service reload. Merging the source does not activate it on an existing host.
 Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
 
+## Human feedback and replanning
+
+The installed `symphony-replan` skill handles human comments that change an
+approach or accepted plan. It uses the shared
+[replanning guide](../../../docs/engineering/symphony/replanning.md) and a
+revision template in the pinned workpad. It distinguishes replacing a ticket's
+implementation from changing ticket boundaries, accounts for running and merged
+work, and preserves unresolved feedback across rewrites. Existing GitHub event
+routing still delivers ordinary human comments; no new verdict syntax or
+controller state is introduced. Install the accepted runtime bundle and workflow
+to activate these worker instructions on an existing host.
+
 ## Supplying host settings
 
 The existing installer inputs are environment variables; it does not

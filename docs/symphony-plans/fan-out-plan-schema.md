@@ -5,6 +5,19 @@ mix. The schema is biased toward exact ownership: every item should make clear
 which files it may edit or create, which context is read-only, what dependency
 state it needs, and what evidence proves the spawned ticket is done.
 
+Human feedback can revise this allocation. Follow
+[Replanning From Human Feedback](../engineering/symphony/replanning.md) to
+amend ownership before crossing file boundaries, coordinate existing writers,
+and account for retained, superseded, and already-merged work. A change to a
+node's approach need not change its graph edges or require a new ticket.
+
+For plan review, put a short outcome and size summary near the top: node count,
+estimated additions and deletions per node, files touched, and substantial
+uncertainty or complexity. Estimates are prompts for judgment, not acceptance
+quotas. Explain why a large node needs its size and whether existing mechanisms
+could satisfy it more simply. For a replan show old versus new values, including
+explicit removal work. Do not increase implementation size to meet an estimate.
+
 ## Plan Header Fields
 
 `project_code`

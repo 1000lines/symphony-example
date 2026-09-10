@@ -40,8 +40,13 @@ Small PRs can use the human guide directly.
 
 1. Collect the PR, linked issue, intended base, head SHA, changed files, CI
    status, prior review comments, and stack context.
-2. Run a PR-shape preflight. If the PR is too large or mixes unrelated work,
-   produce a reshape brief before detailed axis review.
+2. Check whether the ticket and approach still serve the current human outcome
+   before checking conformance. Consider simpler existing mechanisms and fresh
+   objections to accepted decisions. A matching line estimate or ownership
+   list does not justify the design. Name an evidence-backed implementation
+   replacement or replanning need; if a human decision is required, escalate
+   it before spending the pass on dependent detail. Then run the PR-shape
+   preflight and produce a reshape brief for incoherent scope when needed.
 3. Select axes. Always consider reviewability, scope coherence, test/evidence,
    and backward compatibility. Add conditional axes based on the diff.
 4. Run one bounded review per selected axis.

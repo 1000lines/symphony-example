@@ -22,6 +22,12 @@ When fresh human input asks for an in-scope change, do it. If it conflicts with
 generated ticket text, bot workpads, or earlier automation notes, treat the
 human input as the newer requirement and make the smallest coherent update.
 
+When feedback changes the approach or plan boundaries, use the installed
+`symphony-replan` skill before implementing against the old criteria. It may
+keep the current ticket/PR, amend related tickets, or prepare a replacement
+plan. Preserve unresolved feedback across workpad updates and branch rewrites;
+an old comment does not become resolved merely because the workpad is newer.
+
 ## Questions And Assumptions
 
 Use available sources, existing conventions, and reasonable defaults to resolve
