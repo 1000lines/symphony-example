@@ -13,7 +13,8 @@ predecessor blocks its dependent through the relation. When the predecessor
 moves to Done, an already Active dependent becomes eligible without a state
 change. This amendment overrides the older status wording in the accepted
 plan, design, initial ticket descriptions and pinned brief. It changes no
-node scope, topology, ownership, or activation hold.
+node scope or ownership. Jeremy subsequently authorized all fifteen tickets
+to be Active; the monitor deployment prerequisites are now hard relations.
 
 ## Fan-out and common ticket rules
 
@@ -28,13 +29,13 @@ Show one completed body for inspection before live writes. Preserve empty lists
 as `none`. Idempotently replace generated content rather than appending it.
 
 Create exactly thirteen delivery issues and two monitor issues; do not duplicate
-100-6, 100-7 or 100-8. All fifteen nodes start Backlog, preserving the
-accepted hold for human activation. Blocking is a property of unfinished
-predecessor relations, never a workflow status; do not recreate `Blocked` or
-use `Do Not Use`. Initial issue label is `pink`, never `mature` or a wake label.
-Jeremy assigns activation after fan-out review. Resolve all required label/state,
-project/team/assignee IDs and selected branch refs before issue creation; resolve
-all returned issue IDs before writing the exact sixteen directed relations.
+100-6, 100-7 or 100-8. All fifteen nodes finish fan-out in Active under Jeremy's
+explicit activation direction. Stage newly created issues in Backlog only while
+assembling the graph, then apply all eighteen relations, verify them, and move
+the issue set to Active. Unfinished predecessors prevent dispatch through those
+relations, not a workflow status. Both monitor issues are blocked by DEPLOY;
+never create Blocked or use Do Not Use. Initial label is pink, never mature or
+a wake label. Resolve all required IDs before writes.
 Use blocker → blocked: `issueId`, `relatedIssueId`, `type: blocks`. No soft
 sequencing relation or generated join is added. A partial API failure is recorded
 with actual IDs; reconcile before retrying rather than duplicate issues.
@@ -181,8 +182,8 @@ stuck job concurrently. Review timeout is 60 minutes and permits at most one
 operational retry per generation, separately from the three-pass findings cap.
 
 Each monitor copies this section and its exact repository/team/project allowlist,
-human owner and nonempty CI requirements into its issue. It stays Backlog until
-DEPLOY establishes prerequisites and Jeremy authorizes activation. Set
+human owner and nonempty CI requirements into its issue. It is Active but
+blocked by DEPLOY until the deployed prerequisites are established. Set
 `active_states: [Active, Evaluating]`, `daemon_states: [Happy, Unhappy]`,
 `daemon_dispatch_states: [Evaluating]`, default wake `15m`, and Evaluating
 concurrency one. Happy/Unhappy are nonterminal resting states disjoint from
@@ -285,7 +286,7 @@ never merge intentional failure. Clean up fixtures after retaining durable proof
 | R08         | DEPLOY failed CI → one Active correction → fresh green head/review → ready/human; pending work releases slot, old/same-head-stale evidence rejected.                                            |
 | R09         | WAIT fixtures and DEPLOY real dropped-event timer, anchor/due/dispatch/verdict, conflict recovery, scan cursor, crash/history/API failure and duplicate/terminal interleavings.                 |
 | R10         | DEPLOY actual accepted refs/install/reload, RETIRE obsolete active dependencies, ROTATE provider change, FINAL composed proof and MIGRATION inventory/operator limits.                          |
-| R11         | 100-7 human-reviewed topology and 100-8 exact issue/label/assignment/Backlog/dependency-relation readback. No live rehearsal substitutes for this planning criterion.                           |
+| R11         | 100-7 human-reviewed topology and 100-8 exact issue/label/assignment/Active/dependency-relation readback. No live rehearsal substitutes for this planning criterion.                            |
 | R12         | DEPLOY selected Rust target through controller dispatch at target head, both-owner installation evidence and complete handoff; unknown target/caller installation/project substitutions denied. |
 
 No future task claims success from this matrix alone. FINAL requires artifact

@@ -337,8 +337,8 @@ source_notes:
 exclusions:
   - Unlisted files/resources; unrelated product work; downstream ticket creation.
 acceptance_checks:
-  - "R09/D07: remain Backlog at fan-out; no ordinary-ticket blockers, code fixes, extra scheduler or
-    task PR."
+  - "R09/D07: Active with DEPLOY as a hard blocker; do not block ordinary delivery tickets,
+    make code fixes, create an extra scheduler or open a task PR."
   - At activation require deployed WAIT/GUIDE, verified mapping and CI allowlist, exact
     Happy/Unhappy/Evaluating IDs and wake:15m; missing prerequisites stop activation.
   - Bound scans to five minutes; use shared actions/cursor and exact verdict rules; write only own
@@ -353,9 +353,9 @@ delivery_notes:
   wake:15m after discovery. Jeremy owns continued monitoring after FINAL.
 dependencies:
   - item: DEPLOY
-    type: sequencing
-    requires: Explicit Jeremy activation after deployed setup, mapping and wake state verification.
-    reason: Monitor is a parked service, not a delivery blocker; no Linear hard edge.
+    type: hard
+    requires: Completed deployed setup, mapping and wake state verification.
+    reason: Jeremy activated all tickets; this incoming blocker prevents premature monitor scans.
 difficulty: hard
 ```
 
@@ -382,8 +382,8 @@ source_notes:
 exclusions:
   - Unlisted files/resources; unrelated product work; downstream ticket creation.
 acceptance_checks:
-  - "R09/D07: remain Backlog at fan-out; no ordinary-ticket blockers, code fixes, extra scheduler or
-    task PR."
+  - "R09/D07: Active with DEPLOY as a hard blocker; do not block ordinary delivery tickets,
+    make code fixes, create an extra scheduler or open a task PR."
   - At activation require deployed WAIT/GUIDE, verified mapping and CI allowlist, exact
     Happy/Unhappy/Evaluating IDs and wake:15m; missing prerequisites stop activation.
   - Bound scans to five minutes; use shared actions/cursor and exact verdict rules; write only own
@@ -398,8 +398,8 @@ delivery_notes:
   wake:15m after discovery. Jeremy owns continued monitoring after FINAL.
 dependencies:
   - item: DEPLOY
-    type: sequencing
-    requires: Explicit Jeremy activation after deployed setup, mapping and wake state verification.
-    reason: Monitor is a parked service, not a delivery blocker; no Linear hard edge.
+    type: hard
+    requires: Completed deployed setup, mapping and wake state verification.
+    reason: Jeremy activated all tickets; this incoming blocker prevents premature monitor scans.
 difficulty: hard
 ```

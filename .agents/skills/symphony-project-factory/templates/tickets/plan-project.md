@@ -37,6 +37,9 @@ scope, such as extraction redaction generators, remains allowed in the plan.
 
 ## Success Criteria
 
+- Default generated tickets to `Active` after relation setup unless the human
+  explicitly requests a hold. Unfinished predecessors gate dispatch through
+  relations. Use temporary Backlog staging only to construct and verify the DAG.
 - The plan preserves confirmed metadata and states material assumptions using
   available context and reasonable defaults. Ask only unresolved questions whose
   answers would materially change the plan or an authorized next action; name

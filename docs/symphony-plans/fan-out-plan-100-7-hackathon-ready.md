@@ -60,10 +60,10 @@ The minimum dependency height is **nine rounds** along
 CI → APP/GATE → CODEX/WAIT → ROUTE → GUIDE → DEPLOY → RETIRE → ROTATE → FINAL.
 RUST runs independently against its existing CI; INSTALL follows APP and
 converges at DEPLOY. Capacity and key-arrival time are not implied by rounds.
-Monitor issues are parked services, outside the delivery critical path; they
-never block ordinary tickets and do not prevent project completion by remaining
-in a resting daemon state. Their activation prerequisites are explicit sequencing
-conditions, not hard relations or permission to run them now.
+Monitor issues are Active with hard incoming dependencies on DEPLOY. They
+remain outside the delivery critical path, never block ordinary tickets, and do
+not prevent project completion by remaining in a resting daemon state. Jeremy
+authorized activation of all fifteen tickets; relations prevent premature work.
 
 Every drawn edge is a hard prerequisite whose output must be accepted and, for
 repository changes, merged to that repository's `main`. This avoids temporary
@@ -93,8 +93,8 @@ flowchart TD
   RETIRE["Round 7: retire legacy paths and PAT field"]
   ROTATE["Round 8: event key and verified reload"]
   FINAL["Round 9: composed readiness audit"]
-  MON_CONTROLLER["Parked daemon: controller CI monitor; activate at deploy"]
-  MON_RUST["Parked daemon: Rust CI monitor; activate at deploy"]
+  MON_CONTROLLER["Controller CI monitor; blocked by deploy"]
+  MON_RUST["Rust CI monitor; blocked by deploy"]
   CI --> APP
   CI --> GATE
   APP --> CODEX
@@ -111,6 +111,8 @@ flowchart TD
   DEPLOY --> RETIRE
   ROTATE --> FINAL
   RETIRE --> ROTATE
+  DEPLOY --> MON_CONTROLLER
+  DEPLOY --> MON_RUST
 ```
 
 ## Decisions
@@ -126,7 +128,7 @@ flowchart TD
 | D07: one 15-minute monitor per repository         | WAIT/GUIDE implement the bounded scan and existing states; MON_CONTROLLER and MON_RUST operate only after authorized deployment. No ordinary-ticket timer or upstream runtime change.                         |
 | D08: shared reconciliation and one periodic owner | WAIT owns event/daemon actions, durable handoff/retry keys and terminal guards. DEPLOY verifies workflow enablement and transfers opted-in conflict coverage from the cron.                                   |
 | D09: staged rollout, key rotation last            | INSTALL prepares authority; DEPLOY verifies new review while retaining the working path; RETIRE removes legacy dependencies; ROTATE verifies the event key; FINAL requires both.                              |
-| D10: parked frontier and clean main branches      | 100-8 creates all nodes in Backlog and represents hard dependencies with blocker relations. Jeremy activates delivery work; no predecessor commits are copied. No live changes from 100-7.                    |
+| D10: Active tickets and clean main branches       | After staging and verifying relations, all fifteen nodes are Active under Jeremy's activation direction; no predecessor commits are copied. No live changes from 100-7.                                       |
 | D11: bounded cross-owner integration              | GATE owns trusted target mapping; APP/ROUTE/WAIT use per-target tokens and head evidence; RUST/DEPLOY exercise the selected repository without distributing controller secrets.                               |
 | P01: preserve schema and reuse tooling            | 100-7 validates through tools/symphony-dag; 100-8 copies rich node content under its existing generation contract. Renderer gaps are advisory process proposals, not new local tooling.                       |
 
@@ -167,7 +169,7 @@ project:
     - pink
     - symphony
 defaults:
-  initial_state: Backlog
+  initial_state: Active
   maturity_label: mature
   task_branch_base: main
   task_pr_base: main
@@ -183,7 +185,7 @@ nodes:
     title: Bootstrap CI for every controller change
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -209,7 +211,7 @@ nodes:
     title: Add renewable App credentials and explicit actor identities
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -236,7 +238,7 @@ nodes:
     title: Define trusted repository mapping and fresh acceptance predicates
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -263,7 +265,7 @@ nodes:
     title: Make selected Rust CI prove the explicit PR head
     type: task
     difficulty: easy
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: jeremycarroll/venn-search-rs
@@ -289,7 +291,7 @@ nodes:
     title: Build isolated Codex assessment and trusted check publication
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -316,7 +318,7 @@ nodes:
     title: Reconcile CI and review through events and bounded monitors
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -343,7 +345,7 @@ nodes:
     title: Prepare and verify both App installations and secret destinations
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -370,7 +372,7 @@ nodes:
     title: Wire App-owned Codex dispatch and human-only review handoff
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -397,7 +399,7 @@ nodes:
     title: Installable host profiles and current acceptance guidance
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -424,7 +426,7 @@ nodes:
     title: Deploy and rehearse Apps, Codex, CI and 15-minute recovery
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -451,7 +453,7 @@ nodes:
     title: Retire verified legacy reviewer and PAT dependencies
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -478,7 +480,7 @@ nodes:
     title: Rotate to the event OpenAI key and verify reload
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -505,7 +507,7 @@ nodes:
     title: Audit composed readiness, cleanup and human acceptance
     type: task
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -532,7 +534,7 @@ nodes:
     title: Monitor CI and review for 1000lines/symphony-example
     type: daemon
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -559,7 +561,7 @@ nodes:
     title: Monitor CI and review for jeremycarroll/venn-search-rs
     type: daemon
     difficulty: hard
-    initial_state: Backlog
+    initial_state: Active
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -614,6 +616,10 @@ edges:
     to: FINAL
   - from: RETIRE
     to: ROTATE
+  - from: DEPLOY
+    to: MON_CONTROLLER
+  - from: DEPLOY
+    to: MON_RUST
 ```
 
 ## Linear Relation Payloads
@@ -623,28 +629,30 @@ The blocker is `issueId`; the blocked issue is `relatedIssueId`; `type` is
 always `blocks`. This table and the graph use the identical direct edge set.
 Multiple incoming rows are direct fan-in, never generated join issues.
 
-| Source           | issueId (blocker) | relatedIssueId (blocked) | type   |
-| ---------------- | ----------------- | ------------------------ | ------ |
-| CI → APP         | HR-CI             | HR-APP                   | blocks |
-| CI → GATE        | HR-CI             | HR-GATE                  | blocks |
-| APP → CODEX      | HR-APP            | HR-CODEX                 | blocks |
-| GATE → CODEX     | HR-GATE           | HR-CODEX                 | blocks |
-| APP → WAIT       | HR-APP            | HR-WAIT                  | blocks |
-| GATE → WAIT      | HR-GATE           | HR-WAIT                  | blocks |
-| APP → INSTALL    | HR-APP            | HR-INSTALL               | blocks |
-| CODEX → ROUTE    | HR-CODEX          | HR-ROUTE                 | blocks |
-| WAIT → ROUTE     | HR-WAIT           | HR-ROUTE                 | blocks |
-| ROUTE → GUIDE    | HR-ROUTE          | HR-GUIDE                 | blocks |
-| GUIDE → DEPLOY   | HR-GUIDE          | HR-DEPLOY                | blocks |
-| INSTALL → DEPLOY | HR-INSTALL        | HR-DEPLOY                | blocks |
-| RUST → DEPLOY    | HR-RUST           | HR-DEPLOY                | blocks |
-| DEPLOY → RETIRE  | HR-DEPLOY         | HR-RETIRE                | blocks |
-| ROTATE → FINAL   | HR-ROTATE         | HR-FINAL                 | blocks |
-| RETIRE → ROTATE  | HR-RETIRE         | HR-ROTATE                | blocks |
+| Source                  | issueId (blocker) | relatedIssueId (blocked) | type   |
+| ----------------------- | ----------------- | ------------------------ | ------ |
+| CI → APP                | HR-CI             | HR-APP                   | blocks |
+| CI → GATE               | HR-CI             | HR-GATE                  | blocks |
+| APP → CODEX             | HR-APP            | HR-CODEX                 | blocks |
+| GATE → CODEX            | HR-GATE           | HR-CODEX                 | blocks |
+| APP → WAIT              | HR-APP            | HR-WAIT                  | blocks |
+| GATE → WAIT             | HR-GATE           | HR-WAIT                  | blocks |
+| APP → INSTALL           | HR-APP            | HR-INSTALL               | blocks |
+| CODEX → ROUTE           | HR-CODEX          | HR-ROUTE                 | blocks |
+| WAIT → ROUTE            | HR-WAIT           | HR-ROUTE                 | blocks |
+| ROUTE → GUIDE           | HR-ROUTE          | HR-GUIDE                 | blocks |
+| GUIDE → DEPLOY          | HR-GUIDE          | HR-DEPLOY                | blocks |
+| INSTALL → DEPLOY        | HR-INSTALL        | HR-DEPLOY                | blocks |
+| RUST → DEPLOY           | HR-RUST           | HR-DEPLOY                | blocks |
+| DEPLOY → RETIRE         | HR-DEPLOY         | HR-RETIRE                | blocks |
+| ROTATE → FINAL          | HR-ROTATE         | HR-FINAL                 | blocks |
+| RETIRE → ROTATE         | HR-RETIRE         | HR-ROTATE                | blocks |
+| DEPLOY → MON_CONTROLLER | HR-DEPLOY         | HR-MON-CONTROLLER        | blocks |
+| DEPLOY → MON_RUST       | HR-DEPLOY         | HR-MON-RUST              | blocks |
 
 ## Completion and unresolved inputs
 
-R11 is discharged by human review of this plan and 100-8's parked-state,
+R11 is discharged by human review of this plan and 100-8's Active-state,
 assignment and exact-relation readback, not a production demonstration. All
 other requirements need the node evidence and composed DEPLOY/FINAL proof.
 Final completion requires accepted task PRs, current target-ref CI and review,

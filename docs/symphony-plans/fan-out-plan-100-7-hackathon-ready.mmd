@@ -13,8 +13,8 @@ flowchart TD
   RETIRE["Round 7: retire legacy paths and PAT field"]
   ROTATE["Round 8: event key and verified reload"]
   FINAL["Round 9: composed readiness audit"]
-  MON_CONTROLLER["Parked daemon: controller CI monitor; activate at deploy"]
-  MON_RUST["Parked daemon: Rust CI monitor; activate at deploy"]
+  MON_CONTROLLER["Controller CI monitor; blocked by deploy"]
+  MON_RUST["Rust CI monitor; blocked by deploy"]
   CI --> APP
   CI --> GATE
   APP --> CODEX
@@ -31,3 +31,5 @@ flowchart TD
   DEPLOY --> RETIRE
   ROTATE --> FINAL
   RETIRE --> ROTATE
+  DEPLOY --> MON_CONTROLLER
+  DEPLOY --> MON_RUST

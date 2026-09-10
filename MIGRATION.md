@@ -159,3 +159,9 @@ will be Markdown. GitHub Actions are enabled for the setup rehearsal. The live d
 - Created team-scoped Linear label `mature` (`d53a5a05-4f26-4f25-b3e5-1e8dba138a7d`) for the accepted plan's metadata prerequisite. No issue was labeled mature. This is a Linear team label, not a GitHub repository label; the briefly mistaken GitHub label was removed.
 - Added the already-required `pink` and `symphony` PR labels to the accepted Rust target `jeremycarroll/venn-search-rs`; both were absent at preflight. No `mature` GitHub label was retained.
 - Updated 100-8 with Jeremy's explicit state correction and amended plan SHA `8f4eafe3999040f67cd68e696e29bcb27eb44149`, then returned it to Active. Shared parser/renderer validation confirmed fifteen Backlog issue payloads, sixteen unchanged directed relations, and identical Markdown/standalone graphs. The changed plan/contract/templates passed formatting and whitespace checks; this is not a claim of repository CI or completed live fan-out.
+
+## Delivery activation correction — 2026-09-09
+
+- Jeremy clarified that the generated tickets should be Active. Moved all fifteen (`100-10` through `100-24`) from Backlog to Active and put the current activation direction in every ticket description. The earlier hold is superseded.
+- Preserved the sixteen delivery edges. Added `100-19 blocks 100-23` and `100-19 blocks 100-24` before activation: the monitors' existing deployment prerequisites must gate execution now that they are Active. There are eighteen direct edges; no monitor blocks delivery work. Updated both graph copies, the manifest, relation table and monitor item records consistently.
+- Updated plan/fan-out templates: stage in Backlog only while creating and verifying relations, then activate the issue set by default. Only an explicit current human hold leaves tickets parked.

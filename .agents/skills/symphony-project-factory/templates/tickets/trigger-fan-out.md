@@ -15,6 +15,12 @@ set through `linear_graphql` without pausing for a second human response.
 
 Do not implement any spawned ticket work from this ticket.
 
+Unless the human explicitly requests a current hold, generated tickets should
+finish fan-out in `Active`, including dependents. Stage them briefly in Backlog,
+create and verify all blocker relations, then activate them. Dependencies hold
+unfinished work; do not infer a new approval gate from older boilerplate about
+parking tickets. Apply fresh human activation direction over older plan defaults.
+
 ## Assumptions
 
 - Accepted plan source: `{{accepted-plan-source}}`
