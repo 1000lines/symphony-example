@@ -55,8 +55,35 @@ const result = ({ login, classification, humanFacing, source, actorKind }) => ({
 });
 
 export const classifyGitHubActor = (actor, options = {}) => {
-  const login = normalize(actor);
+  const login = normalize(typeof actor === "object" ? actor?.login : actor);
   const teamMembership = options.teamMembership || {};
+
+  // App mode trusts only the configured identities/human mapping. Numeric App
+  // IDs are not bot user IDs; when provenance supplies an App ID it must match.
+  const appMode = options.appIdentities || process.env.SYMPHONY_GITHUB_AUTH_MODE === "app";
+  if (appMode) {
+    const identities = options.appIdentities || [
+      { appId: Number(process.env.SYMPHONY_APP_ID), slug: process.env.SYMPHONY_APP_SLUG, actorKind: "coding" },
+      { appId: Number(process.env.CADENCE_APP_ID), slug: process.env.CADENCE_APP_SLUG, actorKind: "review" },
+    ];
+    if (identities.length !== 2 || identities.some(({ appId, slug, actorKind }) => !Number.isSafeInteger(appId) || appId <= 0 ||
+        !/^[a-z0-9-]+$/.test(slug || "") || !["coding", "review"].includes(actorKind)) ||
+        new Set(identities.map((entry) => entry.appId)).size !== 2 || new Set(identities.map((entry) => entry.slug)).size !== 2 ||
+        new Set(identities.map((entry) => entry.actorKind)).size !== 2) {
+      throw new Error("Two distinct configured GitHub App identities are required.");
+    }
+    const app = identities.find(({ slug }) => login === `${slug}[bot]`);
+    const appId = options.actorAppId ?? actor?.app?.id;
+    if (app && (appId === undefined || appId === app.appId) && (typeof actor !== "object" || actor.type === "Bot")) {
+      return { ...result({ login, classification: ACTOR_CLASSIFICATION.AI_ACTOR, humanFacing: false, source: "configured-app", actorKind: app.actorKind }), appId: app.appId };
+    }
+    const humans = options.humanAllowlist || [process.env.SYMPHONY_HUMAN_LOGIN];
+    if (!login.endsWith("[bot]") && appId === undefined && listContains(humans, login) &&
+        (typeof actor !== "object" || actor.type === "User")) {
+      return result({ login, classification: ACTOR_CLASSIFICATION.HUMAN, humanFacing: true, source: "human-allowlist" });
+    }
+    return result({ login, classification: login.endsWith("[bot]") ? ACTOR_CLASSIFICATION.NON_HUMAN_BOT : ACTOR_CLASSIFICATION.UNKNOWN, humanFacing: false, source: "unmapped-actor" });
+  }
 
   if (!login) {
     return result({
@@ -277,6 +304,9 @@ export const fetchGitHubActorTeams = async ({
 };
 
 export const classifyGitHubActorWithTeams = async (actor, options = {}) => {
+  if (options.appIdentities || process.env.SYMPHONY_GITHUB_AUTH_MODE === "app") {
+    return { ...classifyGitHubActor(actor, options), teamLookup: { status: "not-required" } };
+  }
   try {
     const teamLookup = await fetchGitHubActorTeams({ actor, ...options });
     return {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from "node:url";
+import { createGitHubAppClient, loadAppConfig } from "./github-app-auth.mjs";
 
 const ISSUE_PATTERN = /^[A-Z0-9]+-\d+$/;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -95,6 +96,7 @@ export async function ensurePrLabels({
   repository,
   env = process.env,
   fetchImpl = fetch,
+  appClient,
 }) {
   if (!ISSUE_PATTERN.test(issueIdentifier || "")) {
     throw new Error(
@@ -108,14 +110,22 @@ export async function ensurePrLabels({
   }
   const linearToken = env.LINEAR_API_TOKEN || env.LINEAR_API_KEY;
   const githubToken = env.GH_TOKEN || env.GITHUB_TOKEN;
-  if (!linearToken || !githubToken) {
+  if (!["legacy", "app"].includes(env.SYMPHONY_GITHUB_AUTH_MODE || "legacy")) throw new Error("Invalid GitHub authentication mode.");
+  const appMode = env.SYMPHONY_GITHUB_AUTH_MODE === "app";
+  if (!linearToken || (!appMode && !githubToken)) {
     throw new Error(
       "Linear and GitHub API tokens are required for PR label repair."
     );
   }
+  if (appMode && !appClient) {
+    const config = await loadAppConfig(env);
+    if (config.repository.toLowerCase() !== repository.toLowerCase()) throw new Error("App configuration repository mismatch.");
+    // Labels need PR read and Issues write only, not the worker's push grants.
+    appClient = createGitHubAppClient({ config: { ...config, permissions: { pull_requests: "read", issues: "write" } }, cacheDir: env.SYMPHONY_GITHUB_APP_CACHE, fetchImpl });
+  }
 
-  // One deadline for the entire run, no retries, and bounded pagination. Leave
-  // room for Symphony's existing hook timeout; errors retain best-effort semantics.
+  // Linear/legacy requests share this deadline. The App broker bounds its own
+  // refresh/readback retry; the hosted hook also enforces its overall timeout.
   const signal = AbortSignal.timeout(45_000);
   async function request(url, token, operation, body) {
     let response;
@@ -139,13 +149,28 @@ export async function ensurePrLabels({
       throw new Error(`${operation}: invalid API JSON response.`);
     }
   }
-  const github = (path, operation, body) =>
-    request(
+  const github = async (path, operation, body) => {
+    if (appMode) {
+      const response = await appClient(`/${path}`, {
+        method: body ? "POST" : "GET", body,
+        ...(body ? { readback: async (read) => {
+          const observed = await read(`/${path}?per_page=100`);
+          const labels = await observed.clone().json();
+          if (!Array.isArray(labels)) throw new Error("Invalid label write readback.");
+          return body.labels.every((label) => labels.some((entry) => entry.name?.toLowerCase() === label))
+            ? { applied: true, response: observed } : { applied: false };
+        } } : {}),
+      });
+      if (!response.ok) throw new Error(`${operation}: HTTP ${response.status}.`);
+      try { return await response.json(); } catch { throw new Error(`${operation}: invalid API JSON response.`); }
+    }
+    return request(
       `https://api.github.com/repos/${repository}/${path}`,
       `Bearer ${githubToken}`,
       operation,
       body
     );
+  };
   async function githubList(path, operation) {
     const items = [];
     for (let page = 1; page <= 10; page++) {
