@@ -25,6 +25,134 @@ The host defaults to enabled. `bootstrap_ref` pins the verified installer commit
 The runtime fork is pinned in `variables.tf`. The state backend was created by
 `infra/state`; its local bootstrap state is ignored by Git.
 
+## GitHub App keys: Jeremy's setup handoff
+
+[INSTALL (100-16)](https://linear.app/1000lines/issue/100-16/prepare-and-verify-both-app-installations-and-secret-destinations)
+owns live setup. After this Terraform change is reviewed, Jeremy applies it and
+uploads his keys. Terraform manages the empty `symphony/github-apps/symphony`
+container and host `DescribeSecret`/`GetSecretValue` access to that name and
+`symphony/keys` only, in account `350353785278`, region `us-west-2`. Values stay
+outside Terraform inputs, plans and state.
+
+### Apply the container and host read grant
+
+From the repository root, verify both callers are the intended Jeremy identity
+in account `350353785278`; a profile name alone does not establish identity:
+
+```bash
+aws sts get-caller-identity --profile 1000lines --region us-west-2 --query '{Account:Account,Arn:Arn}' --output json --no-cli-pager
+aws sts get-caller-identity --profile 1000lines-terraform --region us-west-2 --query '{Account:Account,Arn:Arn}' --output json --no-cli-pager
+aws secretsmanager describe-secret --profile 1000lines --region us-west-2 --secret-id symphony/github-apps/symphony --query '{ARN:ARN,VersionIdsToStages:VersionIdsToStages}' --output json --no-cli-pager
+terraform -chdir=infra/static init
+```
+
+If the container exists and is not already at
+`aws_secretsmanager_secret.symphony_github_app` in this stack's state, import
+its returned ARN before planning:
+
+```bash
+terraform -chdir=infra/static import aws_secretsmanager_secret.symphony_github_app '<ARN returned by describe-secret>'
+```
+
+Only `ResourceNotFoundException` establishes absence; access denial requires
+INSTALL to resolve read access. Plan normally, review for only this container
+and `module.symphony_host[0].aws_iam_role_policy.symphony_runtime`, then apply the
+reviewed plan. Stop if it changes anything else, including host bootstrap refs.
+
+```bash
+terraform -chdir=infra/static plan -out=app-secret.tfplan
+terraform -chdir=infra/static apply app-secret.tfplan
+```
+
+### Populate Symphony
+
+Use a reviewed nonsecret target JSON file and the local Symphony App PEM at the
+quoted `target` and `pem` paths below, both outside the checkout.
+
+The target file contains these fields except `privateKey`, which `jq --rawfile`
+adds from the PEM without changing its newlines:
+
+| Field            | Required value                                                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `appId`          | Integer `4866508`                                                                                                                                                                      |
+| `appSlug`        | `1000lines-symphony`                                                                                                                                                                   |
+| `installationId` | Observed positive integer for this App and the selected repository owner; never reuse another owner's installation                                                                     |
+| `repositoryId`   | Observed positive integer matching `repository`; controller ID `1362180215` read back on 2026-09-10                                                                                    |
+| `repository`     | Matching `owner/name`, e.g. `1000lines/symphony-example`                                                                                                                               |
+| `permissions`    | Exact nonempty operation permission object from the reviewed trusted target configuration and [accepted matrix](../../docs/symphony-plans/hackathon-ready-design.md#permission-matrix) |
+| `privateKey`     | Local Symphony App RSA private key; added only during upload                                                                                                                           |
+
+This is the single-target camelCase interface in
+[APP PR #7 at a9f6510](https://github.com/1000lines/symphony-example/blob/a9f6510d62c543e805c39efdad76a9db38194f8d/scripts/symphony/github-app-auth.mjs).
+Both credential materializers copy this JSON verbatim. INSTALL must reconcile
+it with the final accepted APP interface, verify the owner/installation/repository
+binding and approve the exact operation grants before upload. The validator caps
+grants at the matrix; it does not discover installations or prove live grants.
+
+Run this Bash block after apply, with Bash, jq, OpenSSL and AWS CLI available.
+It disables shell tracing, checks the AWS account, validates the RSA PEM and
+complete target before starting upload, and prints upload metadata only:
+
+```bash
+(
+  set +x +v
+  set -euo pipefail
+  target='/secure/symphony-target.json'
+  pem='/secure/1000lines-symphony.pem'
+  aws sts get-caller-identity --profile 1000lines --region us-west-2 --output json --no-cli-pager |
+    jq -e '.Account == "350353785278"' >/dev/null
+  openssl rsa -in "$pem" -passin pass: -check -noout >/dev/null 2>&1 || { echo 'Invalid RSA PEM' >&2; exit 1; }
+  unset app_payload
+  app_payload=$(jq -cse --rawfile privateKey "$pem" '
+    {actions:"write", checks:"read", contents:"write", issues:"write",
+     metadata:"read", pull_requests:"write", statuses:"read", workflows:"write"} as $max
+    | if length != 1 then error("one target required") else .[0] end
+    | if type == "object" and
+        keys == ["appId","appSlug","installationId","permissions","repository","repositoryId"] and
+        .appId == 4866508 and .appSlug == "1000lines-symphony" and
+        all(.installationId, .repositoryId; type == "number" and . > 0 and . <= 9007199254740991 and floor == .) and
+        (.repository | type == "string" and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") and
+          (split("/") | all(. != "." and . != ".."))) and
+        (.repository != "1000lines/symphony-example" or .repositoryId == 1362180215) and
+        (.permissions | type == "object" and length > 0 and all(to_entries[];
+          (.value == "read" and $max[.key] != null) or (.value == "write" and $max[.key] == "write")))
+      then . + {privateKey:$privateKey} else error("invalid target") end
+  ' "$target" 2>/dev/null) || { echo 'Invalid target JSON or PEM' >&2; exit 1; }
+  printf '%s\n' "$app_payload" |
+    aws secretsmanager put-secret-value --profile 1000lines --region us-west-2 --secret-id symphony/github-apps/symphony --secret-string file:///dev/stdin --query '{ARN:ARN,VersionId:VersionId,VersionStages:VersionStages}' --output json --no-cli-pager
+)
+```
+
+Keep xtrace and AWS debug logging off. The payload stays in shell memory and
+stdin; no key value enters command arguments, Terraform, or a generated file.
+[AWS CLI reference](https://docs.aws.amazon.com/cli/latest/reference/secretsmanager/put-secret-value.html).
+Read back only container/version metadata:
+
+```bash
+aws secretsmanager describe-secret --profile 1000lines --region us-west-2 --secret-id symphony/github-apps/symphony --query '{ARN:ARN,VersionIdsToStages:VersionIdsToStages}' --output json --no-cli-pager
+```
+
+### Populate Cadence and hand off
+
+After INSTALL creates and protects `cadence-controller` for protected `main`,
+upload the distinct Cadence App `4866513` PEM with
+[`gh secret set`](https://cli.github.com/manual/gh_secret_set) and read back only
+the secret name:
+
+```bash
+set +x +v
+gh secret set CADENCE_APP_PRIVATE_KEY --repo 1000lines/symphony-example --env cadence-controller < /secure/1000lines-cadence.pem
+gh secret list --repo 1000lines/symphony-example --env cadence-controller --json name --jq '.[] | select(.name == "CADENCE_APP_PRIVATE_KEY") | .name'
+```
+
+Cadence's key stays in that Environment; no second AWS copy or host access is
+needed. Return only the Symphony ARN/version metadata and Cadence secret-name
+presence to INSTALL, never a key in Linear or GitHub. INSTALL owns Environment
+protection, App/installation variables, provider/Linear secrets and actual
+installation/grant/token-preflight evidence. [DEPLOY (100-19)](https://linear.app/1000lines/issue/100-19/deploy-and-rehearse-apps-codex-ci-and-15-minute-recovery)
+owns host reload and live activation. This setup leaves `symphony/keys`, App
+registrations/installations, host processes and the selected reviewer unchanged.
+
 See [MIGRATION.md](../../MIGRATION.md) for decisions and verified progress.
 Original extraction notes are preserved below and describe the earlier setup.
 
