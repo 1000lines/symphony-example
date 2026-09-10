@@ -443,7 +443,7 @@ test("invalid inputs and missing credentials fail without requests", async () =>
   }
 });
 
-test("hosted after_run passes workspace issue and intended repository, preserving failure for Symphony to log", async () => {
+test("hosted hooks support an empty arbitrary-repository workspace without invoking controller tools", async () => {
   const source = await readFile(
     new URL("../runtime-bundle/workflow/WORKFLOW.md", import.meta.url),
     "utf8"
@@ -451,7 +451,7 @@ test("hosted after_run passes workspace issue and intended repository, preservin
   const { hooks } = yaml.load(source.split("---")[1]);
   const root = await mkdtemp(join(tmpdir(), "symphony-pr-labels-"));
   try {
-    const workspace = join(root, "TASK-42");
+    const workspace = join(root, "100-11");
     const bin = join(root, "bin");
     await mkdir(workspace);
     await mkdir(bin);
@@ -460,22 +460,48 @@ test("hosted after_run passes workspace issue and intended repository, preservin
       '#!/bin/sh\nprintf "%s\\n" "$@"\nexit "${TEST_HOOK_EXIT:-0}"\n'
     );
     await chmod(join(bin, "node"), 0o755);
-    for (const status of [0, 17]) {
-      const result = spawnSync("bash", ["-c", hooks.after_run], {
+    for (const hook of [hooks.after_create, hooks.after_run]) {
+      const result = spawnSync("bash", ["-c", hook], {
         cwd: workspace,
         encoding: "utf8",
-        env: { PATH: `${bin}:/usr/bin:/bin`, TEST_HOOK_EXIT: String(status) },
+        env: { PATH: `${bin}:/usr/bin:/bin`, TEST_HOOK_EXIT: "17" },
       });
-      assert.equal(result.status, status, result.stderr);
-      assert.deepEqual(result.stdout.trim().split("\n"), [
-        "scripts/symphony/ensure-pr-labels.mjs",
-        "--issue",
-        "TASK-42",
-        "--repo",
-        "example-org/example-repo",
-      ]);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, "");
     }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("numeric issue labels use renewable App API calls without a GitHub PAT", async () => {
+  const paths = [];
+  let labels = [];
+  const result = await ensurePrLabels({ issueIdentifier: "100-11", repository,
+    env: { LINEAR_API_TOKEN: "linear-test-secret", SYMPHONY_GITHUB_AUTH_MODE: "app" },
+    fetchImpl: async (url, init) => {
+      assert.equal(url, "https://api.linear.app/graphql");
+      assert.equal(JSON.parse(init.body).variables.id, "100-11");
+      return response({ data: { issue: { identifier: "100-11", project: { content: "project-color: pink" }, attachments: { nodes: [], pageInfo: { hasNextPage: false } } } } });
+    },
+    appClient: async (path, options) => {
+      paths.push(path);
+      if (path.startsWith("/pulls?")) return new Response(JSON.stringify([{ ...pr(), title: "[100-11]: App credentials", head: { ref: "symphony/hackathon-ready/100-11/app-credentials" } }]));
+      if (path.startsWith("/labels/")) return new Response(JSON.stringify({ name: path.split("/").at(-1) }));
+      assert.ok(path.startsWith("/issues/42/labels"));
+      if (options.method === "POST") {
+        labels = options.body.labels.map((name) => ({ name }));
+        const outcome = await options.readback(async (readPath) => {
+          assert.equal(readPath, "/issues/42/labels?per_page=100");
+          return new Response(JSON.stringify(labels));
+        });
+        assert.equal(outcome.applied, true);
+        return outcome.response;
+      }
+      return new Response(JSON.stringify(labels));
+    },
+  });
+  assert.equal(result.result, "repaired");
+  assert.deepEqual(result.verified, ["symphony", "pink"]);
+  assert.ok(paths.length >= 5);
 });

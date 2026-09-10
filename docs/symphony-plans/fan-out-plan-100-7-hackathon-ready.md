@@ -1,9 +1,14 @@
 # Hackathon readiness fan-out plan
 
 Planning issue: [100-7](https://linear.app/1000lines/issue/100-7/plan-project-seed-ticket).
-Status: proposed for human PR review. No implementation issues are created by
-this artifact. [100-8](https://linear.app/1000lines/issue/100-8/trigger-fan-out)
-alone creates the accepted issue set after this plan is accepted and merged.
+Status: accepted in PR #3, with Jeremy’s state correction pinned at
+`8f4eafe3999040f67cd68e696e29bcb27eb44149`.
+[100-8](https://linear.app/1000lines/issue/100-8/trigger-fan-out) created the
+fifteen issues in Backlog and sixteen direct relations. Jeremy subsequently
+authorized activation and two DEPLOY-to-monitor relations, reflected below.
+See the
+[fan-out result](hackathon-ready/fan-out-result-100-8.md) for the live issue
+mapping, branch manifest and readback evidence.
 
 Project: `hackathon-ready`; color: `pink`; base branch: `main`; human lead:
 Jeremy Carroll (`jeremycarroll`, Linear `c65b9fbe-e740-47e9-b444-3172d3526ff2`).
@@ -80,21 +85,21 @@ in the execution contract govern every repeated file or resource.
 ```mermaid
 %% symphony-dag/v1
 flowchart TD
-  CI["Round 1: controller CI caller"]
-  APP["Round 2: renewable App credentials"]
-  GATE["Round 2: trusted mapping and fresh gates"]
-  RUST["Round 1: Rust target head CI"]
-  CODEX["Round 3: isolated Codex assessment and publisher"]
-  WAIT["Round 3: event and monitor reconciliation"]
-  INSTALL["Round 3: App grants and secret destinations"]
-  ROUTE["Round 4: trusted workflow and dispatch wiring"]
-  GUIDE["Round 5: host profiles and acceptance guidance"]
-  DEPLOY["Round 6: deploy and rehearse both repositories"]
-  RETIRE["Round 7: retire legacy paths and PAT field"]
-  ROTATE["Round 8: event key and verified reload"]
-  FINAL["Round 9: composed readiness audit"]
-  MON_CONTROLLER["Controller CI monitor; blocked by deploy"]
-  MON_RUST["Rust CI monitor; blocked by deploy"]
+  CI["100-10: Round 1: controller CI caller"]
+  APP["100-11: Round 2: renewable App credentials"]
+  GATE["100-12: Round 2: trusted mapping and fresh gates"]
+  RUST["100-13: Round 1: Rust target head CI"]
+  CODEX["100-14: Round 3: isolated Codex assessment and publisher"]
+  WAIT["100-15: Round 3: event and monitor reconciliation"]
+  INSTALL["100-16: Round 3: App grants and secret destinations"]
+  ROUTE["100-17: Round 4: trusted workflow and dispatch wiring"]
+  GUIDE["100-18: Round 5: host profiles and acceptance guidance"]
+  DEPLOY["100-19: Round 6: deploy and rehearse both repositories"]
+  RETIRE["100-20: Round 7: retire legacy paths and PAT field"]
+  ROTATE["100-21: Round 8: event key and verified reload"]
+  FINAL["100-22: Round 9: composed readiness audit"]
+  MON_CONTROLLER["100-23: Controller CI monitor; blocked by deploy"]
+  MON_RUST["100-24: Rust CI monitor; blocked by deploy"]
   CI --> APP
   CI --> GATE
   APP --> CODEX

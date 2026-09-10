@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   ACTOR_CLASSIFICATION,
+  KNOWN_AI_ACTORS,
   classifyGitHubActor,
   classifyGitHubActorWithTeams,
 } from "./github-actor-classification.mjs";
@@ -59,16 +60,18 @@ test("uses explicit allowlists before fallback suffix rules", () => {
 });
 
 test("classifies known Symphony and Cadence bot accounts as AI actors", () => {
-  assert.deepEqual(classifyGitHubActor("example-symphony-bot"), {
-    login: "example-symphony-bot",
+  const coding = Object.keys(KNOWN_AI_ACTORS).find((login) => login !== "claude[bot]" && KNOWN_AI_ACTORS[login].actorKind === "coding");
+  const review = Object.keys(KNOWN_AI_ACTORS).find((login) => KNOWN_AI_ACTORS[login].actorKind === "review");
+  assert.deepEqual(classifyGitHubActor(coding), {
+    login: coding,
     classification: ACTOR_CLASSIFICATION.AI_ACTOR,
     humanFacing: false,
     source: "known-ai-actor",
     actorKind: "coding",
   });
 
-  assert.deepEqual(classifyGitHubActor("example-cadence-bot"), {
-    login: "example-cadence-bot",
+  assert.deepEqual(classifyGitHubActor(review), {
+    login: review,
     classification: ACTOR_CLASSIFICATION.AI_ACTOR,
     humanFacing: false,
     source: "known-ai-actor",
@@ -163,4 +166,54 @@ test("missing team permission is surfaced and does not make a bot human", async 
   assert.equal(classified.teamLookup.status, "missing_permission");
   assert.equal(classified.teamLookup.code, "missing_team_permission");
   assert.doesNotMatch(JSON.stringify(classified), /secret-token/);
+});
+
+const appIdentities = [
+  { appId: 4866508, slug: "1000lines-symphony", actorKind: "coding" },
+  { appId: 4866513, slug: "1000lines-cadence", actorKind: "review" },
+];
+
+test("both explicit App identities and mapped humans need no organization teams", async () => {
+  for (const identity of appIdentities) {
+    const actor = { login: `${identity.slug}[bot]`, type: "Bot", app: { id: identity.appId } };
+    const classified = await classifyGitHubActorWithTeams(actor, { appIdentities, humanAllowlist: ["jeremycarroll"], fetchImpl: () => assert.fail("no team requests allowed") });
+    assert.equal(classified.classification, ACTOR_CLASSIFICATION.AI_ACTOR);
+    assert.equal(classified.appId, identity.appId);
+    assert.equal(classified.actorKind, identity.actorKind);
+    assert.equal(classified.teamLookup.status, "not-required");
+    assert.equal(classified.humanFacing, false);
+  }
+  const human = classifyGitHubActor({ login: "JeremyCarroll", type: "User" }, { appIdentities, humanAllowlist: ["jeremycarroll"] });
+  assert.equal(human.classification, ACTOR_CLASSIFICATION.HUMAN);
+  assert.equal(human.humanFacing, true);
+});
+
+test("App classification fails loudly for an empty human mapping", async () => {
+  for (const humanAllowlist of [[], [""], ["  "]]) {
+    await assert.rejects(classifyGitHubActorWithTeams("jeremycarroll", { appIdentities, humanAllowlist }), /explicit GitHub human mapping/);
+  }
+  const previous = process.env.SYMPHONY_HUMAN_LOGIN;
+  try {
+    process.env.SYMPHONY_HUMAN_LOGIN = "  JeremyCarroll, second-human  ";
+    assert.equal(classifyGitHubActor("second-human", { appIdentities }).classification, ACTOR_CLASSIFICATION.HUMAN);
+    delete process.env.SYMPHONY_HUMAN_LOGIN;
+    assert.throws(() => classifyGitHubActor("jeremycarroll", { appIdentities }), /explicit GitHub human mapping/);
+  } finally {
+    if (previous === undefined) delete process.env.SYMPHONY_HUMAN_LOGIN;
+    else process.env.SYMPHONY_HUMAN_LOGIN = previous;
+  }
+});
+
+test("unknown or spoofed App identities cannot become trusted through legacy teams or allowlists", () => {
+  for (const actor of [
+    { login: "1000lines-symphony[bot]", type: "Bot", app: { id: 1 } },
+    { login: "1000lines-symphony[bot]", type: "User" },
+    { login: "some-app[bot]", type: "Bot", app: { id: 4866508 } },
+    "1000-symphony-bot", "unknown-human", "some-app[bot]",
+  ]) {
+    const classified = classifyGitHubActor(actor, { appIdentities, teamMembership: { ai: true, humans: true }, aiActorAllowlist: ["unknown-human"], humanAllowlist: ["some-app[bot]"] });
+    assert.equal(classified.humanFacing, false);
+    assert.notEqual(classified.classification, ACTOR_CLASSIFICATION.AI_ACTOR);
+  }
+  assert.throws(() => classifyGitHubActor("x", { appIdentities: [appIdentities[0], appIdentities[0]] }), /distinct/);
 });

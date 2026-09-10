@@ -188,15 +188,34 @@ prepend_runtime_path() {
   local prepend="$1"
   local existing_path
   local tmp
+  local auth_mode
+  local real_gh=""
 
   [[ -n "$prepend" ]] || die "no runtime path to record"
   existing_path="$(runtime_env_value PATH)"
   if [[ -z "$existing_path" ]]; then
     existing_path="$default_runtime_path"
   fi
+  auth_mode="$(runtime_auth_mode)" || return 1
+  if [[ "$auth_mode" == app ]]; then
+    local directory
+    local directories
+    IFS=: read -r -a directories <<<"$prepend"
+    for directory in "${directories[@]}"; do
+      if [[ "$directory" != "$config_dir/bin" && -x "$directory/gh" ]]; then real_gh="$directory/gh"; break; fi
+    done
+    existing_path="${existing_path#"$config_dir/bin:"}"
+    prepend="$config_dir/bin:$prepend"
+  fi
 
   tmp="$(mktemp "$state_dir/runtime-env.XXXXXX")"
   grep -v '^PATH=' "$runtime_env_path" >"$tmp" || true
+  if [[ -n "$real_gh" ]]; then
+    sed -i '/^SYMPHONY_GH_BIN=/d' "$tmp"
+    printf 'SYMPHONY_GH_BIN=' >>"$tmp"
+    shell_quote "$real_gh" >>"$tmp"
+    printf '\n' >>"$tmp"
+  fi
   {
     printf 'PATH='
     shell_quote "$prepend:$existing_path"
@@ -409,7 +428,33 @@ json_value() {
 
 # Runs git with the bootstrap credential helper disabled and the askpass script
 # supplying the bot token, so no token is ever written into .git/config.
+runtime_auth_mode() {
+  local mode="${SYMPHONY_GITHUB_AUTH_MODE:-}"
+  if [[ -z "$mode" && -f "$runtime_env_path" ]]; then mode="$(runtime_env_value SYMPHONY_GITHUB_AUTH_MODE)"; fi
+  case "${mode:-legacy}" in
+    app|legacy) printf '%s' "${mode:-legacy}" ;;
+    *) die "invalid SYMPHONY_GITHUB_AUTH_MODE" ;;
+  esac
+}
+
 symphony_git() {
+  local auth_mode
+  auth_mode="$(runtime_auth_mode)" || return 1
+  if [[ "$auth_mode" == app ]]; then
+    (
+      unset GITHUB_TOKEN GH_TOKEN SYMPHONY_GITHUB_TOKEN SSH_AUTH_SOCK
+      unset GIT_TRACE GIT_TRACE_CURL GIT_CURL_VERBOSE
+      export SYMPHONY_GITHUB_AUTH_MODE=app
+      export SYMPHONY_GITHUB_APP_AUTH="${SYMPHONY_GITHUB_APP_AUTH:-$config_dir/github-app-auth.mjs}"
+      export SYMPHONY_GITHUB_APP_CONFIG="${SYMPHONY_GITHUB_APP_CONFIG:-$config_dir/github-app.json}"
+      export SYMPHONY_GITHUB_APP_CACHE="${SYMPHONY_GITHUB_APP_CACHE:-$workspace_root/cache/github-app}"
+      if is_root; then export SYMPHONY_GITHUB_APP_CACHE="$state_dir/github-app-cache"; fi
+      export GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never
+      export GIT_ASKPASS="${GIT_ASKPASS:-$git_askpass_path}"
+      git -c credential.helper= -c credential.useHttpPath=true -c url.https://github.com/.insteadOf=git@github.com: "$@"
+    )
+    return
+  fi
   GIT_TERMINAL_PROMPT=0 \
     GCM_INTERACTIVE=never \
     GIT_ASKPASS="${GIT_ASKPASS:-$git_askpass_path}" \

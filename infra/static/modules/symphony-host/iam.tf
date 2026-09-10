@@ -5,6 +5,7 @@ data "aws_region" "current" {}
 locals {
   symphony_secret_names = [
     "symphony/keys",
+    "symphony/github-apps/symphony",
   ]
 
   symphony_secret_arns = [

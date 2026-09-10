@@ -215,6 +215,7 @@ fi
     exit 1
   }
 
+export SYMPHONY_TOOLING_ROOT="$bootstrap_source_checkout"
 exec codex "\$@"
 WRAPPER
   install_personal_file 0755 "$tmp" "$dest"

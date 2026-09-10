@@ -13,6 +13,7 @@
 #   symphony/keys
 #     JSON map of Symphony environment variables
 
+set +x
 if [[ "${BASH_SOURCE[0]}" == "$0" && "${1:-}" != "--identity-preflight" ]]; then
   echo "Source this script so it can export variables into your current shell:" >&2
   echo "  source scripts/symphony/setup-local-env.sh" >&2
@@ -107,6 +108,25 @@ symphony_json_field() {
 }
 
 symphony_set_identity_defaults() {
+  # HACKATHON_LEGACY_AUTH: App opt-in is durable; RETIRE removes legacy defaults.
+  case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
+    app)
+      export SYMPHONY_GITHUB_AUTH_MODE=app
+      unset GITHUB_TOKEN GH_TOKEN SYMPHONY_GITHUB_TOKEN GIT_TRACE GIT_TRACE_CURL GIT_CURL_VERBOSE
+      export SYMPHONY_GITHUB_APP_AUTH="${SYMPHONY_GITHUB_APP_AUTH:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/github-app-auth.mjs}"
+      local identity
+      identity="$(node --input-type=module -e 'const {loadAppConfig} = await import(process.env.SYMPHONY_GITHUB_APP_AUTH); const c = await loadAppConfig(); process.stdout.write(`${c.appId} ${c.appSlug}`);' 2>/dev/null)" || { symphony_die "Invalid private App configuration"; return 1; }
+      export SYMPHONY_APP_ID="${identity%% *}" SYMPHONY_APP_SLUG="${identity#* }"
+      export SYMPHONY_BOT_USER="$SYMPHONY_APP_SLUG[bot]"
+      if [[ -z "${SYMPHONY_GIT_AUTHOR_EMAIL:-}" || -z "${SYMPHONY_HUMAN_LOGIN:-}" || -z "${CADENCE_APP_ID:-}" || -z "${CADENCE_APP_SLUG:-}" ]]; then
+        symphony_die "App mode requires explicit bot author email, human login and Cadence App ID/slug"
+        return 1
+      fi
+      export CADENCE_REVIEWER="$CADENCE_APP_SLUG[bot]"
+      ;;
+    legacy) ;;
+    *) symphony_die "Invalid SYMPHONY_GITHUB_AUTH_MODE"; return 1 ;;
+  esac
   export SYMPHONY_BOT_USER="${SYMPHONY_BOT_USER:-1000-symphony-bot}"
   export CADENCE_REVIEWER="${CADENCE_REVIEWER:-1000-cadence-bot}"
   export SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL="${SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL:-example-doc-reader@example-project.iam.gserviceaccount.com}"
@@ -167,6 +187,12 @@ symphony_verify_google_identity() {
 symphony_verify_github_identity() {
   local login
 
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then
+    node "$SYMPHONY_GITHUB_APP_AUTH" preflight || return 1
+    SYMPHONY_GITHUB_LOGIN_ACTUAL="$SYMPHONY_BOT_USER"
+    return
+  fi
+
   if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     symphony_die "GITHUB_TOKEN is unset"
     return 1
@@ -187,6 +213,7 @@ symphony_verify_github_identity() {
 }
 
 symphony_github_credential_class() {
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then printf 'github-app-installation-token'; return; fi
   case "${GITHUB_TOKEN:-}" in
     github_pat_*) printf 'fine-grained-pat' ;;
     ghp_*) printf 'classic-pat' ;;
@@ -212,8 +239,15 @@ symphony_prepare_git_auth() {
   unset SSH_AUTH_SOCK
 
   askpass="${SYMPHONY_RUNTIME_DIR}/git-askpass.sh"
+  mkdir -p "$SYMPHONY_RUNTIME_DIR" || return 1
+  chmod 700 "$SYMPHONY_RUNTIME_DIR" || return 1
   cat >"${askpass}" <<'EOF'
 #!/bin/sh
+case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
+  app) exec node "${SYMPHONY_GITHUB_APP_AUTH:?}" askpass "$1" ;;
+  legacy) ;;
+  *) exit 1 ;;
+esac
 case "$1" in
   *Username*) printf '%s\n' "x-access-token" ;;
   *Password*) printf '%s\n' "${GITHUB_TOKEN}" ;;
@@ -230,6 +264,18 @@ EOF
   export GIT_CONFIG_KEY_1="url.https://github.com/.insteadOf"
   export GIT_CONFIG_VALUE_1="git@github.com:"
   export GIT_CONFIG_COUNT=2
+
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then
+    export GIT_CONFIG_KEY_2="credential.useHttpPath" GIT_CONFIG_VALUE_2=true GIT_CONFIG_COUNT=3
+    export SYMPHONY_GH_BIN="${SYMPHONY_GH_BIN:-$(command -v gh)}"
+    [[ "$SYMPHONY_GH_BIN" != "$SYMPHONY_RUNTIME_DIR/bin/gh" ]] || { symphony_die "Real gh binary required"; return 1; }
+    mkdir -p "$SYMPHONY_RUNTIME_DIR/bin" || return 1
+    cp "$(dirname "$SYMPHONY_GITHUB_APP_AUTH")/github-app-exec.sh" "$SYMPHONY_RUNTIME_DIR/bin/gh" || return 1
+    chmod 700 "$SYMPHONY_RUNTIME_DIR/bin/gh" || return 1
+    export PATH="$SYMPHONY_RUNTIME_DIR/bin:$PATH"
+    symphony_log "GitHub transport: renewable App askpass and gh wrapper"
+    return
+  fi
 
   symphony_log "GitHub git transport: SSH agent disabled; SSH remotes rewritten to HTTPS using bot GITHUB_TOKEN through GIT_ASKPASS"
 }
@@ -388,7 +434,7 @@ symphony_identity_record() {
 }
 
 symphony_identity_preflight() {
-  symphony_set_identity_defaults
+  symphony_set_identity_defaults || return 1
 
   symphony_require_command curl || return 1
   symphony_require_command gh || return 1
@@ -400,7 +446,11 @@ symphony_identity_preflight() {
   symphony_verify_codex_identity || return 1
 
   symphony_identity_record "github.actor" "${SYMPHONY_GITHUB_LOGIN_ACTUAL}"
-  symphony_identity_record "github.credential_source" "env:GITHUB_TOKEN"
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then
+    symphony_identity_record "github.credential_source" "renewable-app-broker"
+  else
+    symphony_identity_record "github.credential_source" "env:GITHUB_TOKEN"
+  fi
   symphony_identity_record "github.credential_class" "$(symphony_github_credential_class)"
   symphony_identity_record "linear.viewer_email" "${SYMPHONY_LINEAR_VIEWER_EMAIL_ACTUAL}"
   symphony_identity_record "linear.credential_source" "env:LINEAR_API_TOKEN"
@@ -424,13 +474,15 @@ symphony_setup_main() {
 
   export SYMPHONY_GOOGLE_SA_SECRET_ID="symphony-google-service-account-json"
   export SYMPHONY_KEYS_SECRET_ID="symphony/keys"
-  export SYMPHONY_RUNTIME_DIR="/tmp/symphony"
+  export SYMPHONY_RUNTIME_DIR="${SYMPHONY_RUNTIME_DIR:-/tmp/symphony}"
 
-  symphony_set_identity_defaults
-  export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}"
-  export GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
-  export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}"
-  export GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+  # Retain legacy precedence: defaults first, then secret-map overrides.
+  local initial_author_email="${SYMPHONY_GIT_AUTHOR_EMAIL:-}"
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == legacy ]]; then
+    symphony_set_identity_defaults || return 1
+    export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+    export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+  fi
 
   if ! aws sts get-caller-identity \
     --profile "${AWS_PROFILE}" \
@@ -443,8 +495,29 @@ symphony_setup_main() {
 
   unset GH_TOKEN LINEAR_API_KEY
   symphony_load_secret_env_map "${SYMPHONY_KEYS_SECRET_ID}" || return 1
-
-
+  if [[ "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" == app ]]; then
+    # A mode selected by the secret map must not inherit a legacy email default.
+    if [[ -z "$initial_author_email" && "${SYMPHONY_GIT_AUTHOR_EMAIL:-}" == 327018241+1000-symphony-bot@users.noreply.github.com ]]; then
+      unset SYMPHONY_GIT_AUTHOR_EMAIL
+    fi
+    unset GITHUB_TOKEN GH_TOKEN SYMPHONY_GITHUB_TOKEN
+    mkdir -p "$SYMPHONY_RUNTIME_DIR" || return 1
+    chmod 700 "$SYMPHONY_RUNTIME_DIR" || return 1
+    export SYMPHONY_GITHUB_APP_CONFIG="$SYMPHONY_RUNTIME_DIR/github-app.json"
+    export SYMPHONY_GITHUB_APP_CACHE="$SYMPHONY_RUNTIME_DIR/github-app-cache"
+    local app_tmp
+    app_tmp="$(mktemp "$SYMPHONY_RUNTIME_DIR/app.XXXXXX")" || return 1
+    if ! symphony_secret_string "${SYMPHONY_GITHUB_APP_SECRET_ID:-symphony/github-apps/symphony}" >"$app_tmp"; then
+      rm -f "$app_tmp"
+      symphony_die "Unable to load App signing configuration"
+      return 1
+    fi
+    mv "$app_tmp" "$SYMPHONY_GITHUB_APP_CONFIG" || return 1
+    symphony_set_identity_defaults || return 1
+    export GIT_AUTHOR_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_AUTHOR_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+    export GIT_COMMITTER_NAME="${SYMPHONY_GIT_AUTHOR_NAME}" GIT_COMMITTER_EMAIL="${SYMPHONY_GIT_AUTHOR_EMAIL}"
+  fi
+  case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in app|legacy) ;; *) symphony_die "Invalid SYMPHONY_GITHUB_AUTH_MODE"; return 1 ;; esac
   symphony_verify_github_identity || return 1
   symphony_prepare_git_auth || return 1
 

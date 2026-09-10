@@ -108,6 +108,7 @@ test("runtime bundle install stages release, links skills through current, and w
     SYMPHONY_RUNTIME_BUNDLE_REPO_SHA: repoSha,
     SYMPHONY_RUNTIME_GROUP: currentGroup,
     SYMPHONY_RUNTIME_USER: currentUser,
+    SYMPHONY_SRC_ROOT: join(root, "sources"),
     SYMPHONY_WORKSPACE_ROOT: workspaceRoot,
   };
 
@@ -172,6 +173,7 @@ test("runtime bundle install stages release, links skills through current, and w
       privateSkill,
       sharedSkill,
       "linear-graphql",
+      "symphony-repository",
     ]) {
       const linkTarget = await readlink(join(codexHome, "skills", skill));
       assert.equal(linkTarget.startsWith(currentLink), true);
@@ -204,7 +206,7 @@ test("runtime bundle install stages release, links skills through current, and w
     );
     await writeExecutable(
       join(binDir, "codex"),
-      "#!/usr/bin/env bash\nprintf 'codex %s\\n' \"$*\"\n"
+      "#!/usr/bin/env bash\nprintf 'codex %s\\ntooling %s\\n' \"$*\" \"$SYMPHONY_TOOLING_ROOT\"\n"
     );
     const wrapperRun = spawnSync("bash", [wrapper, "--version"], {
       encoding: "utf8",
@@ -224,7 +226,10 @@ test("runtime bundle install stages release, links skills through current, and w
       await readFile(installerLog, "utf8"),
       "--check-runtime-bundle-fresh\n"
     );
-    assert.equal(wrapperRun.stdout, "codex --version\n");
+    assert.equal(
+      wrapperRun.stdout,
+      `codex --version\ntooling ${join(env.SYMPHONY_SRC_ROOT, "example-repo")}\n`
+    );
 
     const installedManifest = JSON.parse(
       await readFile(join(codexHome, "runtime-bundle-manifest.json"), "utf8")
@@ -261,6 +266,7 @@ test("runtime bundle install stages release, links skills through current, and w
       "private:symphony-google-docs",
       "private:symphony-linear-api",
       "private:symphony-proof-of-work",
+      "private:symphony-repository",
       "shared:karpathy-guidelines",
       "shared:linear-graphql",
     ]);
