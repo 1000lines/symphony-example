@@ -26,6 +26,13 @@ Do not cancel a sound node merely because its implementation is poor. Conversely
 do not preserve a bad boundary merely to save a PR. A replacement may be much
 smaller: replanning can contract as well as expand the work.
 
+Treat explicit constraints such as "minor hooks around the existing scheduler"
+or "no new controller code" as acceptance criteria. Remove superseded machinery
+when the requested replacement makes it obsolete; wrapping it in a small hook
+does not satisfy a request to simplify it. Show the resulting behavior and
+implementation footprint so the human can judge whether the simplification
+actually happened.
+
 For a substantive change, keep a revision record in the pinned `## Codex Workpad`:
 source URL/ID, author and update time, reviewed and current heads, interpretation,
 chosen change class, superseded decisions/criteria, affected tickets, and next
