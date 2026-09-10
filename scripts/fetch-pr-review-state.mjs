@@ -375,7 +375,7 @@ const main = async () => {
   // This CLI remains the bootstrap consumer until ROUTE wires trusted check
   // acquisition. The shared check-mode API below never falls back to approval.
   const mapping = JSON.parse(readFileSync(new URL("../.github/symphony/repositories.yml", import.meta.url), "utf8"));
-  if (mapping.review_mode !== "legacy") {
+  if (mapping.review_mode !== "HACKATHON_LEGACY_REVIEW") {
     throw new Error("Legacy review disabled; use trusted classifyCheckReviewState acquisition.");
   }
   const pr = await runQuery({ owner, repo, number });

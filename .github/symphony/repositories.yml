@@ -1,8 +1,8 @@
 {
   "schema": "symphony-repositories/v1",
   "controller": "1000lines/symphony-example",
-  "description": "JSON subset of YAML. DEPLOY supplies missing IDs and verifies grants, workflow/ref and exact-head CI before enabling either target. HACKATHON_LEGACY_REVIEW keeps bootstrap review selected until DEPLOY proves cutover; RETIRE removes this temporary selector.",
-  "review_mode": "legacy",
+  "description": "JSON subset of YAML. Disabled entries authorize no actions. Enabled entries require complete IDs, verified grants, workflow/ref and exact-head CI. The review_mode selector explicitly enables the bootstrap review CLI.",
+  "review_mode": "HACKATHON_LEGACY_REVIEW",
   "repositories": [
     {
       "enabled": false,

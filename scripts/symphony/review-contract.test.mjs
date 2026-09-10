@@ -128,6 +128,112 @@ test("CI requires exact workflow, event, run attempt, App, checkout and every ch
   }
 });
 
+function addCiAttempt(ci, { id = 21, run_number = 2, run_attempt = 1, event = "push" } = {}) {
+  const template = fixture().ci;
+  const run = { ...template.runs[0], id, run_number, run_attempt, event, check_suite_id: id + 1000 };
+  const jobs = template.jobs.map((job, i) => ({ ...job, id: id * 100 + run_attempt * 10 + i,
+    run_id: id, run_attempt, check_run_url: `https://api.github.com/checks/${id}-${run_attempt}-${i}` }));
+  const checks = template.checks.map((check, i) => ({ ...check, id: jobs[i].id,
+    url: jobs[i].check_run_url, check_suite: { id: run.check_suite_id } }));
+  ci.runs.push(run); ci.jobs.push(...jobs); ci.checks.push(...checks);
+  return { run, jobs, checks };
+}
+
+test("CI retains evidence for every peer run at the current head", () => {
+  const { ci } = fixture();
+  addCiAttempt(ci);
+  const result = evaluateCi(ci);
+  assert.equal(result.passes, true);
+  assert.deepEqual(result.evidence.map(e => e.runId).sort(), [20, 21]);
+  assert.ok(result.evidence.every(e => e.jobs.length === 5));
+});
+
+test("a successful peer cannot hide nonpassing push or PR runs in either order", () => {
+  for (const event of ["push", "pull_request"]) {
+    for (const status of ["completed", "queued", "in_progress"]) {
+      const conclusions = status === "completed"
+        ? ["failure", "cancelled", "timed_out", "skipped", "neutral", "action_required", "unknown", null] : [null];
+      for (const conclusion of conclusions) {
+        for (const failingNumber of [1, 2]) {
+          const { ci } = fixture();
+          const peer = addCiAttempt(ci);
+          const bad = failingNumber === 1 ? ci.runs[0] : peer.run;
+          const good = failingNumber === 1 ? peer.run : ci.runs[0];
+          Object.assign(bad, { event, status, conclusion });
+          good.event = event === "push" ? "pull_request" : "push";
+          for (const runs of [ci.runs, [...ci.runs].reverse()]) {
+            assert.equal(evaluateCi({ ...ci, runs }).passes, false,
+              `${event} run ${failingNumber}: ${status}/${conclusion}`);
+          }
+        }
+      }
+    }
+  }
+});
+
+test("each peer needs its own verified successful checks and children", () => {
+  for (const change of [
+    c => { c.jobs = c.jobs.filter(j => j.run_id !== 20); },
+    c => { c.jobs[1].conclusion = "failure"; },
+    c => { c.checks[1].conclusion = "failure"; },
+    c => { c.checks[0].app.id = 999; },
+    c => { c.jobs[0].tested_sha = base; },
+  ]) {
+    const { ci } = fixture(); addCiAttempt(ci); change(ci);
+    assert.equal(evaluateCi(ci).passes, false, change.toString());
+  }
+});
+
+test("only genuine later attempts supersede a run, never a distinct peer", () => {
+  const { ci } = fixture();
+  ci.runs[0].conclusion = "failure";
+  const retry = addCiAttempt(ci, { id: 20, run_number: 1, run_attempt: 2, event: "pull_request" });
+  addCiAttempt(ci);
+  assert.equal(evaluateCi(ci).passes, true);
+  assert.equal(evaluateCi(ci).evidence.find(e => e.runId === 20).attempt, 2);
+  for (const conclusion of ["failure", null]) {
+    retry.run.conclusion = conclusion;
+    retry.run.status = conclusion ? "completed" : "queued";
+    assert.equal(evaluateCi(ci).passes, false);
+  }
+  for (const change of [
+    c => { c.runs[1].id = 99; },
+    c => { c.runs[1].run_number = 3; },
+    c => { c.runs[1].event = "push"; },
+    c => { c.runs.push({ ...c.runs[1] }); },
+  ]) {
+    const invalid = structuredClone(ci);
+    Object.assign(invalid.runs[1], { status: "completed", conclusion: "success" });
+    change(invalid);
+    assert.equal(evaluateCi(invalid).passes, false, change.toString());
+  }
+});
+
+test("AI cannot accept a completed review acquired with incomplete feedback sources", () => {
+  for (const source of Object.keys(sources())) {
+    const { ai, gen } = fixture();
+    const incomplete = sources(); incomplete[source].complete = false;
+    const next = generation({ feedback: feedbackWatermark(incomplete) });
+    const queued = queueReviewGeneration(null, next, { checkId: 90 });
+    const completed = completeReviewGeneration(queued, { generationId: next.id, attempt: 1,
+      checkId: 90, phase: "completed", output: output(next) }, next);
+    ai.generation = next; ai.workpad.reviewContract = completed;
+    ai.checks[0].external_id = reviewExternalId(completed);
+    assert.notEqual(next.id, gen.id);
+    assert.equal(evaluateAi(ai).passes, false, source);
+  }
+});
+
+test("legacy bot accounts cannot create feedback generations or reset the pass cap", () => {
+  for (const login of [process.env.SYMPHONY_BOT_USER || "example-symphony-bot",
+    process.env.CADENCE_REVIEWER || "example-cadence-bot", "another-app[bot]"]) {
+    const feedback = sources();
+    feedback.comments.nodes = [{ ...human(), author: { login, __typename: "User" } }];
+    assert.deepEqual(feedbackWatermark(feedback).records, [], login);
+    assert.equal(generation({ feedback: feedbackWatermark(feedback) }).resetKey, generation().resetKey, login);
+  }
+});
+
 test("AI success requires exact check/generation, closed ledger and durable workpad", () => {
   assert.equal(evaluateAi(fixture().ai).passes, true);
   for (const change of [

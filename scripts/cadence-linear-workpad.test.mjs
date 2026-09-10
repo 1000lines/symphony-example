@@ -862,6 +862,30 @@ test("upsertCadenceWorkpad warns when multiple Cadence workpads already exist", 
   assert.match(warnings[0], /Found 2 Cadence Workpad comments/);
 });
 
+test("contract detection ignores quoted field names in valid workpad prose", async () => {
+  const { queued } = contractFixture();
+  for (const mode of ["prose", "contract", "malformed-contract"]) {
+    let body = renderCadenceWorkpad(mode === "prose"
+      ? { summary: 'This review discusses the "reviewContract" field.' }
+      : { reviewContract: queued });
+    if (mode === "malformed-contract") body = body.replace('"generation": {', '"generation": INVALID {');
+    const linear = makeLinearFetch({ comments: [
+      { id: "cadence-old", body }, { id: "cadence-new", body },
+    ] });
+    const warnings = [];
+    const result = upsertCadenceWorkpad({ issueIdentifier: "DEMO-112", workpad: sampleWorkpad,
+      token: "linear-token", fetchImpl: linear.fetchImpl, logger: { warn: message => warnings.push(message) } });
+    if (mode === "prose") {
+      assert.equal((await result).operation, "updated");
+      assert.equal(linear.updated.length, 1);
+      assert.match(warnings[0], /Found 2 Cadence Workpad comments/);
+    } else {
+      await assert.rejects(result, /Duplicate Cadence workpads/);
+      assert.equal(linear.updated.length, 0);
+    }
+  }
+});
+
 test("upsertCadenceWorkpad does not touch Codex Workpad comments", async () => {
   const codexBody = "## Codex Workpad\n\nStatus: In Review";
   const linear = makeLinearFetch({

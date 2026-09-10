@@ -121,29 +121,38 @@ export function evaluateCi({ target, runs = [], jobs = [], checks = [], complete
     if (!candidates.length) return fail(`missing-run:${rule.name}`);
     if (candidates.some(r => !positive(r.id) || !positive(r.run_number) || !positive(r.run_attempt)))
       return fail(`invalid-run:${rule.name}`);
-    // Across allowed events, a later run supersedes earlier evidence, even before
-    // its jobs/checks appear. Reruns supersede the earlier attempt of the same run.
-    candidates.sort((a, b) => b.run_number - a.run_number || b.run_attempt - a.run_attempt);
-    const run = candidates[0];
-    if (candidates.filter(r => r.run_number === run.run_number && r.run_attempt === run.run_attempt).length !== 1)
-      return fail(`ambiguous-run:${rule.name}`);
-    if (run.status !== "completed" || run.conclusion !== "success") return fail(`run-${run.conclusion || run.status}:${rule.name}`);
-    const selected = [];
-    for (const name of [rule.name, ...rule.children.map(c => c.name)]) {
-      const matches = jobs.filter(job => job.run_id === run.id && job.run_attempt === run.run_attempt && job.name === name);
-      if (matches.length !== 1) return fail(`missing-or-ambiguous-job:${name}`);
-      const job = matches[0];
-      const ownedChecks = checks.filter(check => check.name === name && check.app?.id === rule.app_id &&
-        check.check_suite?.id === run.check_suite_id && check.head_sha === target.headSha &&
-        check.url === job.check_run_url);
-      if (!positive(job.id) || !positive(run.check_suite_id) || !positive(ownedChecks[0]?.id) ||
-        job.head_sha !== target.headSha || job.tested_sha !== target.headSha ||
-        ownedChecks.length !== 1 || job.status !== "completed" || job.conclusion !== "success" ||
-        ownedChecks[0].status !== "completed" || ownedChecks[0].conclusion !== "success")
-        return fail(`invalid-job-provenance-or-result:${name}`);
-      selected.push({ jobId: job.id, checkId: ownedChecks[0].id, name });
+    // Separate push/PR/dispatch runs are peers, not replacements. Only a later
+    // attempt of the same run can supersede its earlier evidence.
+    const groups = new Map();
+    for (const run of candidates) {
+      if (!groups.has(run.id)) groups.set(run.id, []);
+      groups.get(run.id).push(run);
     }
-    evidence.push({ name: rule.name, runId: run.id, attempt: run.run_attempt, jobs: selected });
+    if (new Set([...groups.values()].map(attempts => attempts[0].run_number)).size !== groups.size)
+      return fail(`ambiguous-run:${rule.name}`);
+    for (const attempts of groups.values()) {
+      const run = attempts.sort((a, b) => b.run_attempt - a.run_attempt)[0];
+      if (attempts.some(r => r.run_number !== run.run_number || r.event !== run.event) ||
+        new Set(attempts.map(r => r.run_attempt)).size !== attempts.length)
+        return fail(`ambiguous-run:${rule.name}`);
+      if (run.status !== "completed" || run.conclusion !== "success") return fail(`run-${run.conclusion || run.status}:${rule.name}`);
+      const selected = [];
+      for (const name of [rule.name, ...rule.children.map(c => c.name)]) {
+        const matches = jobs.filter(job => job.run_id === run.id && job.run_attempt === run.run_attempt && job.name === name);
+        if (matches.length !== 1) return fail(`missing-or-ambiguous-job:${name}`);
+        const job = matches[0];
+        const ownedChecks = checks.filter(check => check.name === name && check.app?.id === rule.app_id &&
+          check.check_suite?.id === run.check_suite_id && check.head_sha === target.headSha &&
+          check.url === job.check_run_url);
+        if (!positive(job.id) || !positive(run.check_suite_id) || !positive(ownedChecks[0]?.id) ||
+          job.head_sha !== target.headSha || job.tested_sha !== target.headSha ||
+          ownedChecks.length !== 1 || job.status !== "completed" || job.conclusion !== "success" ||
+          ownedChecks[0].status !== "completed" || ownedChecks[0].conclusion !== "success")
+          return fail(`invalid-job-provenance-or-result:${name}`);
+        selected.push({ jobId: job.id, checkId: ownedChecks[0].id, name });
+      }
+      evidence.push({ name: rule.name, runId: run.id, attempt: run.run_attempt, jobs: selected });
+    }
   }
   return { passes: true, reason: "current-ci-success", evidence };
 }

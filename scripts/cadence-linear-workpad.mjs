@@ -1031,11 +1031,15 @@ export const upsertCadenceWorkpad = async ({
   const issue = await fetchIssueComments(issueIdentifier, token, { fetchImpl });
   const cadenceWorkpads = findCadenceWorkpadComments(issue.comments);
   const existing = cadenceWorkpads[0];
-  if (!issue.complete && (workpad.reviewContract || cadenceWorkpads.some(c => c.body.includes('"reviewContract"')))) {
+  const hasContract = workpad.reviewContract || cadenceWorkpads.some(comment => {
+    try { return Boolean(parseCadenceWorkpad(comment.body).reviewContract); }
+    catch { return comment.body.includes('"reviewContract"'); }
+  });
+  if (!issue.complete && hasContract) {
     throw new Error("Incomplete Linear comment history cannot establish acceptance");
   }
   if (cadenceWorkpads.length > 1) {
-    if (workpad.reviewContract || cadenceWorkpads.some(c => c.body.includes('"reviewContract"'))) {
+    if (hasContract) {
       throw new Error("Duplicate Cadence workpads cannot establish acceptance");
     }
     logger?.warn?.(
