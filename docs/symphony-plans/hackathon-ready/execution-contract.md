@@ -6,6 +6,15 @@ The accepted design at controller commit
 Its R/D/O identifiers are preserved below. These are implementation instructions
 for later accepted tickets, not claims about the current deployment.
 
+## Human state correction — 2026-09-09
+
+Jeremy removed the `Blocked` workflow status and specified that an unfinished
+predecessor blocks its dependent through the relation. When the predecessor
+moves to Done, an already Active dependent becomes eligible without a state
+change. This amendment overrides the older status wording in the accepted
+plan, design, initial ticket descriptions and pinned brief. It changes no
+node scope, topology, ownership, or activation hold.
+
 ## Fan-out and common ticket rules
 
 100-8 reads the human-accepted merged plan revision and pins links to this plan,
@@ -19,8 +28,10 @@ Show one completed body for inspection before live writes. Preserve empty lists
 as `none`. Idempotently replace generated content rather than appending it.
 
 Create exactly thirteen delivery issues and two monitor issues; do not duplicate
-100-6, 100-7 or 100-8. CI/RUST and both monitors start Backlog; all other nodes
-start Blocked. Initial issue label is `pink`, never `mature` or a wake label.
+100-6, 100-7 or 100-8. All fifteen nodes start Backlog, preserving the
+accepted hold for human activation. Blocking is a property of unfinished
+predecessor relations, never a workflow status; do not recreate `Blocked` or
+use `Do Not Use`. Initial issue label is `pink`, never `mature` or a wake label.
 Jeremy assigns activation after fan-out review. Resolve all required label/state,
 project/team/assignee IDs and selected branch refs before issue creation; resolve
 all returned issue IDs before writing the exact sixteen directed relations.
@@ -144,7 +155,7 @@ WAIT exports one reconciliation action path for event bridges, publication and
 monitor scans. Observe live state before deciding and immediately before mutation;
 persist actual readback, action key and failures. Do not claim distributed
 exactly-once behavior: Linear has no compare-and-swap. Preserve terminal states
-and categories, closed PRs, other projects, Backlog and Blocked. Never activate
+and categories, closed PRs, other projects, Backlog and issues with unfinished hard blockers. Never activate
 the parked frontier through CI or maturity.
 
 | Observation                                             | Required action                                                                                                                                  |
@@ -274,7 +285,7 @@ never merge intentional failure. Clean up fixtures after retaining durable proof
 | R08         | DEPLOY failed CI → one Active correction → fresh green head/review → ready/human; pending work releases slot, old/same-head-stale evidence rejected.                                            |
 | R09         | WAIT fixtures and DEPLOY real dropped-event timer, anchor/due/dispatch/verdict, conflict recovery, scan cursor, crash/history/API failure and duplicate/terminal interleavings.                 |
 | R10         | DEPLOY actual accepted refs/install/reload, RETIRE obsolete active dependencies, ROTATE provider change, FINAL composed proof and MIGRATION inventory/operator limits.                          |
-| R11         | 100-7 human-reviewed topology and 100-8 exact issue/label/assignment/Backlog/Blocked/relation readback. No live rehearsal substitutes for this planning criterion.                              |
+| R11         | 100-7 human-reviewed topology and 100-8 exact issue/label/assignment/Backlog/dependency-relation readback. No live rehearsal substitutes for this planning criterion.                           |
 | R12         | DEPLOY selected Rust target through controller dispatch at target head, both-owner installation evidence and complete handoff; unknown target/caller installation/project substitutions denied. |
 
 No future task claims success from this matrix alone. FINAL requires artifact

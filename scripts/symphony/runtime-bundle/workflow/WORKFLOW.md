@@ -154,8 +154,11 @@ Symphony uses these state meanings:
 - `Canceled`: work was intentionally stopped.
 - `Duplicate`: work is represented by another issue.
 
-`Backlog` holds the ready DAG frontier before the starting gun. `Blocked` holds
-work waiting on prerequisite tickets, with explicit Linear blocker relations.
+`Backlog` holds intentionally parked work before activation. Blocking is a
+property derived from unfinished predecessor relations, not a workflow status.
+Active tickets wait on their blocker relations; completion of a predecessor
+satisfies its relation without changing the dependent ticket's status. Do not
+create `Blocked` or use the required but unused `Do Not Use` placeholder.
 Only `Active` is dispatched. Daemon tickets and the `Happy`, `Unhappy`, and
 `Evaluating` states are not supported in this deployment. The human lead manages
 follow-up and monitoring manually during the hackathon.
@@ -297,7 +300,7 @@ For coding tickets spawned from a DAG plan:
   - `Active`: implementation or rework may run now.
   - `Inactive`: CI, deploy, review, human input, or another external event is
     pending and the issue should not consume a worker slot.
-  - `Blocked`: prerequisite tickets are incomplete.
+  - Blocking is derived from unfinished predecessor relations, not a status.
   - `Done`, `Canceled`, and `Duplicate`: terminal states.
 - Treat legacy waiting states such as `Waiting for CI`, `In Review`, and
   `Human Input Needed` as `Inactive`. Treat legacy workable states such as

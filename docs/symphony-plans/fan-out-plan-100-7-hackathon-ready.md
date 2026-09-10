@@ -126,7 +126,7 @@ flowchart TD
 | D07: one 15-minute monitor per repository         | WAIT/GUIDE implement the bounded scan and existing states; MON_CONTROLLER and MON_RUST operate only after authorized deployment. No ordinary-ticket timer or upstream runtime change.                         |
 | D08: shared reconciliation and one periodic owner | WAIT owns event/daemon actions, durable handoff/retry keys and terminal guards. DEPLOY verifies workflow enablement and transfers opted-in conflict coverage from the cron.                                   |
 | D09: staged rollout, key rotation last            | INSTALL prepares authority; DEPLOY verifies new review while retaining the working path; RETIRE removes legacy dependencies; ROTATE verifies the event key; FINAL requires both.                              |
-| D10: parked frontier and clean main branches      | 100-8 creates CI/RUST/monitors in Backlog and hard dependents Blocked. Jeremy activates delivery work; no predecessor commits are copied. No live changes from 100-7.                                         |
+| D10: parked frontier and clean main branches      | 100-8 creates all nodes in Backlog and represents hard dependencies with blocker relations. Jeremy activates delivery work; no predecessor commits are copied. No live changes from 100-7.                    |
 | D11: bounded cross-owner integration              | GATE owns trusted target mapping; APP/ROUTE/WAIT use per-target tokens and head evidence; RUST/DEPLOY exercise the selected repository without distributing controller secrets.                               |
 | P01: preserve schema and reuse tooling            | 100-7 validates through tools/symphony-dag; 100-8 copies rich node content under its existing generation contract. Renderer gaps are advisory process proposals, not new local tooling.                       |
 
@@ -167,7 +167,7 @@ project:
     - pink
     - symphony
 defaults:
-  initial_state: Blocked
+  initial_state: Backlog
   maturity_label: mature
   task_branch_base: main
   task_pr_base: main
@@ -209,7 +209,7 @@ nodes:
     title: Add renewable App credentials and explicit actor identities
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -236,7 +236,7 @@ nodes:
     title: Define trusted repository mapping and fresh acceptance predicates
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -289,7 +289,7 @@ nodes:
     title: Build isolated Codex assessment and trusted check publication
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -316,7 +316,7 @@ nodes:
     title: Reconcile CI and review through events and bounded monitors
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -343,7 +343,7 @@ nodes:
     title: Prepare and verify both App installations and secret destinations
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -370,7 +370,7 @@ nodes:
     title: Wire App-owned Codex dispatch and human-only review handoff
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -397,7 +397,7 @@ nodes:
     title: Installable host profiles and current acceptance guidance
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -424,7 +424,7 @@ nodes:
     title: Deploy and rehearse Apps, Codex, CI and 15-minute recovery
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -451,7 +451,7 @@ nodes:
     title: Retire verified legacy reviewer and PAT dependencies
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -478,7 +478,7 @@ nodes:
     title: Rotate to the event OpenAI key and verify reload
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example
@@ -505,7 +505,7 @@ nodes:
     title: Audit composed readiness, cleanup and human acceptance
     type: task
     difficulty: hard
-    initial_state: Blocked
+    initial_state: Backlog
     labels:
       - pink
     repository: 1000lines/symphony-example

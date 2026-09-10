@@ -1,7 +1,9 @@
 # Plan project - seed ticket
 
-Initial status: `Blocked` by the requirements-and-design ticket. Keep it outside
-the dispatch queue until that prerequisite is satisfied.
+Create in `Backlog`. After all seeds and relations are verified, move to
+`Active` unless the human requested a hold. The requirements/design relation
+prevents dispatch until the predecessor is Done. Blocking is a property, not a
+workflow status; never require `Blocked` or use `Do Not Use`.
 
 ## Scope
 

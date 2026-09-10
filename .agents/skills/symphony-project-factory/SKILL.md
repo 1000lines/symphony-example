@@ -153,16 +153,18 @@ Use only these three templates for the default starter ticket set:
 | Template | Default title | Creation status | Status after setup |
 | --- | --- | --- | --- |
 | `requirements-and-design.md` | `Create requirements & design doc` | `Backlog` | `Active`, unless the human explicitly requests a hold |
-| `plan-project.md` | `Plan project - seed ticket` | `Blocked` | `Blocked` by requirements/design |
-| `trigger-fan-out.md` | `Trigger fan out` | `Blocked` | `Blocked` by the plan-project ticket |
+| `plan-project.md` | `Plan project - seed ticket` | `Backlog` | `Active`, held by requirements/design until Done |
+| `trigger-fan-out.md` | `Trigger fan out` | `Backlog` | `Active`, held by the planning relation until Done |
 
 Stage all seeds outside the dispatch queue, create the two blocker relations,
 and read back the tickets and relation direction before activating anything.
-After successful verification, move the ready requirements/design ticket to
+After successful verification, move all three seeds to
 `Active` without asking for another confirmation. Do not leave a newly created
 project parked merely because the human did not separately say "start now".
-Dependent tickets remain `Blocked` until their prerequisites are satisfied;
-this setup step does not authorize premature fan-out or implementation.
+Blocking is a derived property of unfinished predecessor relations, not a
+workflow status. An Active dependent waits for its predecessor to reach Done;
+no dependent status change is needed. Verify relation-aware dispatch before
+activation. Never create or require a `Blocked` status or use `Do Not Use`.
 If setup or relation verification fails, leave the seeds undispatched and report
 the failure. Resolve these state names against the actual workspace and workflow;
 do not assume an example `Todo` state is dispatchable.
@@ -247,7 +249,7 @@ Live Linear reads and writes must use Symphony's injected `linear_graphql` tool.
 Before writing, resolve:
 
 - Linear team id for `DEMO`.
-- Workflow state ids for `Backlog`, `Blocked`, and the configured dispatch state
+- Workflow state ids for `Backlog` and the configured dispatch state
   (`Active` in 1000lines).
 - Linear label ids.
 - Human lead assignee id when a matching Linear identity is known.
@@ -320,8 +322,8 @@ Starter ticket payloads:
 | Title                              | Initial status           | Labels | Template                     | Default blocker relation           |
 | ---------------------------------- | ------------------------ | ------ | ---------------------------- | ---------------------------------- |
 | `Create requirements & design doc` | `Backlog`, then `Active` after setup verification unless held | `blue` | `requirements-and-design.md` | none |
-| `Plan project - seed ticket` | `Blocked` | `blue` | `plan-project.md` | blocked by requirements-and-design |
-| `Trigger fan out` | `Blocked` | `blue` | `trigger-fan-out.md` | blocked by plan-project |
+| `Plan project - seed ticket` | `Backlog`, then `Active` after relation verification unless held | `blue` | `plan-project.md` | blocked by requirements-and-design |
+| `Trigger fan out` | `Backlog`, then `Active` after relation verification unless held | `blue` | `trigger-fan-out.md` | blocked by plan-project |
 
 ## Write-Capable Payload Fixture
 
@@ -359,7 +361,7 @@ starter_issue_mutations:
       projectId: "<project-id>"
       title: "Plan project - seed ticket"
       description: "<rendered templates/tickets/plan-project.md>"
-      stateId: "<blocked-state-id>"
+      stateId: "<backlog-state-id>"
       labelIds:
         - "<blue-label-id>"
       assigneeId: "<human-lead-linear-user-id when resolved>"
@@ -370,7 +372,7 @@ starter_issue_mutations:
       projectId: "<project-id>"
       title: "Trigger fan out"
       description: "<rendered templates/tickets/trigger-fan-out.md>"
-      stateId: "<blocked-state-id>"
+      stateId: "<backlog-state-id>"
       labelIds:
         - "<blue-label-id>"
       assigneeId: "<human-lead-linear-user-id when resolved>"
@@ -388,8 +390,8 @@ starter_relation_mutations:
       type: blocks
 ```
 
-After both relations and the three seed states are verified, activate the
-requirements/design seed with `issueUpdate(input: {stateId: <active-state-id>})`,
+After both relations and the three seed states are verified, activate all three
+seeds with `issueUpdate(input: {stateId: <active-state-id>})`,
 unless the human explicitly requested a hold. Record and verify the resulting
 state. A hold changes only activation, not creation of the blocker relations.
 
