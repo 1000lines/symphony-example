@@ -451,7 +451,7 @@ test("hosted after_run passes workspace issue and intended repository, preservin
   const { hooks } = yaml.load(source.split("---")[1]);
   const root = await mkdtemp(join(tmpdir(), "symphony-pr-labels-"));
   try {
-    const workspace = join(root, "TASK-42");
+    const workspace = join(root, "100-11");
     const bin = join(root, "bin");
     await mkdir(workspace);
     await mkdir(bin);
@@ -470,12 +470,44 @@ test("hosted after_run passes workspace issue and intended repository, preservin
       assert.deepEqual(result.stdout.trim().split("\n"), [
         "scripts/symphony/ensure-pr-labels.mjs",
         "--issue",
-        "TASK-42",
+        "100-11",
         "--repo",
-        "example-org/example-repo",
+        "1000lines/symphony-example",
       ]);
     }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("numeric issue labels use renewable App API calls without a GitHub PAT", async () => {
+  const paths = [];
+  let labels = [];
+  const result = await ensurePrLabels({ issueIdentifier: "100-11", repository,
+    env: { LINEAR_API_TOKEN: "linear-test-secret", SYMPHONY_GITHUB_AUTH_MODE: "app" },
+    fetchImpl: async (url, init) => {
+      assert.equal(url, "https://api.linear.app/graphql");
+      assert.equal(JSON.parse(init.body).variables.id, "100-11");
+      return response({ data: { issue: { identifier: "100-11", project: { content: "project-color: pink" }, attachments: { nodes: [], pageInfo: { hasNextPage: false } } } } });
+    },
+    appClient: async (path, options) => {
+      paths.push(path);
+      if (path.startsWith("/pulls?")) return new Response(JSON.stringify([{ ...pr(), title: "[100-11]: App credentials", head: { ref: "symphony/hackathon-ready/100-11/app-credentials" } }]));
+      if (path.startsWith("/labels/")) return new Response(JSON.stringify({ name: path.split("/").at(-1) }));
+      assert.ok(path.startsWith("/issues/42/labels"));
+      if (options.method === "POST") {
+        labels = options.body.labels.map((name) => ({ name }));
+        const outcome = await options.readback(async (readPath) => {
+          assert.equal(readPath, "/issues/42/labels?per_page=100");
+          return new Response(JSON.stringify(labels));
+        });
+        assert.equal(outcome.applied, true);
+        return outcome.response;
+      }
+      return new Response(JSON.stringify(labels));
+    },
+  });
+  assert.equal(result.result, "repaired");
+  assert.deepEqual(result.verified, ["symphony", "pink"]);
+  assert.ok(paths.length >= 5);
 });
