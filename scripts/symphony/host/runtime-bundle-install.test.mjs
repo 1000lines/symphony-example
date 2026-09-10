@@ -108,6 +108,7 @@ test("runtime bundle install stages release, links skills through current, and w
     SYMPHONY_RUNTIME_BUNDLE_REPO_SHA: repoSha,
     SYMPHONY_RUNTIME_GROUP: currentGroup,
     SYMPHONY_RUNTIME_USER: currentUser,
+    SYMPHONY_SRC_ROOT: join(root, "sources"),
     SYMPHONY_WORKSPACE_ROOT: workspaceRoot,
   };
 
@@ -225,7 +226,10 @@ test("runtime bundle install stages release, links skills through current, and w
       await readFile(installerLog, "utf8"),
       "--check-runtime-bundle-fresh\n"
     );
-    assert.equal(wrapperRun.stdout, `codex --version\ntooling ${repoRoot}\n`);
+    assert.equal(
+      wrapperRun.stdout,
+      `codex --version\ntooling ${join(env.SYMPHONY_SRC_ROOT, "example-repo")}\n`
+    );
 
     const installedManifest = JSON.parse(
       await readFile(join(codexHome, "runtime-bundle-manifest.json"), "utf8")
