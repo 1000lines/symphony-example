@@ -28,8 +28,8 @@ The runtime fork is pinned in `variables.tf`. The state backend was created by
 ## GitHub App keys: Jeremy's setup handoff
 
 [INSTALL (100-16)](https://linear.app/1000lines/issue/100-16/prepare-and-verify-both-app-installations-and-secret-destinations)
-owns live setup. After this Terraform change is reviewed, Jeremy applies it and
-uploads his keys. Terraform manages the empty `symphony/github-apps/symphony`
+owns live setup. Jeremy reviews and applies the Terraform plan, then uploads his
+keys. Terraform manages the empty `symphony/github-apps/symphony`
 container and host `DescribeSecret`/`GetSecretValue` access to that name and
 `symphony/keys` only, in account `350353785278`, region `us-west-2`. Values stay
 outside Terraform inputs, plans and state.
@@ -69,8 +69,9 @@ terraform -chdir=infra/static apply app-secret.tfplan
 Use a reviewed nonsecret target JSON file and the local Symphony App PEM at the
 quoted `target` and `pem` paths below, both outside the checkout.
 
-The target file contains these fields except `privateKey`, which `jq --rawfile`
-adds from the PEM without changing its newlines:
+The single-target secret contract requires the camelCase fields below. The target
+file contains every field except `privateKey`, which `jq --rawfile` adds from the
+PEM without changing its newlines:
 
 | Field            | Required value                                                                                                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -82,14 +83,13 @@ adds from the PEM without changing its newlines:
 | `permissions`    | Exact nonempty operation permission object from the reviewed trusted target configuration and [accepted matrix](../../docs/symphony-plans/hackathon-ready-design.md#permission-matrix) |
 | `privateKey`     | Local Symphony App RSA private key; added only during upload                                                                                                                           |
 
-This is the single-target camelCase interface in
-[APP PR #7 at a9f6510](https://github.com/1000lines/symphony-example/blob/a9f6510d62c543e805c39efdad76a9db38194f8d/scripts/symphony/github-app-auth.mjs).
-Both credential materializers copy this JSON verbatim. INSTALL must reconcile
-it with the final accepted APP interface, verify the owner/installation/repository
-binding and approve the exact operation grants before upload. The validator caps
-grants at the matrix; it does not discover installations or prove live grants.
+No merged consumer reads `symphony/github-apps/symphony` yet; provisioning and
+population alone do not enable App authentication. INSTALL must verify the
+owner/installation/repository binding and approve the exact operation grants
+before upload. The validator caps grants at the matrix; it does not discover
+installations or prove live grants.
 
-Run this Bash block after apply, with Bash, jq, OpenSSL and AWS CLI available.
+Run this Bash block after apply, with Bash, jq 1.6 or newer, OpenSSL and AWS CLI available.
 It disables shell tracing, checks the AWS account, validates the RSA PEM and
 complete target before starting upload, and prints upload metadata only:
 
