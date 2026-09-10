@@ -64,6 +64,13 @@ history is missing. An unavailable required source needs an open mandatory
 acceptance. The trusted controller owns the three-pass cap and operational retry;
 you cannot reset either by writing output.
 
+`sourcesComplete` means every supplied source and feedback item has been
+accounted for in the assessment. Set it to `true` only after that accounting.
+An unavailable required document can be accounted for with the mandatory
+`human-needed` finding described above; it still prevents acceptance. If you
+cannot account for the supplied evidence, return `false`; publication rejects
+that output as incomplete and requires operational follow-up.
+
 Return the exact repository, PR, head, generation, evidence digest, and execution
 pins supplied in the evidence. Keep the summary concise and useful to a human:
 why the change is acceptable, required follow-up, or the decision needed. Label

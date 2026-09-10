@@ -11,6 +11,7 @@ export const CODEX_PINS = Object.freeze({ action: "86365089eb2b84e0a8fb0717b304f
   cli: "0.153.4", model: "gpt-6-astra", effort: "xhigh", sandbox: "read-only",
   safetyStrategy: "drop-sudo", apiProxy: true });
 export const CORE_AXES = Object.freeze(["reviewability", "scope", "test-evidence", "compatibility", "architecture", "coverage-seams"]);
+// Independent ceilings: nested tree/blob reads can exhaust calls before files.
 export const EVIDENCE_LIMITS = Object.freeze({ bytes: 2_000_000, calls: 100, milliseconds: 60_000, files: 200 });
 const schema = JSON.parse(readFileSync(new URL("../.github/codex/review-output.schema.json", import.meta.url), "utf8"));
 const prompt = readFileSync(new URL("../.github/codex/review.md", import.meta.url), "utf8");
@@ -322,7 +323,8 @@ export function createPublicationClients({ target, appOptions, linearToken, line
   const config = appOptions.config;
   assert(config.appId === target.apps.cadence.app_id && config.appId === CADENCE_APP_ID &&
     config.installationId === target.apps.cadence.installation_id && config.repositoryId === target.repository_id &&
-    config.repository === target.full_name && same(config.permissions, { checks: "write" }), "Wrong publisher credential scope");
+    config.repository === target.full_name && same({ metadata: "read", ...config.permissions },
+      { metadata: "read", checks: "write" }), "Wrong publisher credential scope");
   const request = createGitHubAppClient(appOptions);
   const readCheck = async id => {
     assert(Number.isSafeInteger(id) && id > 0, "Invalid check ID");
@@ -339,7 +341,7 @@ export function createPublicationClients({ target, appOptions, linearToken, line
     assert(response.ok, "Check write failed");
   }, persist: async (acquired, reviewContract) => {
     const saved = await upsertCadenceWorkpad({ issueIdentifier: acquired.evidence.issue.identifier, token: linearToken,
-      fetchImpl: linearFetch, liveGeneration: acquired.generation, workpad: { reviewContract,
+      fetchImpl: linearFetch, liveGeneration: acquired.generation, workpad: { ...acquired.workpad, reviewContract,
         status: reviewContract.phase, summary: reviewContract.output?.summary || "Cadence operational failure" } });
     return { ...saved, reviewContract: parseCadenceWorkpad(saved.body).reviewContract };
   } };

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { generateKeyPairSync } from "node:crypto";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -7,10 +8,42 @@ import { acquireReviewEvidence, prepareCodexAssessment, parseAssessment, publish
   createPublicationClients, createGitHubEvidenceReaders, CODEX_PINS, CORE_AXES, EVIDENCE_LIMITS } from "./cadence-codex-review.mjs";
 import { queueReviewGeneration, reviewExternalId, reviewDigest, evaluateAi } from "./symphony/review-contract.mjs";
 import { renderCadenceWorkpad, parseCadenceWorkpad } from "./cadence-linear-workpad.mjs";
+import { bindRepository, createGitHubAppClient } from "./symphony/github-app-auth.mjs";
 
 const head = "a".repeat(40), base = "b".repeat(40), controller = "c".repeat(40);
 const page = nodes => ({ nodes, pageInfo: { hasNextPage: false, endCursor: null } });
 const human = id => ({ id, body: "Check the negative path", updatedAt: "2026-09-10T00:00:00Z", author: { login: "jeremycarroll", __typename: "User" } });
+async function appFixture(t, permissions) {
+  const cacheDir = await mkdtemp(join(tmpdir(), "codex-app-fixture-"));
+  t.after(() => rm(cacheDir, { recursive: true, force: true }));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs8", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
+  const config = { appId: 4866513, appSlug: "cadence", installationId: 12, repositoryId: 100,
+    repository: "owner/repo", permissions, privateKey };
+  const response = value => new Response(JSON.stringify(value));
+  const f = { paths: [], api: () => assert.fail("Unexpected repository API request") };
+  const now = () => Date.parse("2026-09-10T00:00:00Z");
+  const fetchImpl = async (url, init) => {
+    const parsed = new URL(url), path = parsed.pathname;
+    assert.equal(parsed.origin, "https://api.github.com");
+    f.paths.push(path + parsed.search);
+    if (path === "/app") return response({ id: config.appId, slug: config.appSlug });
+    if (path === "/repos/owner/repo/installation") return response({ id: 12, app_id: config.appId,
+      account: { login: "owner" }, suspended_at: null, permissions });
+    if (path === "/app/installations/12/access_tokens") {
+      const requested = JSON.parse(init.body);
+      assert.deepEqual(requested.repositories || requested.repository_ids, requested.repositories ? ["repo"] : [100]);
+      return response({ token: "local-fixture-token", expires_at: new Date(now() + 3_600_000).toISOString(), permissions: requested.permissions });
+    }
+    if (path === "/installation/repositories") return response({ total_count: 1, repositories: [{ id: 100, full_name: "owner/repo" }] });
+    if (path === "/installation/token") { assert.equal(init.method, "DELETE"); return new Response(null, { status: 204 }); }
+    return f.api(path, init);
+  };
+  const bound = await bindRepository({ config, repository: config.repository, fetchImpl, now });
+  f.appOptions = { config: bound, cacheDir, fetchImpl, now };
+  f.request = createGitHubAppClient(f.appOptions);
+  return f;
+}
 function fixture() {
   const repository = { id: 100, full_name: "owner/repo", owner: { login: "owner" }, default_branch: "main" };
   const resolution = {
@@ -219,7 +252,7 @@ test("strict schema rejects unknown keys, malformed/missing output, stale identi
     o => { o.execution = { ...o.execution, model: "other" }; }, o => { o.token = "injected"; },
     o => { o.findings.push(finding("unknown")); }, o => { o.humanFeedback.pop(); },
     o => { o.requirements[0].owners = []; }, o => { o.requirements[0].coverage = "partial"; },
-    o => { o.requirements[0].evidence = []; }, o => { o.requirements[0].ignored = true; },
+    o => { o.requirements[0].evidence = []; }, o => { o.requirements[0].ignored = true; }, o => { o.sourcesComplete = false; },
   ]) { const output = assessment(acquired); change(output); assert.throws(() => parseAssessment(JSON.stringify(output), acquired), change.toString()); }
 });
 
@@ -302,6 +335,37 @@ test("denied persistence fails visibly and never publishes success", async () =>
   assert.equal(JSON.stringify(f.check).includes("private-token"), false);
 });
 
+test("mandatory dismissals need recorded human evidence; resolved fixes retain their classification", async () => {
+  for (const className of ["blocker", "human-needed", "suggestion"]) {
+    const f = fixture(), prior = await acquireReviewEvidence(f.options);
+    f.context.workpad.reviewContract = queueReviewGeneration(null, prior.generation, { checkId: 90 });
+    f.context.workpad.reviewContract.ledger.findings = [finding(className, { mandatory: true })];
+    const acquired = await acquireReviewEvidence(f.options), output = assessment(acquired);
+    output.findings = [finding(className, { mandatory: true, status: "dismissed" })];
+    assert.throws(() => parseAssessment(JSON.stringify(output), acquired), /Mandatory dismissal needs human evidence/);
+    const feedback = acquired.generation.feedback.records[0];
+    output.findings[0].evidence.push(`${feedback.source}:${feedback.id}`);
+    assert.equal(parseAssessment(JSON.stringify(output), acquired).findings[0].status, "dismissed");
+    output.findings = [finding(className, { mandatory: true, status: "resolved" })];
+    assert.equal(parseAssessment(JSON.stringify(output), acquired).findings[0].status, "resolved");
+  }
+});
+
+test("publisher validates newly persisted mandatory findings even when the generation is unchanged", async () => {
+  for (const status of ["omitted", "dismissed", "resolved"]) {
+    const f = await publication();
+    f.context.workpad.reviewContract.ledger.findings = [finding("blocker", { mandatory: true })];
+    if (status !== "omitted") f.output.findings = [finding("blocker", { mandatory: true, status })];
+    f.publicationOptions.outcome.output = JSON.stringify(f.output);
+    assert.equal((await acquireReviewEvidence(f.options)).generation.id, f.queued.generation.id);
+    const result = await publishAssessment(f.publicationOptions);
+    assert.equal(result.published, true);
+    assert.equal(result.conclusion, status === "resolved" ? "success" : "failure");
+    assert.equal(result.reason, status === "resolved" ? "assessment" : "provider-output-or-evidence-failure");
+    assert.equal(f.context.workpad.reviewContract.phase, status === "resolved" ? "completed" : "operational-error");
+  }
+});
+
 test("stale heads, changed feedback, wrong App and newer attempts never mutate a check", async () => {
   for (const mutate of [f => { f.context.resolution.pullRequest.head.sha = base; },
     f => { f.feedback.comments.push(human("new-human-input")); }, f => { f.check.app.id = 1; },
@@ -335,12 +399,35 @@ test("production adapters bind the exact Cadence repository/installation and den
     repository: "owner/repo", permissions: { checks: "write", contents: "write" } }]) {
     assert.throws(() => createPublicationClients({ target: acquired.target, appOptions: { config } }), /scope/);
   }
+  for (const permissions of [{ checks: "read" }, { checks: "write", metadata: "write" },
+    { checks: "write", contents: "read" }, { checks: "write", issues: "write" }]) {
+    assert.throws(() => createPublicationClients({ target: acquired.target, appOptions: { config: {
+      appId: 4866513, installationId: 12, repositoryId: 100, repository: "owner/repo", permissions } } }), /scope/);
+  }
+});
+
+test("publication accepts bindRepository metadata permission and uses the real App client", async t => {
+  const acquired = await acquireReviewEvidence(fixture().options), f = await appFixture(t, { checks: "write" });
+  assert.deepEqual(f.appOptions.config.permissions, { metadata: "read", checks: "write" });
+  const check = { id: 90, status: "queued", conclusion: null };
+  f.api = async (path, init) => {
+    assert.equal(path, "/repos/owner/repo/check-runs/90");
+    if (init.method === "PATCH") Object.assign(check, JSON.parse(init.body));
+    return new Response(JSON.stringify(check));
+  };
+  const clients = createPublicationClients({ target: acquired.target, appOptions: f.appOptions });
+  assert.equal((await clients.readCheck(90)).status, "queued");
+  await clients.writeCheck(90, { status: "completed", conclusion: "success", external_id: "generation" });
+  assert.equal((await clients.readCheck(90)).conclusion, "success");
 });
 
 test("publication uses the landed workpad writer with durable transition/readback; denied writes fail", async () => {
   for (const denied of [false, true]) {
     const f = await publication();
-    let body = renderCadenceWorkpad({ reviewContract: f.state });
+    const routerFields = { triggerSource: "pull_request.synchronize", pendingTriggerState: "review-queued",
+      disposition: "pending", lastReviewedSha: base, coordination: { routingKey: "preserve-me" } };
+    Object.assign(f.context.workpad, routerFields);
+    let body = renderCadenceWorkpad({ ...routerFields, reviewContract: f.state });
     const linearFetch = async (_url, init) => {
       const { query, variables } = JSON.parse(init.body);
       if (query.includes("mutation")) {
@@ -366,6 +453,7 @@ test("publication uses the landed workpad writer with durable transition/readbac
       const persisted = parseCadenceWorkpad(body);
       assert.equal(persisted.reviewContract.output.evidenceDigest, f.queued.evidenceDigest);
       assert.equal(persisted.reviewContractHistory[0].phase, "queued");
+      for (const [key, value] of Object.entries(routerFields)) assert.deepEqual(persisted[key], value, key);
     }
   }
 });

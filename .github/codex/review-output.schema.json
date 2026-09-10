@@ -43,6 +43,7 @@
       "pattern": "^[a-f0-9]{64}$"
     },
     "sourcesComplete": {
+      "description": "Every supplied source and feedback item is accounted for, including unavailable required documents with mandatory human-needed findings. False is rejected as incomplete output.",
       "type": "boolean"
     },
     "execution": {
