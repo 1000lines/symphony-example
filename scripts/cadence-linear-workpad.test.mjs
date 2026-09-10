@@ -993,3 +993,106 @@ test("Linear API create errors mention missing write access without exposing the
     }
   );
 });
+
+import { createReviewGeneration, feedbackWatermark, queueReviewGeneration,
+  completeReviewGeneration, startReviewGeneration } from "./symphony/review-contract.mjs";
+
+function contractFixture() {
+  const generation = createReviewGeneration({ repositoryId: 1, prNumber: 2,
+    headSha: "a".repeat(40), baseSha: "b".repeat(40), configRevision: "c".repeat(40),
+    feedback: feedbackWatermark(Object.fromEntries(["reviews", "comments", "threads", "linearComments"]
+      .map(key => [key, { nodes: [], complete: true }]))) });
+  const queued = queueReviewGeneration(null, generation, { checkId: 3 });
+  const output = { schema: "cadence-review/v1", repositoryId: 1, prNumber: 2,
+    headSha: generation.headSha, generationId: generation.id, sourcesComplete: true, summary: "Gate verified",
+    requirements: [{ id: "R05", status: "satisfied", summary: "Gate enforced", evidence: ["fixture"] }],
+    findings: [{ id: "F1", class: "suggestion", mandatory: false, status: "open", summary: "Optional", evidence: ["fixture"] }],
+    humanFeedback: [] };
+  const completed = completeReviewGeneration(queued, { generationId: generation.id,
+    attempt: 1, checkId: 3, phase: "completed", output }, generation);
+  return { generation, queued, completed };
+}
+
+test("contract queue/completion round-trips full generations, history, finding IDs and classifications", () => {
+  const { generation, queued, completed } = contractFixture();
+  const legacy = renderCadenceWorkpad(structuredWorkpad);
+  const first = resolveWorkpadInput({ incomingWorkpad: { reviewContract: queued }, existingBody: legacy });
+  const next = resolveWorkpadInput({ incomingWorkpad: { reviewContract: completed,
+    reviewUpdate: { requirements: completed.output.requirements, findings: completed.output.findings } },
+    existingBody: renderCadenceWorkpad(first), liveGeneration: generation });
+  const parsed = parseCadenceWorkpad(renderCadenceWorkpad(next));
+  assert.deepEqual(parsed.reviewContract, completed);
+  assert.deepEqual(parsed.reviewContractHistory, [queued]);
+  assert.equal(parsed.requirements[0].id, structuredWorkpad.requirements[0].id);
+  assert.equal(parsed.findings.at(-1).id, "F1");
+  assert.equal(parsed.findings.at(-1).class, "suggestion");
+  assert.equal(parsed.findings.at(-1).mandatory, false);
+  assert.deepEqual(parsed.findings.at(-1).evidence, ["fixture"]);
+  const bookkeeping = resolveWorkpadInput({ incomingWorkpad: { status: "event-gate", findings: [] },
+    existingBody: renderCadenceWorkpad(parsed) });
+  assert.deepEqual(bookkeeping.reviewContract, completed);
+  assert.deepEqual(bookkeeping.reviewContractHistory, [queued]);
+  assert.deepEqual(bookkeeping.findings, parsed.findings);
+});
+
+test("stale completions, changing heads, missing live evidence and malformed contract history reject", () => {
+  const { generation, queued, completed } = contractFixture();
+  const newer = createReviewGeneration({ ...generation, headSha: "d".repeat(40) });
+  const newerQueue = queueReviewGeneration(queued, newer, { checkId: 4 });
+  for (const [stored, live] of [[queued, newer], [newerQueue, newer], [queued, undefined]]) {
+    assert.throws(() => resolveWorkpadInput({ incomingWorkpad: { reviewContract: completed },
+      existingBody: renderCadenceWorkpad({ reviewContract: stored }), liveGeneration: live }), /Superseded/);
+  }
+  assert.throws(() => resolveWorkpadInput({ incomingWorkpad: { reviewContract: queued },
+    existingBody: renderCadenceWorkpad({ reviewContract: newerQueue }) }), /invalid/);
+  const broken = renderCadenceWorkpad({ reviewContract: queued }).replace('"generation": {', '"generation": INVALID {');
+  assert.throws(() => resolveWorkpadInput({ incomingWorkpad: { reviewContract: queued }, existingBody: broken }));
+});
+
+test("contract watermark/history can never be compacted into false clean evidence", () => {
+  const { completed } = contractFixture();
+  assert.throws(() => renderCadenceWorkpadForLinear({ reviewContract: completed,
+    findings: Array.from({ length: 100 }, (_, n) => ({ id: `F${n}`, class: "blocker", summary: "must retain".repeat(100) })) },
+  { maxCommentChars: 5000 }), /cannot be truncated/);
+});
+
+test("public workpad writer rejects denied writes, duplicate anchors and changed readback", async () => {
+  const { queued } = contractFixture();
+  for (const mode of ["success", "denied", "readback-mismatch", "duplicate", "missing-cursor"]) {
+    let body = renderCadenceWorkpad(structuredWorkpad), writes = 0;
+    const result = upsertCadenceWorkpad({ issueIdentifier: "TEST-1", token: "fixture-token",
+      workpad: { reviewContract: queued }, fetchImpl: async (_, options) => {
+        const { query, variables } = JSON.parse(options.body);
+        let data;
+        if (query.includes("query CadenceWorkpadIssue")) {
+          const comment = { id: "anchor", body: mode === "readback-mismatch" && writes ? "changed" : body, createdAt: "2026-09-10" };
+          data = { issue: { id: "issue", identifier: "TEST-1", comments: {
+            nodes: mode === "duplicate" ? [comment, { ...comment, id: "other" }] : [comment],
+            pageInfo: { hasNextPage: mode === "missing-cursor", endCursor: null } } } };
+        } else {
+          writes++;
+          assert.equal(variables.commentId, "anchor");
+          body = variables.body;
+          data = { commentUpdate: { success: mode !== "denied", comment: mode === "denied" ? null : { id: "anchor" } } };
+        }
+        return { ok: true, json: async () => ({ data }) };
+      } });
+    if (mode === "success") {
+      const written = await result;
+      assert.equal(written.commentId, "anchor");
+      assert.deepEqual(parseCadenceWorkpad(written.body).reviewContract, queued);
+    } else await assert.rejects(result);
+    assert.equal(writes, ["duplicate", "missing-cursor"].includes(mode) ? 0 : 1);
+  }
+});
+
+
+test("running review persistence requires the live generation and preserves its pass budget", () => {
+  const { generation, queued } = contractFixture();
+  const running = startReviewGeneration(queued, generation);
+  const stored = resolveWorkpadInput({ incomingWorkpad: { reviewContract: running },
+    existingBody: renderCadenceWorkpad({ reviewContract: queued }), liveGeneration: generation });
+  assert.equal(stored.reviewContract.phase, "in_progress");
+  assert.equal(stored.reviewContract.passes, queued.passes);
+  assert.throws(() => startReviewGeneration(queued, { id: "stale" }), /Superseded/);
+});
