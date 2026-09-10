@@ -5,6 +5,11 @@ name: symphony-test
 on:
   workflow_call:
     inputs:
+      tested-ref:
+        description: Exact caller commit SHA to check out and validate.
+        required: false
+        type: string
+        default: ${{ github.event.pull_request.head.sha || github.sha }}
       tooling-directory:
         description: Relative path to the standalone Symphony tooling package in the caller checkout.
         required: false
@@ -26,7 +31,14 @@ jobs:
       - name: Check out caller repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tested-ref }}
           persist-credentials: false
+      - name: Verify and record tested commit
+        env:
+          TESTED_REF: ${{ inputs.tested-ref }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TESTED_REF"
+          printf 'Tested SHA: %s\n' "$TESTED_REF" >> "$GITHUB_STEP_SUMMARY"
       - name: Set up tooling Node version
         uses: actions/setup-node@v4
         with:

@@ -22,7 +22,7 @@ test("identity preflight reports expected actors and credential classes", async 
     const result = runPreflight(fixture);
 
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /^github\.actor=example-symphony-bot$/m);
+    assert.match(result.stdout, /^github\.actor=1000-symphony-bot$/m);
     assert.match(
       result.stdout,
       /^github\.credential_source=env:GITHUB_TOKEN$/m
@@ -36,17 +36,10 @@ test("identity preflight reports expected actors and credential classes", async 
       result.stdout,
       /^linear\.credential_source=env:LINEAR_API_TOKEN$/m
     );
+    assert.doesNotMatch(result.stdout, /^google\./m);
     assert.match(
       result.stdout,
-      /^google\.service_account_email=example-doc-reader@example-project\.iam\.gserviceaccount\.com$/m
-    );
-    assert.match(
-      result.stdout,
-      /^google\.credential_source=file:GOOGLE_APPLICATION_CREDENTIALS service-account-json$/m
-    );
-    assert.match(
-      result.stdout,
-      /^git\.author=example-symphony-bot <symphony@example\.invalid>$/m
+      /^git\.author=1000-symphony-bot <symphony@example\.invalid>$/m
     );
     assert.match(result.stdout, /^git\.askpass=executable$/m);
     assert.match(result.stdout, /^git\.ssh_auth_sock=unset$/m);
@@ -77,7 +70,7 @@ test("identity preflight rejects the wrong GitHub actor without printing tokens"
     assert.equal(result.status, 1);
     assert.match(
       result.stderr,
-      /GitHub identity mismatch: got example-lead, expected example-symphony-bot/
+      /GitHub identity mismatch: got example-lead, expected 1000-symphony-bot/
     );
     assertNoSecrets(result);
   } finally {
@@ -131,7 +124,7 @@ test("running setup directly without a preflight mode still instructs the user t
 });
 
 async function createPreflightFixture({
-  githubLogin = "example-symphony-bot",
+  githubLogin = "1000-symphony-bot",
   linearEmail = "linear-bot@example.invalid",
 } = {}) {
   const root = await mkdtemp(join(tmpdir(), "symphony-identity-"));
@@ -139,16 +132,6 @@ async function createPreflightFixture({
   const codexHome = join(root, "codex-home");
   await mkdir(binDir, { recursive: true });
   await mkdir(codexHome, { recursive: true });
-
-  const googleCredentials = join(root, "google-sa.json");
-  await writeFile(
-    googleCredentials,
-    JSON.stringify({
-      client_email:
-        "example-doc-reader@example-project.iam.gserviceaccount.com",
-      project_id: "example-project",
-    })
-  );
 
   const askpass = join(root, "git-askpass.sh");
   await writeFile(askpass, "#!/bin/sh\nexit 0\n");
@@ -185,7 +168,6 @@ exit 1
     binDir,
     cleanup: () => rm(root, { recursive: true, force: true }),
     codexHome,
-    googleCredentials,
   };
 }
 
@@ -202,12 +184,13 @@ function runPreflight(fixture, env = {}) {
       PATH: `${fixture.binDir}:${process.env.PATH}`,
       ...secretEnv,
       CODEX_HOME: fixture.codexHome,
-      GOOGLE_APPLICATION_CREDENTIALS: fixture.googleCredentials,
       GIT_ASKPASS: fixture.askpass,
-      GIT_AUTHOR_NAME: "example-symphony-bot",
+      GIT_AUTHOR_NAME: "1000-symphony-bot",
       GIT_AUTHOR_EMAIL: "symphony@example.invalid",
-      GIT_COMMITTER_NAME: "example-symphony-bot",
+      GIT_COMMITTER_NAME: "1000-symphony-bot",
       GIT_COMMITTER_EMAIL: "symphony@example.invalid",
+      SYMPHONY_EXPECTED_LINEAR_EMAIL: "linear-bot@example.invalid",
+      SYMPHONY_GIT_AUTHOR_EMAIL: "symphony@example.invalid",
       SSH_AUTH_SOCK: "",
       ...env,
     },
