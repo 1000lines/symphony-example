@@ -30,6 +30,7 @@ const privateRuntimeSkillNames = [
   "symphony-google-docs",
   "symphony-linear-api",
   "symphony-proof-of-work",
+  "symphony-repository",
 ];
 
 const commonAbsentSkillNames = [
@@ -171,6 +172,7 @@ test("hosted private skills install from the personal bundle and not common path
       "private:symphony-google-docs",
       "private:symphony-linear-api",
       "private:symphony-proof-of-work",
+      "private:symphony-repository",
       "shared:karpathy-guidelines",
       "shared:linear-graphql",
     ]);

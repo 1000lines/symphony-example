@@ -23,18 +23,11 @@ workspace:
   root: ~/code/1000lines-symphony-workspaces
 hooks:
   after_create: |
-    test -n "${GITHUB_TOKEN:-}" || { echo "GITHUB_TOKEN is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
-    test -n "${LINEAR_API_TOKEN:-}" || { echo "LINEAR_API_TOKEN is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
-    test -x "${GIT_ASKPASS:-}" || { echo "GIT_ASKPASS is required; source scripts/symphony/setup-local-env.sh before starting Symphony"; exit 1; }
-    GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git \
-      -c credential.helper= \
-      clone --branch main --depth 1 https://github.com/1000lines/symphony-example.git .
-    git remote set-url origin https://github.com/1000lines/symphony-example.git
-    npm ci
+    true
   before_run: |
     true
   after_run: |
-    node scripts/symphony/ensure-pr-labels.mjs --issue "$(basename "$PWD")" --repo 1000lines/symphony-example
+    true
   before_remove: |
     true
 agent:
@@ -87,16 +80,19 @@ remains allowed.
 
 ## Harness Entry Point
 
-Before planning or editing, read the shared
-`.agents/skills/karpathy-guidelines/SKILL.md` and the specific docs or
-package-level files that the issue asks for directly. Hosted Symphony's personal
-instructions and private skills are installed from
-`scripts/symphony/runtime-bundle/`; consume the installed skills without copying
-them into common repo discovery paths.
+After pinning the workpad, use the installed `symphony-repository` skill to
+resolve the target from the Linear project/task, bind its credentials, and clone
+it into the issue workspace. Use `.symphony.cfg.json` from the selected base;
+when absent, inspect the repository and propose it for review in a PR, GitHub
+issue, or the pinned Linear workpad as permissions allow. Do not require an
+entry in a controller repository list. The empty startup hook is intentional:
+checkout and dependency setup depend on the assigned repository.
 
-Do not use legacy `AGENTS.md` or `CLAUDE.md` as default instruction sources.
-Only open them when the issue explicitly asks for historical context from those
-files.
+Read the installed `karpathy-guidelines` skill and the target's applicable
+`AGENTS.md`, configuration-referenced instructions, and task-specific docs.
+Use `SYMPHONY_TOOLING_ROOT` for shared Symphony scripts and docs; they need not
+exist in the target checkout. Personal runtime skills are installed from the
+runtime bundle and should not be copied into the target repository.
 
 ## Project Metadata
 
@@ -106,6 +102,7 @@ near the top of the project's detailed description/content:
 ```yaml
 project-code: short-project-code
 project-color: pink
+repository: owner/repo
 base-branch: main
 human-lead: Full Name
 ```
@@ -119,7 +116,10 @@ for example `pink`, `blue`, or `green`. The color label lets humans visually
 distinguish multiple active Symphony projects in GitHub. It may be recycled for
 a new project after the current project finishes.
 
-`base-branch` is optional and defaults to `main`. It names the branch Symphony
+`repository` selects the project target without a central allowlist. Resolve an
+omitted value from the project's GitHub links or explicit human task direction.
+
+`base-branch` is optional and defaults to the target's GitHub default branch. It names the branch Symphony
 uses for clean task branches and GitHub PR bases. Record the selected base
 branch in the Codex workpad and PR body for each task.
 
@@ -167,7 +167,7 @@ Waiting on another ticket uses the accepted hard blocker relations. Waiting on
 CI, review, or input uses `Inactive`. Optional `waiting:ci`,
 `waiting:ai-review`, and `waiting:human` labels are hints that can become stale;
 they are not workflow states or prerequisites for a wakeup. Detailed state and
-event rules are in `docs/engineering/symphony/project-workflow.md`.
+event rules are in `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-workflow.md`.
 
 ## GitHub Wakeups And Review Handoffs
 
@@ -419,7 +419,7 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   Do not infer it from a branch name, issue label, or a default. Missing or
   conflicting project metadata is a labeling failure.
 - Apply and verify the two shared labels with
-  `node scripts/symphony/ensure-pr-labels.mjs --issue TEAM-123 --repo OWNER/REPO`,
+  `node "$SYMPHONY_TOOLING_ROOT/scripts/symphony/ensure-pr-labels.mjs" --issue TEAM-123 --repo OWNER/REPO`,
   substituting the current issue and intended repository. The helper verifies a
   unique open PR association, checks missing labels exist, adds them, and reads
   them back. A `no-open-pr` result does not complete publishing when a PR was

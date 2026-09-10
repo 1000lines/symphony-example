@@ -9,7 +9,7 @@ discovery and are installed into the runtime user's personal Codex home.
 
 `manifest.json` lists every file shipped here, the install destinations and
 owner/mode policy. Its variable names describe the installer inputs; the loader
-does not expand these strings as configuration. The four skill bodies under `skills/` are canonical; no
+does not expand these strings as configuration. The skill bodies under `skills/` are canonical; no
 matching common `.codex/skills` copies are required. The installer also stages
 `karpathy-guidelines` and `linear-graphql` from the repository's `.agents/skills`.
 The human-only `symphony-project-factory` skill is excluded from the unattended
@@ -26,49 +26,36 @@ the bundle freshness digest. Use a new source commit for a changed release:
 an already staged repository SHA is reused. These checks do not establish that
 the runtime can start or that external services are configured.
 
-## PR Label Repair
+## Repository discovery and onboarding
 
-The hosted workflow runs `scripts/symphony/ensure-pr-labels.mjs` from the issue
-workspace in `hooks.after_run`, preserving the ticket-start `before_run` hook.
-It reads the current owning Linear project's `project-color` and the intended
-repository's open PRs. A unique PR must have the exact issue segment in its
-Symphony branch or a Linear PR attachment; a conflicting title/branch identity
-or multiple candidates causes a failure without edits. Title-only matches are
-reported as unverified. Closed PRs and other repositories are not repaired.
+The hosted `symphony-repository` skill resolves each target from its Linear
+project or explicit task direction. The startup hook leaves an empty workspace;
+the worker clones the selected repository and chooses its setup commands.
+There is no controller-side repository list. GitHub App installations determine
+available access, and the credential broker's `bind` command produces a private,
+per-task configuration from live repository/installation discovery. The existing
+AWS signing secret remains compatible; adding a repository needs no new secret
+or Terraform change when the App already has access to it.
 
-Configure the optional hook in an operator-owned workflow selected by
-`SYMPHONY_WORKFLOW_SOURCE`. The shipped hook is enabled and uses the issue
-workspace's basename for `--issue`; its static `--repo` argument must name the
-adopter's repository. Installer repository inputs do not substitute that text.
+Repositories own `.symphony.cfg.json`; see the skill's
+[configuration reference](skills/symphony-repository/references/config.md).
+The worker reads configuration from the fetched selected base commit. Missing
+configuration is inferred from repository evidence and proposed for review:
+PR first, GitHub issue if branch/PR writes are denied, then the pinned Linear
+workpad if GitHub publication is unavailable. Proposed rules are not active
+until merged into the selected base. `AGENTS.md` remains working guidance.
 
-| Input | Purpose, shape and setting location | Requiredness / default |
-| --- | --- | --- |
-| `--issue` | CLI argument, uppercase issue identifier such as `DEMO-123`; identifies the owning Linear issue. | Required for an invocation; no default. The hosted hook supplies the workspace basename. |
-| `--repo` | CLI argument, GitHub `owner/repository` string; restricts PR lookup and label writes. Set it in the operator-owned `hooks.after_run`. | Required for an invocation; no inferred repository. |
-| `LINEAR_API_TOKEN`, fallback `LINEAR_API_KEY` | Secret token string in the hook process environment, authorized to read the issue, project and attachments. | Required for repair; no default. The host credential bundle supplies `LINEAR_API_TOKEN`. |
-| `GH_TOKEN`, fallback `GITHUB_TOKEN` | Secret token string in the hook process environment with repository PR/label reads and label writes. | Required for repair; no default. The host credential bundle supplies `GITHUB_TOKEN`. |
-| `project-color` | One label-name string in the owning Linear project's content or description, for example `teal`. Both locations must agree; values are normalized to lowercase and must match `[a-z][a-z0-9-]*`. | Required for a matching open PR; no fallback to issue text, CLI, branch color or palette. |
+The freshness wrapper exports `SYMPHONY_TOOLING_ROOT` for shared tools and docs
+outside the target checkout. Label repair runs as part of the worker's publish
+steps with the actual target and its bound credentials, using
+`$SYMPHONY_TOOLING_ROOT/scripts/symphony/ensure-pr-labels.mjs`. The after-run hook
+no longer edits a fixed controller repository using controller credentials.
 
-Create the color label and `symphony` in GitHub repository settings before use.
-The helper checks that missing labels exist, adds only missing
-`symphony`/color labels through GitHub REST, and verifies a separate label
-readback. It skips when no open PR matches. Requests share a 45-second deadline
-with no retries; a list that fills ten 100-item GitHub pages or more than 100
-Linear attachments fails as incomplete. Missing/conflicting metadata and
-API/readback failures produce a nonzero exit with sanitized diagnostics.
-
-Symphony logs and ignores `after_run` failures under its existing best-effort
-lifecycle. This safety net does not establish successful publishing, run on each
-PR creation event, gate review/merge, or change Linear states. Agents still need
-to apply any additional project labels and record actual label readback before
-handoff.
-
-The public GitHub and Linear API endpoints are fixed in this helper; host
-endpoint overrides do not configure it. Tokens exported to the host service
-must reach the hook process; Actions repository secrets do not populate it.
-Optional use defaults to the shipped hook, which can be omitted in an
-operator-owned profile. Omission does not remove the agent's publishing-label
-responsibility.
+Deploy the accepted bundle and updated App credential broker together. For a
+running host this requires the accepted checkout's `40-credentials` (in App
+mode), `45-runtime-bundle` and `80-config` installation steps, plus the normal
+service reload. Merging the source does not activate it on an existing host.
+Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
 
 ## Supplying host settings
 
@@ -173,19 +160,19 @@ alone do not establish enterprise-host support.
 
 ## Toolchain and service settings
 
-| Input / setting location                                                                                  | Default and format                                                                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SYMPHONY_ERLANG_VERSION`, `SYMPHONY_ELIXIR_VERSION` in `host/lib.sh`                                     | `28.5.0.5`, `1.19.5-otp-28`; matching Erlang release and Elixir release/OTP strings.                                                                                                          |
-| `SYMPHONY_MISE_BIN` in `host/lib.sh`                                                                      | `bin/mise` beneath the tools root; existing executable path, with PATH discovery taking precedence. Otherwise the step downloads the installer from `mise.run`.                               |
-| `SYMPHONY_MISE_DATA_DIR`, `SYMPHONY_MISE_CONFIG_DIR`, `SYMPHONY_MISE_CACHE_DIR` in `50-beam-toolchain.sh` | `mise`, `mise-config`, `mise-cache` beneath the tools root; absolute directory overrides.                                                                                                     |
-| `SYMPHONY_MISE_JOBS`, `SYMPHONY_MISE_ERLANG_COMPILE` in `50-beam-toolchain.sh`                            | `1`, `1`; build parallelism and compile switch. `KERL_CONFIGURE_OPTIONS` retains the headless build flags shown in that file.                                                                 |
-| `SYMPHONY_ELIXIR_INSTALL_DIR` in `50-beam-toolchain.sh`                                                   | `mise/installs/elixir/<version>` beneath the tools root; optional absolute directory override.                                                                                                |
-| `.nvmrc`, `package.json` `packageManager`                                                                 | Required root files for `55-node-toolchain.sh`: exact `vMAJOR.MINOR.PATCH` and `npm@MAJOR.MINOR.PATCH`. There is no Node/npm environment override in that step.                               |
-| `SYMPHONY_CODEX_VERSION` in `55-node-toolchain.sh`                                                        | `0.153.4`; optional package version. `install_codex` sets `NPM_CONFIG_MIN_RELEASE_AGE=0` only for its Codex npm install. |
-| `SYMPHONY_GH_VERSION`, `SYMPHONY_TERRAFORM_VERSION` in `60-dev-tools.sh`                                  | `2.97.0`, `1.4.2`; optional release version strings.                                                                                                                                          |
-| `SYMPHONY_INSTALL_NPM_CACHE` in `55-node-toolchain.sh`                                                    | `npm-cache` beneath the tools root; installer cache directory, distinct from the runtime workspace npm cache.                                                                                 |
-| `SYMPHONY_SERVICE_PORT` in `host/lib.sh`                                                                  | `4000`; runtime CLI port. Keep network and workflow server settings aligned.                                                                                                                  |
-| `SYMPHONY_WORKER_SLOTS` or EC2 `symphony:worker-slots` tag                                                | Optional integer `1`–`64`, default `6`; environment takes precedence over the tag. The renderer replaces `agent.max_concurrent_agents` in workflow frontmatter.                               |
+| Input / setting location                                                                                  | Default and format                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SYMPHONY_ERLANG_VERSION`, `SYMPHONY_ELIXIR_VERSION` in `host/lib.sh`                                     | `28.5.0.5`, `1.19.5-otp-28`; matching Erlang release and Elixir release/OTP strings.                                                                            |
+| `SYMPHONY_MISE_BIN` in `host/lib.sh`                                                                      | `bin/mise` beneath the tools root; existing executable path, with PATH discovery taking precedence. Otherwise the step downloads the installer from `mise.run`. |
+| `SYMPHONY_MISE_DATA_DIR`, `SYMPHONY_MISE_CONFIG_DIR`, `SYMPHONY_MISE_CACHE_DIR` in `50-beam-toolchain.sh` | `mise`, `mise-config`, `mise-cache` beneath the tools root; absolute directory overrides.                                                                       |
+| `SYMPHONY_MISE_JOBS`, `SYMPHONY_MISE_ERLANG_COMPILE` in `50-beam-toolchain.sh`                            | `1`, `1`; build parallelism and compile switch. `KERL_CONFIGURE_OPTIONS` retains the headless build flags shown in that file.                                   |
+| `SYMPHONY_ELIXIR_INSTALL_DIR` in `50-beam-toolchain.sh`                                                   | `mise/installs/elixir/<version>` beneath the tools root; optional absolute directory override.                                                                  |
+| `.nvmrc`, `package.json` `packageManager`                                                                 | Required root files for `55-node-toolchain.sh`: exact `vMAJOR.MINOR.PATCH` and `npm@MAJOR.MINOR.PATCH`. There is no Node/npm environment override in that step. |
+| `SYMPHONY_CODEX_VERSION` in `55-node-toolchain.sh`                                                        | `0.153.4`; optional package version. `install_codex` sets `NPM_CONFIG_MIN_RELEASE_AGE=0` only for its Codex npm install.                                        |
+| `SYMPHONY_GH_VERSION`, `SYMPHONY_TERRAFORM_VERSION` in `60-dev-tools.sh`                                  | `2.97.0`, `1.4.2`; optional release version strings.                                                                                                            |
+| `SYMPHONY_INSTALL_NPM_CACHE` in `55-node-toolchain.sh`                                                    | `npm-cache` beneath the tools root; installer cache directory, distinct from the runtime workspace npm cache.                                                   |
+| `SYMPHONY_SERVICE_PORT` in `host/lib.sh`                                                                  | `4000`; runtime CLI port. Keep network and workflow server settings aligned.                                                                                    |
+| `SYMPHONY_WORKER_SLOTS` or EC2 `symphony:worker-slots` tag                                                | Optional integer `1`–`64`, default `6`; environment takes precedence over the tag. The renderer replaces `agent.max_concurrent_agents` in workflow frontmatter. |
 
 The Erlang installer explicitly installs with at most three attempts, delays of
 5 and 10 seconds, and checks the installed `erl` binary before recording success.
@@ -214,10 +201,8 @@ so the renderer can substitute worker slots and the freshness wrapper.
 
 Configure the supplied workflow's `tracker` team/state/maturity mappings,
 `workspace.root`, clone repository/branch, `hooks`, `codex` command and `server`
-settings for the adopter. The bundled hooks retain these defaults: `after_create`
-checks credentials, clones `main` and runs `npm install`; `before_run` invokes
-the optional Misc ticket-start routing helper; `after_run` performs the label
-repair above; `before_remove` runs `true`. Configure these shell commands in the
+settings for the adopter. The bundled hooks default to `true`; the repository skill selects checkout,
+setup and publication steps after reading the issue/project context. Configure these shell commands in the
 operator's workflow file. Misc routing still has a synthetic team predicate and
 must be assessed before enabling it for another team. These hooks do not define
 a required product language or application CI.

@@ -443,7 +443,7 @@ test("invalid inputs and missing credentials fail without requests", async () =>
   }
 });
 
-test("hosted after_run passes workspace issue and intended repository, preserving failure for Symphony to log", async () => {
+test("hosted hooks support an empty arbitrary-repository workspace without invoking controller tools", async () => {
   const source = await readFile(
     new URL("../runtime-bundle/workflow/WORKFLOW.md", import.meta.url),
     "utf8"
@@ -460,20 +460,14 @@ test("hosted after_run passes workspace issue and intended repository, preservin
       '#!/bin/sh\nprintf "%s\\n" "$@"\nexit "${TEST_HOOK_EXIT:-0}"\n'
     );
     await chmod(join(bin, "node"), 0o755);
-    for (const status of [0, 17]) {
-      const result = spawnSync("bash", ["-c", hooks.after_run], {
+    for (const hook of [hooks.after_create, hooks.after_run]) {
+      const result = spawnSync("bash", ["-c", hook], {
         cwd: workspace,
         encoding: "utf8",
-        env: { PATH: `${bin}:/usr/bin:/bin`, TEST_HOOK_EXIT: String(status) },
+        env: { PATH: `${bin}:/usr/bin:/bin`, TEST_HOOK_EXIT: "17" },
       });
-      assert.equal(result.status, status, result.stderr);
-      assert.deepEqual(result.stdout.trim().split("\n"), [
-        "scripts/symphony/ensure-pr-labels.mjs",
-        "--issue",
-        "100-11",
-        "--repo",
-        "1000lines/symphony-example",
-      ]);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, "");
     }
   } finally {
     await rm(root, { recursive: true, force: true });
