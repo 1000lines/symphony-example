@@ -28,7 +28,10 @@ participant projects or operates the parent rehearsal.
   two newline-separated lists, including instructions, tests, package dependencies
   and license attribution. Identify planned new paths in CT-C/R; expand imports
   rather than copying the tooling package or dormant controller wholesale.
-  The inventory names source-to-template mappings and publication CI assets.
+  The inventory names source-to-template mappings and publication CI assets,
+  and the same generated client paths CT-U will instantiate at the published
+  repository root. Keep that root's own workflows/instructions/config separate
+  from `template/`; only `template/` is participant output.
   `client-copy.txt` fixes an existing, reviewed source SHA and every source →
   `templates/symphony-client/template/` destination, with file mode/hash. It
   includes only existing nonsecret files; new Copier metadata belongs to CT-Q,
@@ -231,11 +234,13 @@ participant projects or operates the parent rehearsal.
   of file inventory, copying, Docker compatibility and provider implementation.
 - **owned_files:** `templates/symphony-client/copier.yml`, `README.md`, `LICENSE`,
   `PROVENANCE.md`, `tests/requirements.txt`, `tests/test_answers.py`, and
-  `.github/workflows/ci.yml` under that staging root;
+  `.github/workflows/ci.yml`, `.prettierignore` under that staging root;
+  seed `.prettierignore` (only the raw staging-template exclusion);
   `.github/workflows/client-template-test.yml` at the seed root.
 - **owned_external_resources:** task-local temporary Copier fixture directories
   and its seed PR/checks only. No live secrets, App/repo/project writes.
-- **creates:** all owned files. **edits:** none.
+- **creates:** all owned staging files and the seed template-test workflow.
+  **edits:** seed `.prettierignore`, preserving existing exclusions.
 - **dependencies:** none. D4 already fixes the answer interface; CT-I's file
   selection is unnecessary to ask and serialize those answers.
 - **source_files:** merged design D4 and ordinary Copier configuration guidance.
@@ -243,14 +248,27 @@ participant projects or operates the parent rehearsal.
   `default_branch`, `linear_team_key`, `symphony_app_slug`, `cadence_app_slug`,
   `build_command`, `test_command`. Keep defaults/types and source/ref metadata
   ordinary Copier. No credentials, project binding, mode/provider/ref question.
+  Fix `_envops` now: `variable_start_string: "[["`, `variable_end_string: "]]"`,
+  `block_start_string: "[%"`, `block_end_string: "%]"`; preserve trailing newlines.
+  Use these delimiters for all Copier substitutions, including answer metadata,
+  so native `${{ ... }}` GitHub expressions pass through unchanged. CT-T/L must
+  consume this syntax; do not defer the choice or use per-file raw-block wrapping.
   Pin the Python/Copier requirements. Build tests in a task-local minimal
   `template/` fixture so CI exercises the questions even before CT-M/T land.
   Root CI discovers the package tests; the seed caller uses the same command.
+  Ordinary root lint/format checks exclude raw `template/` (and the seed's
+  `templates/symphony-client/template/`); use normal ignore files/explicit paths.
+  Keep test discovery outside raw templates, but always run dedicated render
+  tests, including when only a template changes; inspect rendered workflows and
+  config, never treat excluding raw syntax as permission to skip those tests.
   Record the interim package's limited scope and the later CT-L release gate.
 - **acceptance_checks:** seven answers work noninteractively for two repo slugs,
   non-main branches, teams and commands with quotes/newlines; ordinary answer
   metadata retains `_src_path`/`_commit` without secrets. No writes inside the
   committed `template/` tree, no CI registration or claim of live client behavior.
+  A fixture containing both `[[ repo_slug ]]` and `${{ secrets.CADENCE_APP_PRIVATE_KEY }}`
+  substitutes only the Copier value. Root-only sentinel workflows/config/docs
+  never appear in output; test with `_subdirectory` and the fixed delimiters.
 - **Validation, in order:** local install of pinned `tests/requirements.txt`,
   `python -m unittest discover -s templates/symphony-client/tests`, actual
   `copier copy` into temporary fixtures and locked formatting/diff checks.
@@ -291,6 +309,9 @@ participant projects or operates the parent rehearsal.
   source correction and refreshed list for review before recopying if needed.
 - **delivery_notes / exclusions:** relinquish the copied tree to CT-T after
   acceptance. CT-Q uses disjoint package files and temporary test fixtures.
+  Byte comparison includes native `${{ ... }}` expressions unchanged. CT-M
+  introduces no Copier placeholders and does no instantiation; CT-Q/T own the
+  delimiter/render checks, preserving this PR's mechanically exact-copy scope.
   No template syntax, new behavior, credentials or live review proof here.
 - **split_criteria:** `risk-blast-radius`, `ticket-template-contract`.
 
@@ -311,8 +332,9 @@ participant projects or operates the parent rehearsal.
 - **dependencies:** CT-M, hard, accepted exact copy; CT-Q, hard, merged Copier
   package/question interface for actual renders. CT-C/R are independent.
 - **source_files:** CT-I mappings, CT-M snapshot, CT-Q package, design D1–D6.
-- **required_actions:** introduce substitutions for the seven established names;
-  escape GitHub expressions and serialize shell arrays/YAML/JSON correctly.
+- **required_actions:** introduce substitutions for the seven established names
+  using CT-Q's fixed `[[ ]]` / `[% %]` delimiters; preserve native GitHub
+  expressions and serialize shell arrays/YAML/JSON correctly.
   Render short instructions, config, direct App manifest and only callers whose
   interfaces already exist at reviewed seed refs. Default native mode by omission.
   Reuse existing application CI and preserve unrelated instructions/license/files.
@@ -322,7 +344,10 @@ participant projects or operates the parent rehearsal.
 - **acceptance_checks:** real Copier render matrix covers two slugs/default
   branches (including non-main), teams, quoted/newline commands and file
   collisions. No project key, provider toggle, secrets, host or reusable bodies
-  in output. The direct App manifest includes required checks-write grants;
+  in output. Assert exact preservation of `${{ ... }}` expressions, no unresolved
+  Copier placeholders, and no root-only development workflows/config/tests in
+  output. Validate rendered YAML/JSON while ordinary lint/format skips raw syntax.
+  The direct App manifest includes required checks-write grants;
   public forks use the accepted existing App. Initial config loads with the
   current reader; any unconfigured
   required-check list is explicit. The bounded pending additions are CT-L-owned
@@ -362,13 +387,17 @@ participant projects or operates the parent rehearsal.
   triggers matching actual generated review workflow names, calling CT-R's
   cleanup entry with App key only. Exercise cancellation/recovery boundary tests.
   Handoff has App/Linear only; CI/ingress have no review secrets. Register the
-  observed render job name/workflow/App in seed required checks. Close the
+  observed render job name/workflow/App in seed required checks; verify CT-Q's
+  raw-template lint/format exclusion remains effective while render tests run
+  for template-only changes. Close the
   PROVENANCE pending list and keep source/version metadata.
 - **acceptance_checks:** full CT-T matrix plus native/optional Docker/remote
   reader compatibility passes; generated paths equal the final inventory;
   no remaining deferred caller, placeholder ref or raw workflow body. Exact
   secret mappings and provider matrix match CT-R's tested interface; no new
-  questions. Existing application/instruction/license content is preserved.
+  questions or changed CT-Q delimiters. Test full generated workflows for
+  unchanged GitHub expressions and exclusion of root development files.
+  Existing application/instruction/license content is preserved.
   Template is now complete for CT-U publication and CT-O onboarding authoring;
   the accepted caller/export readback also enables concurrent CT-V publication.
 - **Validation, in order:** local pinned render unittest matrix, existing reader
@@ -404,6 +433,9 @@ participant projects or operates the parent rehearsal.
   Final public usage selects template `--vcs-ref=alpha` and workflow `@alpha`;
   record actual resolved commits as described in the plan. Author/dry-run from
   CT-L's local staging source until both publication branches exist.
+  Explain the template repository's own root client as a real consumer, with
+  root `copier.yml` selecting only `template/`. Link CT-F's eventual live proof;
+  do not claim self-hosted development before its runs exist.
   Supply seven known answers; set chosen mode/commands outside questions;
   discover IDs, Actions enablement/permissions and actual required checks.
   Provision named secrets separately and show names only. Record accepted public

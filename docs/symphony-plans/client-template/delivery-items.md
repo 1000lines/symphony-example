@@ -28,23 +28,29 @@ repositories created by this planning ticket.
   or a duplicate implementation task. Preserve later merged behavior when reading
   the base; this plan does not reopen old readiness work.
 
-## CT-U — Publish the reviewed template repository
+## CT-U — Publish and instantiate the template repository
 
 - **Repository override:** `https://github.com/1000lines/symphony-client-template`;
   branch and PR base `main`. `symphony-client-template` is the working name.
 - **Scope:** copy the entire reviewed staging root to this public repository,
-  preserve license/provenance and prove rendering from its published ref.
+  instantiate its own root client so Symphony can develop it, preserve
+  license/provenance and prove rendering from its published ref.
 - **owned_files:** the entire new root copied exactly from CT-L's completed
   `templates/symphony-client/`; publication-only additions/edits to root
-  `README.md`, `PROVENANCE.md`, `.symphony.cfg.json` and `.github/workflows/ci.yml`
-  for this repository's own setup/CI. These files are outside the rendered tree.
+  `README.md`, `PROVENANCE.md`, `.symphony.cfg.json`, `.prettierignore` and
+  `.github/workflows/ci.yml`; the client inventory's generated root paths
+  (`.github/workflows/` thin callers, `SYMPHONY.md`, `.github/symphony/` review
+  instructions/App manifest, `.copier-answers.yml`) and `SELF-ADOPTION.md` evidence.
+  These root development files are outside the rendered `template/` tree.
 - **owned_external_resources:** this destination's creation/bootstrap,
   main/PR/alpha branch refs, Actions enablement/variables/named secrets and required
-  CI configuration, through existing authorized tools or Jeremy. No writes to
+  CI configuration, through existing authorized tools or Jeremy; a task-linked
+  root-client proof PR/run/workpad and this repo's host target access. No writes to
   seed content, onboarding skill, workflow destination or participant repos.
 - **creates:** all owned import files except the bootstrap README.
-  **edits:** bootstrap `README.md`; publication metadata changes to imported
-  `PROVENANCE.md` and `.github/workflows/ci.yml` remain part of their new-file diff.
+  Root instantiation adds the listed client/evidence paths. **edits:** bootstrap
+  `README.md`; merge generated config/CI/instructions with imported root files,
+  preserving package checks. Record these deliberate differences from the copy.
 - **dependencies:** CT-L, hard, complete accepted staging commit with passing render CI;
   reason: exact import source. CT-O/V are independent and share no mutable
   file, repository setting, alpha ref or live proof resource.
@@ -58,15 +64,35 @@ repositories created by this planning ticket.
   unreviewed main. Record bootstrap action/ref separately. Use existing copy/Git
   tools with dotfiles; record source SHA/path, destination SHA, path mapping,
   justified publication-only differences and Apache-2.0 attribution. Preserve
-  template tests/CI at their root-relative paths. After human acceptance publish
+  template tests/CI at their root-relative paths. Keep root `copier.yml` with
+  `_subdirectory: template` and CT-Q's delimiters. Render the accepted staged
+  template with this destination's seven answers into an isolated root checkout,
+  using its actual build/test commands and discovered required-check contract.
+  Merge collisions explicitly: root client CI must run package/render tests;
+  generic formatting/lint excludes raw `template/`, not the rendered fixtures.
+  Root workflows are concrete generated callers, not a second implementation.
+  Provision explicit named secrets normally and bind target access using existing
+  repository/onboarding tools; CT-O need not land and no new host controller is
+  needed. Review the import/root-client diff before trusted activation on main.
+  The initial bootstrap PR cannot prove new default-branch event listeners;
+  record its actual review route/limitation, then run a task-linked follow-up PR
+  through Symphony and the generated root callers after human merge. The root
+  initially consumes reviewed seed workflows, allowing CT-F development while
+  CT-V publishes independently. Record the early Codex/advisory/CI run in
+  `SELF-ADOPTION.md` or the pinned workpad; missing activation/secret access keeps
+  that live acceptance open. After human acceptance publish
   `refs/heads/alpha` at the accepted main commit and perform a fresh Git-URL
   render with `--vcs-ref=alpha`. Record branch resolution and actual rendered
   commit; verify no same-name tag. Follow the plan's alpha evidence contract.
 - **acceptance_checks:** public anonymous readback; source/tree comparison with
   no lost dotfiles, secrets or additional rendered assets; seven answers and
   `_src_path`/`_commit`; exact published render passes CT-L's full matrix. Template
-  still references reviewed seed workflows at this intermediate publication; CT-F owns
-  final alpha references. Record actual destination CI/reviewer provenance and ref links.
+  and root still reference reviewed seed workflows at this intermediate
+  publication; CT-F owns final alpha references and migrated root proof. The root
+  is an operational Symphony target with real PR/CI/Codex/advisory evidence,
+  distinct author/reviewer identities, its own config and source answers. A
+  render into a fresh third directory excludes all root-only files. Record
+  destination CI/reviewer provenance and refs; do not infer operation from config.
 - **Validation, in order:** local `git diff --no-index` between export and
   destination (explicit publication differences reviewed), pinned requirements
   install and `python -m unittest discover -s tests`; `copier copy --vcs-ref=alpha
@@ -75,9 +101,12 @@ repositories created by this planning ticket.
   and workspace UID/mount policy. Mandatory destination `.github/workflows/ci.yml`
   render tests on the published task head, plus any observed required checks.
   CI must exist and run; absence is not a green import. Record App/check names
-  from the actual run, not seed assumptions. Read back alpha and its actual commit after human merge.
+  from the actual run, not seed assumptions. Read back alpha and its actual commit
+  after human merge; collect the root-client follow-up run/review/workpad and
+  actual check/readiness states. Keep CT-U open until this bootstrap proof exists.
 - **delivery_notes / exclusions:** CT-V publishes independently in its own repo;
-  CT-F waits for both and later edits these references/provenance. No workflow implementations in the template repo,
+  CT-F waits for both and later owns root/template callers, config, answers,
+  proof PRs and alpha updates. No workflow implementations in the template repo,
   staged-source deletion, upstream submission, participant setup or copier update.
   Missing create/admin rights needs the prepared import patch/PR and exact named
   owner operation; it does not authorize expanded credentials or direct merges.
@@ -137,19 +166,27 @@ repositories created by this planning ticket.
 - **delivery_notes / exclusions:** this is an intentional large mechanical diff,
   not a reason to expand its behavioral scope. Do not delete/retarget seed
   callers here, copy host installers, move onboarding skills or claim final live
-  review. CT-F owns template alpha references; CT-A owns consumer migration; CT-Z owns retirement.
+  review. CT-F owns template/root alpha migration and root proof; CT-A owns
+  example migration; CT-Z owns retirement.
 - **split_criteria:** `external-system-boundary`, `default-branch-dispatch-prerequisite`.
 
-## CT-F — Connect template alpha to published workflow alpha
+## CT-F — Connect both template clients to workflow alpha and prove root use
 
 - **Repository override:** `https://github.com/1000lines/symphony-client-template`;
   main/main. **Scope:** integrate both accepted publications so template alpha
-  emits callers using workflow `@alpha`.
+  emits callers using workflow `@alpha`, and its own root client develops real
+  changes through that published pair.
 - **owned_files:** `template/.github/workflows/` caller files from CT-L's final
-  inventory (only source/ref mappings), root `README.md`, `PROVENANCE.md`,
-  `tests/test_render.py` (expected destination refs only).
-- **owned_external_resources:** template task branch/PR and its moving `alpha` branch. CT-U relinquishes this repository's write ownership; CT-V is read-only.
-- **creates:** none. **edits:** all owned files, source/ref expectations only.
+  inventory (only source/ref mappings), matching root `.github/workflows/`
+  callers, `.copier-answers.yml`, `.symphony.cfg.json` (preserve own CI contract),
+  `README.md`, `PROVENANCE.md`, `SELF-ADOPTION.md`,
+  `tests/test_render.py` (expected refs and root/output separation).
+- **owned_external_resources:** template task branch/PR and moving `alpha` branch,
+  its task-linked follow-up proof PR/Cadence workpad/checks, own named-secret and
+  Actions configuration as needed through Jeremy. CT-U relinquishes this
+  repository's write/proof ownership; CT-V is read-only. No seed proof mutations.
+- **creates:** none. **edits:** owned callers/ref expectations, root source
+  answers/config and evidence. No reusable workflow behavior changes.
 - **dependencies:** CT-U and CT-V, hard direct fan-in. CT-U supplies the accepted
   template repository and relinquishes its files/alpha ref; CT-V supplies the
   accepted public workflow alpha branch and complete mapping. Both must exist
@@ -157,19 +194,38 @@ repositories created by this planning ticket.
 - **source_files:** CT-U source metadata and tests; CT-V alpha/provenance.
 - **required_actions / acceptance_checks:** repoint every generated workflow
   caller to the literal destination `@alpha`; inspect onward references via
-  CT-V evidence. Keep all named secrets and seven questions unchanged. After
+  CT-V evidence. Also regenerate/update the root instance from the revised
+  template with its own answers in an isolated checkout; review the generated
+  delta, preserving root package CI/instructions and excluding `template/` from
+  generic lint/format. Keep all named secrets and seven questions unchanged. After
   human acceptance advance template `refs/heads/alpha`, render using
   `--vcs-ref=alpha` from its Git URL in a fresh isolated checkout and record
   the actual template/workflow commits. Moving branches are intentional; apply
   the alpha evidence contract rather than replacing consumer refs with SHAs. Inspect no remaining
-  active seed-workflow pin in rendered callers. Historical source refs stay valid.
+  active seed-workflow pin in either emitted or root callers. Preserve truthful
+  `_src_path`/`_commit` metadata: a follow-up root render from published alpha may
+  record the prior accepted template commit; do not require a self-referential SHA
+  or build a ref updater. Historical source refs stay valid.
+  After migrated callers land on trusted main, drive a real task-linked template
+  development PR through Symphony: current-head required CI, Codex review via
+  destination `@alpha`, App/head-correct queued/running/result check and clean
+  draft→ready with no newer feedback pending. Test the root cleanup listener's
+  matching workflow names and cancellation/recovery on this isolated proof PR.
+  Record actual template/workflow/helper commits, PR/run/review/check/workpad
+  links and explicit secret delivery names in `SELF-ADOPTION.md`/workpad. Only
+  after this proof may README claim the repo is developed using what it ships.
 - **Validation, in order:** local pinned render unittest matrix and diff check;
   real published-ref Copier render; Docker skipped on local pass or same pinned
   CT-Q/U Python/Git fallback. Mandatory current-head template CI and discovered
-  required checks, even for this small pin change; then alpha branch/readback provenance.
-- **delivery_notes / exclusions:** CT-A consumes this pair; no seed/staging edits,
+  required checks; then alpha readback, published self-render comparison and
+  the real follow-up Symphony/Codex/advisory run at recorded commits. A render or
+  pre-merge CI pass does not prove trusted listener activation. Keep CT-F open
+  until migrated root proof exists, with exact owner action for missing access.
+- **delivery_notes / exclusions:** CT-A consumes this pair and root proof; its
+  example adoption remains mandatory and independently owned. CT-Z reads both
+  consumer records before retiring seed bodies. No seed/staging edits,
   workflow behavior changes, copier update, tags or unreviewed code on alpha.
-- **split_criteria:** `cross-package-contract`, `low-risk-batch`.
+- **split_criteria:** `cross-package-contract`, `default-branch-dispatch-prerequisite`.
 
 ## CT-A — Adopt published template and prove live consumer paths
 
@@ -210,7 +266,8 @@ repositories created by this planning ticket.
   create into a reviewed edit; never overwrite unrelated content.
 - **dependencies:** CT-F and CT-O, hard: final reviewed public refs and merged
   skill are required for adoption and the owner-operated walkthrough.
-- **source_files:** CT-F/CT-V publication evidence, CT-O skill, CT-C compatibility
+- **source_files:** CT-F/CT-V publication and template-root self-adoption evidence,
+  CT-O skill, CT-C compatibility
   and CT-R early proof, current seed config/application/manual workflow paths.
 - **required_actions:** render from CT-F's published Git URL with `--vcs-ref=alpha` into
   an isolated clean checkout. Inspect collisions and merge existing config and
@@ -222,6 +279,8 @@ repositories created by this planning ticket.
   retain useful manual/forwarding entry points. No indiscriminate body deletion.
   Record consumer census (repo, entry path/ref, replacement owner and run) for
   every old entry being replaced. Required checks exclude `Cadence review`.
+  Include the template repository's root client and actual migrated runs from
+  CT-F in the census; do not repeat or mutate that repo's proof from this task.
   Jeremy installs/invokes the merged skill for the controlled walkthrough;
   record installed ref and command, actual App grants and secret delivery names.
   Verify fork/direct/repeat/additional-project procedures, two projects sharing
@@ -294,7 +353,8 @@ repositories created by this planning ticket.
 - **dependencies:** CT-A, hard, accepted adoption and final live evidence;
   reason: retirement cannot be justified from an untested replacement.
 - **source_files:** every item workpad/merged PR, both publications, census,
-  final render/mode/onboarding/provider/advisory evidence, design AC1–AC13.
+  final render/mode/onboarding/provider/advisory evidence, CT-F template-root
+  self-adoption evidence and design AC1–AC13.
 - **required_actions:** apply installed symphony-finalize-project skill. Search
   project-owned files for TODO/FIXME/stub/adapter/disabled paths, lingering staging,
   duplicate event bodies and old active pins. Resolve only project-scoped work;
@@ -306,7 +366,9 @@ repositories created by this planning ticket.
   license/public access and any parent-owned follow-up. No unowned temporary seam
   may remain; a discovered gap keeps its actual delivery open.
 - **acceptance_checks:** AC1–AC13 evidence matrix is complete with exact targets;
-  staging absent; consumer census covers retained/deleted paths; no project-scoped
+  staging absent; both template-root and example clients have real final
+  Codex/advisory evidence through workflow alpha; root development assets are
+  excluded from participant renders; consumer census covers retained/deleted paths; no project-scoped
   TODO, stub, disabled behavior or duplicated maintained body is unexplained.
   Source, installed version and real execution are separate evidence records.
   Jeremy approves final acceptance; no readiness/CI signal alone marks Done.

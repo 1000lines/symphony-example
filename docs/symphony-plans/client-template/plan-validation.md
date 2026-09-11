@@ -46,6 +46,10 @@ which proves this graph acyclic; I→M→T→L→U (or V)→F→A→Z attains ei
 No graph edge has a redundant transitive alternative. CT-Q is disjoint from CT-I/M/C/R; CT-M/C/R are disjoint after
 CT-I; CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U/V are disjoint after CT-L; CT-F directly joins U/V. All later overlapping files/resources have
 explicit ownership handoffs. No new test or planning engine is needed.
+Jeremy's 14:44 self-use decision changes node scope/labels, not edges: CT-U
+owns root bootstrap/proof, CT-F takes that same repository for alpha migration
+and final root proof, and CT-A still owns example adoption. CT-Q's delimiter and
+ignore files remain disjoint from CT-I/M/C/R; CT-T consumes them after Q merges.
 
 Local results from the proposed tree:
 
@@ -56,6 +60,10 @@ Local results from the proposed tree:
   draft, Jeremy, pink/symphony; existing 100-43 remains Misc/blue.
 - Required source and D1–D9/AC1–AC13 ownership review performed; no unavailable
   required source. Both publication destinations and final live proof have owners.
+- The self-use contract assigns fixed `_envops`, root/output separation,
+  expression-preservation tests, raw-template lint exclusions and both real
+  consumer proofs. These are future implementation acceptance checks; this
+  planning ticket does not execute Copier or claim operational root clients.
 - Locked Prettier and diff whitespace checks run on all committed plan Markdown.
   Docker: skipped — passed locally. No application runtime was changed.
 
@@ -88,7 +96,7 @@ Compose each description in this stable order:
 4. Direct blockers and directly blocked keys from the shared payload/graph only.
    Replace placeholders with clickable actual Linear identifier/URL mappings
    after creation. 100-43 has an existing real link; no other live IDs are assumed.
-5. Main plan's alpha publication/evidence and ticket execution contracts, including
+5. Main plan's layout/self-use, alpha publication/evidence and ticket execution contracts, including
    moving branch semantics, actual consumed SHAs, pinned workpad, human review,
    current-head CI, mature rules, state handling, metadata and PR requirements.
 

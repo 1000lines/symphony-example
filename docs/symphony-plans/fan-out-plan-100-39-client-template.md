@@ -20,8 +20,9 @@ approves and merges this plan and 100-39 is Done. No downstream issue exists yet
 except the reused 100-43. Payload keys below are placeholders, never Linear IDs.
 
 The result is a small client for Jeremy's shared host: build in the example,
-publish the template and workflows separately, then adopt the published pair
-back into the example. The thirteen new tasks and one reused task require **eight
+publish the template and workflows separately, run the template repository as
+its own Symphony client, then adopt the published pair back into the example.
+The thirteen new tasks and one reused task require **eight
 minimum dependency rounds**, counting nodes on the longest path, not elapsed
 time or worker availability. Every task begins and opens its PR against `main`
 in its explicitly named target repository. No predecessor branch is a PR base.
@@ -32,14 +33,14 @@ in its explicitly named target repository. No predecessor branch is a PR base.
 | 100-43 | Existing PR #31; advisory lifecycle and readiness          | Existing work; no new estimate or ticket                      | hard       |
 | CT-C   | Existing config reader, CI/wakeup workflow and tests       | +450 / -220                                                   | hard       |
 | CT-R   | Native review workflows, provider result and tests         | +650 / -350                                                   | hard       |
-| CT-Q   | Seven-answer package and isolated question tests           | +180 / -0                                                     | easy       |
+| CT-Q   | Seven answers, fixed delimiters and isolated render checks | +230 / -0                                                     | easy       |
 | CT-M   | Exact copy of every reviewed client-list path              | +500–1,500 / -0, entirely copy                                | easy       |
 | CT-T   | Convert copied files and test the initial template         | +300 / -400–1,300                                             | hard       |
 | CT-L   | Add final CI/review callers and register render CI         | +170 / -50                                                    | hard       |
 | CT-O   | One onboarding entry skill and fork/direct resources       | +240 / -0                                                     | hard       |
-| CT-U   | Whole reviewed template root into public repository        | +650 / -0, primarily copy                                     | easy       |
+| CT-U   | Publish template and instantiate its own root client       | +850 / -0, primarily copy/render; explicit setup differences  | hard       |
 | CT-V   | Reviewed workflow/helper export into public repository     | +2,000–5,000 / -0, primarily copy; ≤250 behavior/pin/CI lines | hard       |
-| CT-F   | Final workflow alpha references and provenance             | +60 / -30                                                     | easy       |
+| CT-F   | Migrate template/root callers to alpha and prove root use  | +180 / -60                                                    | hard       |
 | CT-A   | Generated callers/config/guidance, proof, staging deletion | +250 / -650                                                   | hard       |
 | CT-Z   | Evidence and obsolete bodies after consumer checks         | +100 / -500–1,500                                             | easy       |
 
@@ -83,6 +84,14 @@ changes must be distinguished from that copy and reviewed before publication.
   publication refs in this proposal and design D3. CT-U/V publish concurrently;
   both repositories expose moving `alpha` branches, and CT-F joins them. Main
   remains the task/PR base. Actual consumed SHAs remain validation provenance.
+- [Jeremy's template self-use decision](https://github.com/1000lines/symphony-example/pull/34#issuecomment-5636188386),
+  September 11 at 14:44 UTC, requires the template repository to develop through
+  Symphony using its own generated root client. It strengthens the existing
+  `_subdirectory: template` design: root development assets never render into
+  participants. Choose `_envops` `[[ ]]` / `[% %]` now, and keep ordinary root
+  lint/format away from raw templates while dedicated render checks remain
+  mandatory. Verified admin authority supersedes CT-U's publication-only setup
+  and CT-T's unspecified escaping; CT-U/F own initial and migrated root proof.
 - [100-43 / PR #31](https://github.com/1000lines/symphony-example/pull/31): refreshed
   September 11, now Done; PR merged at 14:02:53Z as
   `ca5c37344df600468ee69e73c04c54197a5b062c`. CT-R still reads its workpad and
@@ -137,6 +146,14 @@ O writes the seed skill, U writes only the template repository and its alpha ref
 V writes only the workflow repository and its alpha ref. Shared source is read-only;
 no task changes org-wide App grants or uses another lane's live proof PR.
 No live shared secret or proof resource is used by Q/M/T/L.
+The self-use revision keeps those boundaries: CT-Q owns package delimiters and
+ignore configuration before CT-T converts anything; CT-U owns root instantiation
+and initial proof in its destination, then CT-F takes both root and template
+callers for migration and final proof. CT-U uses existing setup tools and the
+accepted staged client, so it does not depend on the concurrently authored CT-O
+skill or CT-V publication. CT-F's initial development can use root callers of
+reviewed seed workflows. A separate self-use node would hand off the same files
+again and add a round; combining it with these owners keeps each PR reviewable.
 
 Every drawn edge is hard: its downstream outcome needs a reviewed artifact on the
 selected base (or an accepted published ref), or relinquished write ownership.
@@ -154,7 +171,7 @@ integration, real adoption and consumer-aware retirement.
 %% symphony-dag/v1
 flowchart LR
   I["Round 1: CT-I · Review exact client-copy manifest and export lists"]
-  Q["Round 1: CT-Q · Define seven answers independently"]
+  Q["Round 1: CT-Q · Define seven answers and safe delimiters independently"]
   CHECK["Round 1: 100-43 · Reuse accepted advisory check and ready handoff"]
   M["Round 2: CT-M · Straight copy of every listed file in its own PR"]
   C["Round 2: CT-C · Support native Docker remote CI and portable config"]
@@ -162,10 +179,10 @@ flowchart LR
   T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
   L["Round 4: CT-L · Add late CI and Codex parts before release"]
   O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
-  U["Round 5: CT-U · Publish template repo and alpha branch"]
+  U["Round 5: CT-U · Publish template alpha and instantiate its root client"]
   V["Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
-  F["Round 6: CT-F · Join both repos using workflow alpha in template alpha"]
-  A["Round 7: CT-A · Adopt published pair and prove live consumer paths"]
+  F["Round 6: CT-F · Move template and root callers to workflow alpha and prove root use"]
+  A["Round 7: CT-A · Adopt published pair in example and prove live paths"]
   Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
   I --> M
   I --> C
@@ -280,7 +297,7 @@ nodes:
       labels: [pink, symphony]
   - id: Q
     payload_key: CT-Q
-    title: Define and test the seven Copier answers
+    title: Define seven Copier answers and safe delimiters
     type: task
     difficulty: easy
     labels: [pink]
@@ -355,9 +372,9 @@ nodes:
       labels: [pink, symphony]
   - id: U
     payload_key: CT-U
-    title: Publish the reviewed template repository
+    title: Publish and instantiate the template repository
     type: task
-    difficulty: easy
+    difficulty: hard
     labels: [pink]
     branch:
       template: symphony/client-template/${issue}/publish-template
@@ -385,9 +402,9 @@ nodes:
       labels: [pink, symphony]
   - id: F
     payload_key: CT-F
-    title: Connect template alpha to published workflow alpha
+    title: Connect template and root clients to workflow alpha and prove use
     type: task
-    difficulty: easy
+    difficulty: hard
     labels: [pink]
     branch:
       template: symphony/client-template/${issue}/release
@@ -544,6 +561,53 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
 10. **Reuse seeds and fail closed.** 100-38 is accepted design; 100-39 plans;
     existing 100-40 fans out; existing 100-43 supplies shared behavior. No duplicate
     advisory implementation, planning seed, validator or no-op join ticket.
+11. **The template repository uses its own client.** Jeremy's 14:44 decision is
+    enforced by CT-Q's fixed delimiters/CI boundary, CT-T/L's render tests,
+    CT-U's concrete root instantiation and CT-F's real migrated Symphony/Codex
+    proof. Root `copier.yml` selects `template/`; root workflows, instructions,
+    config and answers are a consumer instance outside that output. CT-A still
+    proves example adoption; CT-Z requires both consumer records before cleanup.
+
+## Template layout and self-use contract
+
+The staging package and published repository keep root `copier.yml` selecting
+only `template/`. Root package tests/docs/CI are development assets. CT-U adds
+concrete root client callers, instructions, `.symphony.cfg.json` and
+`.copier-answers.yml` by rendering the reviewed client for its own repository;
+the same names beneath `template/` remain generic source for participants.
+Root-only content must never leak into generated repositories. CT-Q fixes this
+configuration before CT-T introduces any placeholder:
+
+```yaml
+_subdirectory: template
+_envops:
+  variable_start_string: "[["
+  variable_end_string: "]]"
+  block_start_string: "[%"
+  block_end_string: "%]"
+  keep_trailing_newline: true
+```
+
+CT-Q/T/L render fixtures that substitute Copier values, preserve native GitHub
+`${{ ... }}` expressions exactly, and exclude root-only sentinel files. Normal
+root lint/format/test discovery excludes raw `template/` syntax; dedicated tests
+still render it and validate generated workflow/config files on every affected
+PR. Use existing formatter ignores and test commands, not a custom validator.
+CT-U/F preserve that distinction in the published repo's required CI.
+
+CT-U's initial root client uses reviewed seed workflows; after trusted activation,
+a follow-up Symphony PR proves it works before CT-F develops the migration.
+CT-F repoints both the source template and root instance to workflow `@alpha`,
+then proves a real template-development PR through those migrated callers and
+records it in `SELF-ADOPTION.md`/workpad. Bootstrap/pre-merge renders are not live
+review evidence. CT-A retains the separate published-template adoption into the
+example. These are two real consumers, with disjoint repository/PR resources;
+CT-Z's census must cover both before removing seed workflow bodies.
+
+The additional operational proof is an accepted cost of Jeremy's self-use
+requirement. Keep root setup small, reuse generated files and existing tools,
+and preserve working seed references until replacements pass. No recursive
+Copier hook, automatic update system or self-referential commit pin is needed.
 
 ## Alpha publication and evidence contract
 
@@ -573,7 +637,7 @@ commissioned. Existing human review and mandatory current-head CI still apply.
 
 ## Ticket source and execution contract
 
-Copy this section, the Alpha publication and evidence contract above, the item's
+Copy this section, the layout/self-use and Alpha publication/evidence contracts above, the item's
 complete section and its incoming relation rows
 into every generated description. The per-task files are part of this plan:
 
@@ -646,9 +710,13 @@ and CT-A final real Codex review (AC5), CT-U (AC6), CT-A (AC7), CT-C/L/A (AC8),
 CT-O/A (AC9), all delivery owners (AC10), CT-V/F/A (AC11), CT-C/A (AC12), and
 100-43 plus CT-R/V/A (AC13). Missing live evidence leaves the responsible delivery
 open; it cannot be relabeled as a documentation pass.
+Jeremy's 14:44 additions also require CT-Q/T/L's expression/leakage/CI checks,
+CT-U's operational root instance and CT-F's migrated template-development proof;
+these extend AC1/2/5/6/11/13, rather than replacing CT-A's original evidence.
 
 No project completion until both public refs resolve, final consumers run those
-refs, mandatory CI/review and owner-controlled onboarding/mode evidence exist,
+refs in both the template root and example, mandatory CI/review and
+owner-controlled onboarding/mode evidence exist,
 staging is gone, old entry points are retained or retired with consumer evidence,
 and project-scoped temporary work is resolved. Preserve historical plans as dated
 records. Parent rehearsal/concurrency, application deployments, Terraform,
