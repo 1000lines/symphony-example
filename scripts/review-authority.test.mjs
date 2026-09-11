@@ -295,18 +295,14 @@ test("bodyless changes-requested reviews accept GitHub null bodies but reject ma
   }
 });
 
-test("feedback routing jobs use trusted checkout and the existing App without a PAT fallback", () => {
+test("feedback callers use pinned trusted helpers and explicit App secrets without PAT fallback", () => {
   for (const name of ["cadence-linear-rework", "cadence-ai-review-events"]) {
-    const workflow = readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8");
-    assert.match(workflow, /ref: main/);
-    assert.match(workflow, /persist-credentials: false/);
-    assert.match(workflow, /environment: cadence-controller/);
-    assert.match(workflow, /app-id: \$\{\{ vars.CADENCE_APP_ID \}\}/);
-    assert.match(workflow, /permission-metadata: read/);
-    const routeJob = yaml.load(workflow).jobs[name === 'cadence-ai-review-events' ? 'route' : 'review-handoff'];
-    assert.doesNotMatch(JSON.stringify(routeJob), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members/);
-    const app = routeJob.steps.find(step => step.id === 'app-token');
-    assert.equal(app.with['permission-issues'], name === 'cadence-ai-review-events' ? 'write' : undefined);
-    assert.match(workflow, /GH_TOKEN: \$\{\{ steps.app-token.outputs.token \}\}/);
+    const workflow = yaml.load(readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8"));
+    const job = workflow.jobs[name === "cadence-ai-review-events" ? "review" : "handoff"];
+    assert.equal(job.uses, `1000lines/symphony-client-workflows/.github/workflows/${name}.yml@${job.with["helpers-ref"]}`);
+    assert.match(job.with["helpers-ref"], /^[a-f0-9]{40}$/);
+    assert.equal(job.secrets.CADENCE_APP_PRIVATE_KEY, "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
+    assert.doesNotMatch(JSON.stringify(job), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members/);
+    assert.equal(job.steps, undefined);
   }
 });

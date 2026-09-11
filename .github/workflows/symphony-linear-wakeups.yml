@@ -27,15 +27,6 @@ on:
     secrets:
       CADENCE_LINEAR_API_TOKEN:
         required: true
-  pull_request_target:
-    types: [opened, synchronize, reopened, edited, labeled]
-  workflow_run:
-    workflows: ["*"]
-    types: [completed]
-  # GitHub Actions checks are covered by workflow_run; these are external checks.
-  check_run:
-    types: [completed]
-  status:
 
 permissions:
   actions: read

@@ -1,0 +1,11 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: e7a9be3
+_src_path: https://github.com/1000lines/symphony-client-template.git
+build_command: npm run build
+cadence_app_slug: 1000lines-cadence
+cadence_reviewer: codex
+default_branch: main
+linear_team_key: '100'
+repo_slug: 1000lines/symphony-example
+symphony_app_slug: 1000lines-symphony
+test_command: npm test
