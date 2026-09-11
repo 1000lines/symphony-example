@@ -88,6 +88,21 @@ Each proof item must include:
 
 ## Missing Proof
 
+For normal handoff after verified check cutover, prove both fresh `ci_passes`
+and `ai_accepts`: required current-head CI workflow/App/run-attempt/child-job
+provenance and `Cadence Review` from App `4866513` at the exact head/latest
+human-feedback generation, validated output and matching persisted workpad.
+Record mandatory-feedback closure, a clean task branch and ready PR before
+blocker-side `mature`. Remove maturity for request-changes, rejected/stale
+evidence or severe regression, not ordinary edits alone. Human acceptance owns
+Done. Bootstrap reviewer evidence is separate; bot approval cannot establish
+the check predicate. See the shared Cadence acceptance contract.
+
+Keep source, installed bundle, loaded service and real workflow execution as
+separate proof items at their actual refs. A missing-admin handoff identifies
+the repository/App, failed operation/error, required permission, named operator,
+exact action and readback. A planned command is not an executed artifact.
+
 When no local proof can be produced, still write a complete proof item. Set the
 result to `blocked` or `skipped with reason`, name the intended command or
 environment, record the exact limitation, and make the next handoff concrete.

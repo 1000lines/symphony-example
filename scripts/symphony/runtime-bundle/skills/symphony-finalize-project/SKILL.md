@@ -27,16 +27,16 @@ project finalization mechanics, not for generic fan-out pattern design.
 
 If a required source cannot be read, record `Unavailable source` in the
 workpad, ask for access or pasted context, move the issue to
-`Input Needed`, and stop.
+`Inactive`, and stop.
 
 ## When Finalization Starts
 
 Start a finalize issue only after upstream implementation work reaches the
 accepted readiness point for the project, such as merged task PRs, an accepted
 target ref, or a human-approved descoping decision. The project human lead may move it
-from `Backlog` to `Todo` when that readiness point is reached, or from
-`Input Needed` to `Rework` when missing evidence becomes available. Leave
-human-controlled `Human Review` and `Done` states alone unless the current
+from `Backlog` to `Active` when that readiness point is reached, or from
+`Inactive` to `Active` when missing evidence becomes available. Leave
+human-controlled acceptance and `Done` states alone unless the current
 workflow explicitly instructs otherwise. Use legacy team state names only
 through the active workflow's documented fallbacks.
 
@@ -96,9 +96,32 @@ Search for:
 
 If an unresolved TODO, temporary file, adapter, or disabled path cannot be
 resolved without a human decision, record the exact file and question in the
-workpad and move to `Input Needed`.
+workpad and move to `Inactive`.
 
 ## Validation And Evidence
+
+Validate locally, use Docker only for missing tools/services, then inspect
+mandatory current-head CI, including documentation changes. Record a justified
+Docker skip or image digest, workflow/event/ref, App, run attempt and required
+child-job evidence. A failing assertion needs a fix; unavailable tooling needs
+a precise environment/CI handoff. Source inspection is not deployed proof.
+
+After verified check cutover, normal human handoff and blocker-side `mature`
+require both fresh `ci_passes` and `ai_accepts`, closed mandatory feedback, a
+clean branch and a ready PR. Cadence acceptance is `Cadence Review` from App
+`4866513`, exact head/latest human-feedback generation, validated output and
+matching persisted workpad. Never substitute a bot approval. Remove maturity
+for request-changes, rejected/stale evidence or severe regression; ordinary
+edits alone do not revoke it. Human approval/merge owns acceptance and Done.
+Record configured bootstrap review separately until verified cutover.
+
+Audit actual installation/reload, enabled workflow and live execution at named
+controller/target/runtime refs. Prepared helpers and merged branches do not
+establish deployment. Retire project-specific temporary selectors only after
+replacement proof; preserve durable repository opt-in/configuration. Record
+exact missing-admin operations, affected repository/App, required grant, named
+operator and verification action. Do not claim the disabled AMI updater is a
+working App-only recovery route.
 
 Record these items before claiming finalization:
 
@@ -108,10 +131,10 @@ Record these items before claiming finalization:
 - Validation commands and results on the cleaned target ref.
 - Residual human-needed items, or `none`.
 
-If composed validation fails and the fix is mechanical, move to `Rework` and
+If composed validation fails and the fix is mechanical, move to `Active` and
 fix it. If it fails because credentials, deploy access, source data, or product
 judgment is missing, ask the smallest specific question and move to
-`Input Needed`.
+`Inactive`.
 
 ## Workpad Template
 

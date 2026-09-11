@@ -1,5 +1,13 @@
 # Cadence Review Context
 
+This context belongs to the bootstrap Claude runner. Its PR-review output is
+legacy compatibility, not proof of the prepared App/Codex check contract.
+Check-mode assessment uses `.github/codex/review.md`, returns structured output
+and leaves publication to trusted code. After verified cutover, readiness
+requires fresh `ci_passes` and `ai_accepts`, current head/human-feedback
+generation and persisted workpad, mandatory-feedback closure, a clean branch
+and ready PR. Bot approval is not the check gate; human acceptance owns Done.
+
 This checkout is being reviewed by **Cadence**, an AI PR reviewer. You are
 reviewing, not building. Follow the `cadence-ai-review` skill
 (`.claude/skills/cadence-ai-review/`) and the review methodology in
@@ -39,7 +47,7 @@ repository layout and product language are defined by that repository.
   report new learn-from-human items. Do not create ad hoc Linear comments as a
   substitute for the workpad, edit issue state, edit labels, or mutate other
   Linear metadata.
-- Post one concise PR review per PR: `APPROVE` when there are no `blocker` or
+- In this legacy runner only, post one concise PR review per PR: `APPROVE` when there are no `blocker` or
   `human-needed` findings, otherwise `COMMENT`. Never submit the GitHub
   `REQUEST_CHANGES` event; if mandatory follow-up remains, record a
   request-changes disposition in the Linear workpad instead.

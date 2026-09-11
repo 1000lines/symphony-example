@@ -76,9 +76,9 @@ duplicate tickets when the evidence shows those terminal states.
 | Status         | Means                                                                                     | Whose move                |
 | -------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
 | `Backlog`      | Intentionally not eligible for Symphony work                                              | Named human/project owner |
-| `Blocked`      | A `blockedBy` blocker is neither terminal nor `mature`                                    | Another ticket            |
+| `Blocked`      | An accepted hard prerequisite has not supplied its required result/merge                  | Another ticket            |
 | `Agent`        | Implementable now, or reworking known feedback                                            | Symphony                  |
-| `AI review`    | Cadence holds the ball; show `cadence-loop-N of 3`                                        | Cadence                   |
+| `AI review`    | Cadence holds the ball; show the persisted generation/pass count out of three             | Cadence                   |
 | `Human review` | A named human holds the ball                                                              | That human                |
 | `CI`           | Checks are running or failed on the current head; suspected flaky failures may be retried | CI / Symphony             |
 | `Merge queue`  | Approved, gates closed, awaiting the human merge action                                   | Named human               |
@@ -96,16 +96,27 @@ For each ticket in `{{project-code}}`, gather and reconcile:
   verify, not as derivation inputs.
 - Linked PR state: open, draft, ready, merged, closed, current head SHA,
   `mergeStateStatus`, base branch, assignees, and reviewers.
-- CI status from the check rollup on the current PR head SHA. Do not use the
-  newest run on the branch when it is not for the current head.
+- Fresh `ci_passes` evidence: current-head required checks plus emitting App,
+  workflow/event/ref, run attempt and child-job provenance. A rollup name or the
+  newest run on another head does not prove passing CI.
 - Reviews: latest submitted review per reviewer, review state, reviewed commit
   SHA, whether the review is stale relative to the current head, and whether
   any required approval still applies.
 - Unresolved review threads, including whether each thread is outdated or still
   attached to the current diff.
-- `cadence-loop-N` labels and the cap of three Cadence rounds.
+- Fresh `ai_accepts` evidence under the configured review contract: for
+  check-mode Cadence, App `4866513`, `Cadence Review`, current head/latest
+  human-feedback generation, validated output and matching persisted workpad.
+  Record bootstrap reviewer evidence separately until verified cutover; bot
+  approvals and legacy `cadence-loop-N` labels do not prove check acceptance.
 - `blockedBy` relations, each blocker's state, labels, and whether the blocker
   carries `mature`.
+
+Normal human readiness requires both predicates, closed mandatory feedback,
+a clean task branch and a ready PR. Maturity belongs to the blocker and is
+removed for request-changes, rejected/stale evidence or severe regression;
+ordinary edits alone do not revoke it. An unmerged hard prerequisite still
+requires its accepted landed result. Source availability is not deployment.
 
 Treat daemon tickets according to the daemon lifecycle in
 `docs/engineering/symphony/project-workflow.md` and the daemon design handoff.
@@ -218,6 +229,6 @@ available, and close the PR at project close instead of merging it.
 - Markdown formatting passes for the rewritten standup file.
 - Every board row has a one- or two-word `Evidence` hyperlink tied to the
   current Linear ticket and current PR head where a PR exists.
-- Current-head CI, review staleness, unresolved threads, `cadence-loop-N`, and
+- Current-head CI, review generation/staleness, unresolved threads, pass count, and
   `blockedBy`/`mature` evidence are visible in the standup file.
 - Remedial actions are limited to the alpha set and are logged with evidence.

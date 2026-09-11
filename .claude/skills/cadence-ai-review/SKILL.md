@@ -1,9 +1,27 @@
 ---
 name: cadence-ai-review
-description: Review a group of opt-in Symphony PRs against their Linear acceptance criteria and linked design docs. Fan out review axes per PR plus cross-PR coverage and seam checks, write detailed review state to one Linear Cadence workpad, then post one concise GitHub PR review per PR (APPROVE when clean, else COMMENT; never REQUEST_CHANGES).
+description: Legacy Claude review compatibility for opt-in Symphony PRs. Preserve review axes, stable findings, Linear evidence and human handoff while the bootstrap runner remains selected.
 ---
 
 # Cadence AI Review
+
+## Runner boundary
+
+This is the compatibility skill consumed by the existing Claude runner until
+verified cutover. The PR-review publication instructions below apply only to
+that runner. The prepared Codex assessment uses `.github/codex/review.md` and
+structured output; it must not execute this skill's credential or posting steps.
+No bot approval from this path establishes check-mode AI acceptance.
+
+After verified cutover, normal handoff requires both fresh `ci_passes` and
+`ai_accepts`, closed mandatory feedback, a clean task branch and ready PR.
+Cadence acceptance means `Cadence Review` from App `4866513` at the exact
+head/latest human-feedback generation, validated output and matching persisted
+workpad. Blocker-side `mature` follows those conditions; remove it for
+request-changes, rejected/stale evidence or severe regression, not ordinary edits
+alone. Human acceptance owns Done. The
+[shared contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
+records the current unwired producer boundary and deployment prerequisites.
 
 Use this skill to review a group of opt-in Symphony PRs before human review. The
 review reads evidence, records detailed state in the Linear `## Cadence Workpad`,
@@ -83,7 +101,7 @@ Read these before producing review output. Acquisition mechanics are in
 Per PR:
 
 - PR title, body, base branch, head SHA, changed files, diff, labels, CI status.
-- The associated Linear issue. Infer the `DEMO-NNN` identifier from the PR title
+- The associated Linear issue. Use the target config's `linear.teamKey` in the PR title
   prefix, then fall back to the branch or body. Read its description, acceptance
   criteria, and comments through the acquisition helper. **Read-only during
   acquisition.**
@@ -192,7 +210,7 @@ Cadence has two output surfaces with different audiences:
   Cadence runs.
 - **GitHub PR review** — concise human-readable assessment for PR reviewers.
 
-Write the workpad first when possible. If the helper or credentials are missing,
+Write and read back the workpad before publishing. If the helper or credentials are missing,
 do not bypass it with a separate Linear writer; abort before posting and report
 the configuration failure.
 
@@ -320,8 +338,11 @@ When invoked on a PR you have reviewed before, do not blindly review again. Run
 
 `since` items are typed (commit / comment / review / force-push / draft
 transitions), carry actor and timestamp, and exclude the bot's own activity.
-Inline review-thread replies are not yet surfaced (TODO); rely on commits and
-top-level comments/reviews for now. Put review-state detail such as skipped,
+Do not infer complete feedback from this helper alone. Acquire submitted review
+summaries, top-level comments, inline threads/replies and Linear comments with
+full pagination and current author permission evidence. Missing history requires
+full review and prevents a fresh acceptance claim. Generated workpad bookkeeping
+does not reset the generation or three-pass cap. Put review-state detail such as skipped,
 ignored, non-human, and pending follow-up events in the Cadence workpad unless a
 concise GitHub-visible assessment needs to mention them.
 

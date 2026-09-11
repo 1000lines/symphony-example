@@ -96,7 +96,8 @@ entry in a controller repository list. The empty startup hook is intentional:
 checkout and dependency setup depend on the assigned repository.
 
 Read the installed `karpathy-guidelines` skill and the target's applicable
-`AGENTS.md`, configuration-referenced instructions, and task-specific docs.
+`README.md`, `AGENTS.md`, `CLAUDE.md`, configuration-referenced instructions,
+toolchain/package files, `.github` workflows, and task-specific docs.
 Use `SYMPHONY_TOOLING_ROOT` for shared Symphony scripts and docs; they need not
 exist in the target checkout. Personal runtime skills are installed from the
 runtime bundle and should not be copied into the target repository.
@@ -182,8 +183,8 @@ event rules are in `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-wor
 
 ## GitHub Wakeups And Review Handoffs
 
-Cadence's event router requests review of the current PR head after Symphony
-pushes and human feedback. The review handoff bridge wakes the linked issue for
+Cadence's event router calls the existing reviewer through `workflow_call`
+after Symphony pushes and verified human feedback. The review handoff bridge wakes the linked issue for
 actionable Cadence output, human review summaries, and nonempty human PR
 comments. Clean Cadence approval and human-needed findings request review from
 eligible PR assignees; the bridge records a routing gap if none exists. Human
@@ -292,10 +293,17 @@ For coding tickets spawned from a DAG plan:
 - Treat `mature` as a label on the blocker issue, not the dependent and not the
   graph edge.
 - Set `mature` only when required checks for the current PR head pass, Cadence
-  or the configured reviewer approves that current head, and the PR is marked
-  ready for human review from its draft state.
+  acceptance is fresh, the mandatory-feedback ledger is closed, the task branch
+  is clean of unmerged predecessor work, and the PR is ready from draft. After
+  verified check cutover, require both `ci_passes` and `ai_accepts`: successful
+  `Cadence Review` from App `4866513` for the exact head/latest human-feedback
+  generation, validated output and matching persisted workpad. Bot approval and
+  `reviewDecision` cannot substitute. During bootstrap use the explicitly
+  configured existing reviewer and record its evidence; never claim check-mode
+  acceptance from legacy output. See the shared Cadence acceptance contract.
 - Remove `mature` only when request-changes review, rejected acceptance
-  evidence, or a similarly severe regression makes downstream work unsafe.
+  evidence, stale current-SHA/generation evidence, or a similarly severe
+  regression makes downstream work unsafe.
   Ordinary review rework does not remove maturity by itself.
 - If the agent cannot apply or remove a required `mature` label, record the
   exact label/API failure in the workpad, move to `Inactive`, and stop
@@ -436,6 +444,15 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
     wake label, move to `Inactive`, and stop.
 - Make surgical changes only. Do not refactor adjacent code unless required.
 - Prefer targeted validation over broad monorepo validation.
+- Validate local → Docker only for environment gaps → mandatory current-head CI,
+  including documentation changes. Passing local checks mean `Docker: skipped —
+passed locally`. Use the target's documented container or a compatible pinned
+  image when tools/services are unavailable; record its digest and run as the
+  workspace UID/GID with only the issue workspace mounted. Fix failing assertions.
+  Record exact CI workflow/run, App, head, attempt and required child-job results;
+  missing, pending, skipped, canceled or stale checks never count as passing.
+  If neither environment works, publish available proof with the precise
+  limitation and repository-CI handoff. Do not install every host toolchain.
 - If writing, reviewing, or refactoring code, apply the karpathy-guidelines skill.
 - Commit only intentional changes.
 - Batch publishing within a work loop. Multiple local commits are fine while
@@ -540,6 +557,11 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   passing, and either AI review is not configured or AI review recorded no
   actionable findings. AI findings with known fixes move to `Active`; missing
   evidence, credentials, or decisions keep the issue `Inactive`.
+- Source helpers and profile settings do not prove deployment. Read
+  `$SYMPHONY_TOOLING_ROOT/docs/engineering/review/cadence-ai-review.md` for the
+  check contract and current bootstrap boundary. A missing admin operation
+  needs the target repository/App, failed operation, required grant, named
+  operator and verification step in the prepared PR and pinned workpad.
 
 ## Blockers
 

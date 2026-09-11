@@ -6,8 +6,25 @@ finds that comment and updates it, or creates it when it is absent. Symphony pin
 and updates its own `## Codex Workpad`; `## Symphony Workpad` is engine-owned.
 Neither is a fallback destination for Cadence writes.
 
-Cadence review workflows and the non-review GitHub-to-Linear bridge share this
-workpad using the Example Review Bot credential. The bridge reserves
+After verified check cutover, `ai_accepts` requires `Cadence Review` from App
+`4866513` at the current head/latest required human-feedback generation and
+matching persisted `reviewContract` state. The prepared trusted publisher
+validates output, retains stable finding IDs/mandatory classifications and
+reads back the workpad before publishing success. Both output and retained
+ledger must close mandatory findings, requirements and feedback. Missing or
+denied persistence cannot accept; neither bot approval nor a prose verdict is
+a substitute. The existing Claude runner's records below are bootstrap evidence
+only until verified cutover. See the [acceptance contract](./cadence-ai-review.md#acceptance-contract-and-rollout-boundary).
+
+`ci_passes` independently requires current-head workflow/App/run-attempt and
+child-job provenance. Normal human handoff needs both predicates, a closed
+mandatory-feedback ledger, a clean branch and a ready PR. Workpad bookkeeping,
+even with a human-owned credential, cannot reset generation or the three-pass
+findings cap. Recheck head, feedback IDs/update times, base/config revisions and
+attempt before publishing; an old attempt cannot overwrite newer evidence.
+
+Legacy Cadence review and the retained standalone non-review bridge share this
+workpad using the configured Linear credential. The standalone bridge reserves
 `coordination.nonReviewWakeups` for ten recent deduplication records and
 `coordination.lastNonReviewWakeup` for the latest event's full evidence.
 Full snapshot and incremental review writes preserve these fields. Terminal
@@ -26,6 +43,8 @@ replacement snapshots. The bridge's own evidence writes retain the complete
 review snapshot they read. Callers that need stored review fields must use
 `reviewUpdate` or supply a complete snapshot.
 
+The current CI YAML writes conflict instructions and records state results in
+its run log; it does not use the standalone bridge's deduplication ledger.
 The review handoff bridge records `coordination.reviewHandoff`; the event router
 records trigger context and coalescing evidence. Review and non-review bridges use the shared
 [wakeup helper](../../../scripts/linear-issue-wakeup.mjs): `Active` first,

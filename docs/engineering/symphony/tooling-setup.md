@@ -9,22 +9,32 @@ commands in your own repository configuration.
 
 From the repository root, use Node `20.20.0` from `.nvmrc` and npm `11.13.0`
 from `package.json`. The root and two tooling workspace manifests declare the
-dependencies; a derived `package-lock.json` is not included. The `.npmrc` enforces
+dependencies; the committed `package-lock.json` locks both workspaces. The `.npmrc` enforces
 engine compatibility and a minimum release age. Package-manager preparation is
 separate from the tooling commands:
 
 ```sh
 npm install --global npm@11.13.0
-npm install
+npm ci
 npm run build
 npm test
 npm run lint
 ```
 
-`npm install` resolves the declared ranges and generates a local lockfile under
-the retained `.npmrc` defaults. Dependency resolution can change between installs.
-An adopter can maintain that generated lock in their own repository and use
-`npm ci` once it exists.
+Use `npm ci` for the committed dependency tree. Regenerate and review the lock
+only when intentionally changing dependencies. The controller's `ci.yml` runs
+build, lint, tests and changed Markdown with locked Prettier, then `CI Required`.
+Verify the aggregate and its child jobs at the exact PR head; the expected
+Actions App is `15368`. Reusable workflows alone are not CI evidence.
+
+Read each target's README, applicable AGENTS/CLAUDE instructions, toolchain
+files and `.github` workflows before selecting commands. Validate locally,
+use Docker only for missing tools/services, and always inspect current-head CI,
+including documentation changes. Passing local checks skip Docker. For a
+fallback, use a documented container or compatible pinned image, record its
+digest, mount only the issue workspace and run as its UID/GID. A failing
+assertion requires a fix; unavailable tooling needs a precise environment/CI
+handoff. See the [proof standard](./proof-of-work.md#validation-order).
 
 `build` compiles `tools/symphony-dag` and `tools/symphony-host`, then checks the
 TypeScript helpers in `scripts/` without emitting them. `test` selects the two
@@ -151,7 +161,8 @@ the palette listed in `scripts/symphony/project-colors.ts`.
 
 ## PR labels and non-review wakeups
 
-PR label repair is an optional hosted safety net. Its existing process inputs
+Explicit PR label verification is required; an operator hook is an optional
+hosted safety net. Its existing process inputs
 are documented in the [bundle guide](../../../scripts/symphony/runtime-bundle/README.md#pr-label-repair).
 Set `project-color: teal`, for example, in the owning Linear project's content
 or description and create that GitHub label plus `symphony`. The color is a
@@ -166,7 +177,9 @@ required checks/statuses. It selects one open PR with the `symphony` label at
 the event's current head and resolves the configured team's issue from the PR
 title prefix, then the branch. It reads trusted helpers from the default branch.
 Its `workflow_run` subscription names `CI`; it does not subscribe to arbitrary
-dispatched workflows or run a scheduled conflict sweep.
+dispatched workflows or run a scheduled conflict sweep. The outcome step reads
+the target's `ci.yml` pull-request runs; it does not invoke the prepared
+`evaluateCi` predicate. Workers must still collect complete acceptance evidence.
 
 An Active worker gets up to one minute to finish; if still Active, it is left
 alone. For waiting tickets, pending CI means `Unhappy` with `wake:15m`, successful
@@ -220,8 +233,10 @@ tooling CI requires none of this optional event or credential setup.
 
 ## Review and local environment
 
-The Cadence workflows require GitHub, Linear, Google Docs, and Claude Code
-access. Set the six credential names documented in the generated reference in
+The existing bootstrap Claude runner uses the legacy recipe below. Its
+credentials and approval output do not establish the prepared App/Codex check
+contract. Required Google Docs need source access only when actually linked.
+Set the applicable credential names documented in the generated reference in
 GitHub Settings → Secrets and variables → Actions → Secrets. Workflow identity
 and model variables belong in the Variables tab. The review runner requires
 `CADENCE_CLAUDE_MODEL` with no default. Its retained preflight in
@@ -260,3 +275,54 @@ Keep environment-specific profiles, credentials, routing policies and product
 validation in adopter-owned files or service settings. The optional automation
 recipes need that setup before they can be used; the dependency closure alone
 does not establish an operational installation.
+
+## Check cutover prerequisites
+
+The [Cadence contract](../review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
+separates prepared predicate/producer source from the current native call to
+the Claude runner. The deployment owner must supply a reviewed executable
+Codex route and demonstrate actual acquisition, assessment, publication and
+human handoff before selecting check-only acceptance. Installing these docs or
+minting an App token does not supply that route.
+
+For the readiness project, DEPLOY (100-19) owns the following operations after
+reviewing [INSTALL's dated evidence](../../symphony-plans/hackathon-ready/installation-evidence.md):
+
+1. Re-read both App registrations and installations for `1000lines/symphony-example`
+   and `jeremycarroll/venn-search-rs`. Verify public installability, selected
+   repositories, no suspension, approved operation grants, and each owner's
+   distinct installation IDs. Verify neither legacy bot is a target collaborator.
+   A token refresh cannot add a missing installation or permission.
+2. Protect `cadence-controller` for trusted `main`; provision its
+   `CADENCE_APP_PRIVATE_KEY`, `CADENCE_OPENAI_API_KEY`, `CADENCE_LINEAR_API_TOKEN`
+   secrets and required App/controller identity variables. Keep these off target
+   repositories. Host signing material stays in AWS
+   `symphony/github-apps/symphony`, region `us-west-2`, with narrow host read access.
+3. Install the accepted App broker, private repository skill and workflow
+   together. The credential step selects `SYMPHONY_GITHUB_AUTH_MODE=app` and
+   installs the Git askpass and `gh` adapter. For each task, the skill binds a
+   private target config and preflights it; the selected-base repository config
+   supplies commands and CI, never installation authority. Preserve the
+   operator-owned signing configuration. See the [bundle recipe](../../../scripts/symphony/runtime-bundle/README.md#repository-discovery-and-onboarding).
+4. Confirm target CI/check provenance and branch rules, using real run/job IDs.
+   Discover current Rust checks rather than copying controller requirements.
+   Install/reload the accepted workflow with Active/Evaluating dispatch,
+   Unhappy resting, wake:15m and one evaluation slot. Verify state/label IDs and
+   actual timer anchor, due time and wake; source configuration is insufficient.
+5. Inspect workflow state. If disabled, the authorized operator enables it with
+   `gh workflow enable symphony-linear-wakeups.yml --repo 1000lines/symphony-example`,
+   reads back active state and proves a completion run. Do not describe the
+   removed cron or disabled AMI updater as a working recovery path.
+6. Rehearse on the isolated target while bootstrap production review remains
+   selected. Inventory/dismiss legacy bot approvals and pending requests with
+   readback before verified check cutover; preserve human reviews. RETIRE removes
+   obsolete selectors/secrets after proof. Provider-key changes need their own
+   authorized credential reload; do not infer rotation from a canceled ticket.
+   FINAL requires deployed refs and combined evidence, not just merged source.
+
+Before a privileged operation, identify the actual caller's permissions. When
+access is missing, finish the reviewable preparation and give Jeremy the exact
+repository/App, attempted API or command and error, missing permission, settings
+change or command to perform, and required readback. Re-read INSTALL evidence;
+its dated 403/404 results are not current access checks. Never create a PAT
+fallback or print secret values. GUIDE owns local fixtures and guidance only.

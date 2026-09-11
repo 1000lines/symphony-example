@@ -101,8 +101,9 @@ and acceptance text. Unresolved comments survive workpad updates and rewrites.
 ## GitHub Event Bridges
 
 The [Cadence event router](../../../.github/workflows/cadence-ai-review-events.yml)
-requests `example-cadence-bot` after Symphony pushes and human review activity.
-The review-request workflow reviews the current head. The separate
+calls the existing reviewer through `workflow_call` after Symphony pushes and
+verified human review activity. It currently selects the bootstrap Claude runner;
+the prepared Codex check producer is not wired into that route. The separate
 [review handoff bridge](../../../scripts/cadence-linear-rework.mjs) and
 [CI wakeup workflow](../../../.github/workflows/symphony-linear-wakeups.yml)
 perform these actions:
@@ -159,3 +160,13 @@ edges describe dispatch dependencies, not branch ancestry. Required upstream
 code lands on the selected base before dependent validation unless the accepted
 plan supplies an explicit temporary seam. Finalization audits the accepted
 project target SHA and named cleanup obligations.
+
+Normal check-mode handoff requires fresh `ci_passes` and `ai_accepts`, closed
+mandatory feedback, a clean task branch, and a ready PR. The
+[acceptance contract](../review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
+defines current-head CI provenance and App-owned `Cadence Review` generation
+and workpad evidence. Set `mature` only on the blocker after those conditions;
+remove it for request-changes, rejected or stale acceptance evidence, or a
+similarly severe regression. Ordinary edits alone do not revoke it. Human
+approval/merge owns Done. Until verified cutover, record the configured
+bootstrap review separately; a bot approval does not establish `ai_accepts`.
