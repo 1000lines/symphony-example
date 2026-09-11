@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { authorityFetch, repository, token as appToken } from "./test-fixtures/review-authority.mjs";
 import { routeCadenceReviewEvent } from "../.github/workflows/scripts/cadence-ai-review-route-event.mjs";
 import {
   parseCadenceWorkpad,
@@ -17,7 +18,7 @@ import {
 
 const payload = ({ review = {}, pullRequest = {} } = {}) => ({
   action: "submitted",
-  sender: { login: "example-cadence-bot" },
+  sender: review.user || { login: "example-cadence-bot" },
   review: {
     id: 92,
     state: "commented",
@@ -72,7 +73,7 @@ const commentPayload = ({
     comment: {
       id: 93,
       body: "Please fix the retry limit.",
-      user: { login: "example-lead", type: "User" },
+      user: { id: 42, type: "User", login: "example-lead" },
       ...comment,
     },
   };
@@ -228,7 +229,7 @@ test("human commented reviews with content require Linear Active", () => {
       review: {
         state: "commented",
         body: "LGTM - let's have @example-symphony-bot consider the Cadence suggestions.",
-        user: { login: "example-lead" },
+        user: { id: 42, type: "User", login: "example-lead" },
       },
       pullRequest: {
         labels: [{ name: "symphony" }, { name: "orange" }],
@@ -247,7 +248,7 @@ test("human changes-requested reviews require Linear Active even without a body"
       review: {
         state: "changes_requested",
         body: "",
-        user: { login: "example-lead" },
+        user: { id: 42, type: "User", login: "example-lead" },
       },
     }),
   });
@@ -262,7 +263,7 @@ test("human approvals do not require Linear Active", () => {
       review: {
         state: "approved",
         body: "LGTM",
-        user: { login: "example-lead" },
+        user: { id: 42, type: "User", login: "example-lead" },
       },
     }),
   });
@@ -416,9 +417,10 @@ const route = (fixture, event = payload()) =>
     payload: event,
     eventName: event.issue ? "issue_comment" : "pull_request_review",
     token: "linear-token",
-    githubToken: "github-token",
+    githubToken: appToken,
+    repository,
     runUrl,
-    fetchImpl: fixture.fetchImpl,
+    fetchImpl: authorityFetch(event, event.issue ? "issue_comment" : "pull_request_review", fixture.fetchImpl),
   });
 
 test("actionable review wakes Active and records mutation evidence in the pinned workpad and summary", async () => {
@@ -519,7 +521,7 @@ for (const action of ["created", "edited"]) {
       .reviewHandoff;
     assert.deepEqual(recorded, result);
     for (const value of [
-      event.sender.login,
+      event.comment.user.login,
       "DEMO-118",
       "3604",
       "head-sha",
@@ -580,7 +582,7 @@ for (const [name, options, reason] of [
   ["deleted comment", { action: "deleted" }, "unsupported-comment-action"],
   [
     "human-authored PR",
-    { issue: { user: { login: "example-lead" } } },
+    { issue: { user: { id: 42, type: "User", login: "example-lead" } } },
     "pr-not-symphony-authored",
   ],
   ["unlabeled PR", { issue: { labels: [] } }, "missing-symphony-label"],
@@ -596,24 +598,25 @@ for (const [name, options, reason] of [
 for (const [change, reason] of [
   [{ state: "closed" }, "pr-not-open"],
   [{ labels: [] }, "missing-symphony-label"],
-  [{ user: { login: "example-lead" } }, "pr-not-symphony-authored"],
+  [{ user: { id: 42, type: "User", login: "example-lead" } }, "pr-not-symphony-authored"],
 ]) {
   test(`fetched PR metadata reapplies ${reason} before Linear access`, async () => {
     let calls = 0;
     const result = await routeReviewHandoff({
       payload: commentPayload(),
       eventName: "issue_comment",
-      githubToken: "github-token",
+      githubToken: appToken,
+    repository,
       token: "linear-token",
       runUrl,
-      fetchImpl: async (url) => {
+      fetchImpl: authorityFetch(commentPayload(), "issue_comment", async (url) => {
         assert.match(
           url,
           /api.github.com\/repos\/example-org\/example-repo\/pulls\/3604$/
         );
         calls++;
         return jsonResponse({ ...payload().pull_request, ...change });
-      },
+      }),
     });
     assert.equal(result.skippedReason, reason);
     assert.equal(calls, 1);
@@ -635,14 +638,15 @@ test("PR comment fetch failures retain event context and fail before Linear muta
     const result = await routeReviewHandoff({
       payload: commentPayload(),
       eventName: "issue_comment",
-      githubToken: "github-token",
+      githubToken: appToken,
+    repository,
       token: "linear-token",
       runUrl,
-      fetchImpl: async (url) => {
+      fetchImpl: authorityFetch(commentPayload(), "issue_comment", async (url) => {
         assert.match(url, /api.github.com/);
         calls++;
         return response;
-      },
+      }),
     });
     assert.equal(result.operation, "failed");
     assert.equal(result.actor, "example-lead");
@@ -761,7 +765,7 @@ test("human approval with notes is re-requested by the event workflow without a 
     review: {
       state: "approved",
       body: "Please check the retry edge case",
-      user: { login: "example-lead" },
+      user: { id: 42, type: "User", login: "example-lead" },
     },
   });
   event.sender = { login: "example-lead" };
@@ -773,7 +777,9 @@ test("human approval with notes is re-requested by the event workflow without a 
   const cadence = await routeCadenceReviewEvent({
     payload: event,
     eventName: "pull_request_review",
-    token: "github-token",
+    token: appToken,
+    repository,
+    fetchImpl: authorityFetch(event, "pull_request_review"),
     classifyActor: async () => ({ classification: "human", humanFacing: true }),
   });
   assert.equal(cadence.shouldRequestReview, true);
@@ -799,7 +805,7 @@ test("human request API failure records the gap and redacts credentials", async 
     url.includes("api.github.com")
       ? Promise.resolve(
           jsonResponse(
-            { message: "github-token denied" },
+            { message: "ghs_fixture denied" },
             { ok: false, status: 403 }
           )
         )
@@ -810,7 +816,7 @@ test("human request API failure records the gap and redacts credentials", async 
   );
   assert.equal(result.operation, "failed");
   assert.match(result.error, /HTTP 403/);
-  assert.doesNotMatch(JSON.stringify(result), /github-token/);
+  assert.doesNotMatch(JSON.stringify(result), /ghs_fixture/);
   assert.match(fixture.comments[1].body, /REDACTED/);
 });
 
@@ -853,15 +859,15 @@ test("a cancellation during workpad writes is re-read before the wakeup", async 
   );
 });
 
-test("human commented and changes-requested reviews wake the linked issue directly", async () => {
-  for (const review of [
+test("verified human submitted/edited summaries wake the linked issue directly", async () => {
+  for (const action of ["submitted", "edited"]) for (const review of [
     { state: "commented", body: "Fix the retry limit" },
     { state: "changes_requested", body: "" },
   ]) {
     const fixture = harness();
     const result = await route(
       fixture,
-      payload({ review: { ...review, user: { login: "example-lead" } } })
+      { ...payload({ review: { ...review, user: { id: 42, type: "User", login: "example-lead" } } }), action }
     );
     assert.equal(result.operation, "updated");
     assert.equal(result.actor, "example-lead");

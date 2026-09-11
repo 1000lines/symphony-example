@@ -6,9 +6,16 @@ import {
   issueIdentifierForPullRequest,
   planCadenceReviewRun,
   planStaleApprovalVisibility,
-  routeCadenceReviewEvent,
+  routeCadenceReviewEvent as routeEvent,
   triggerContextFromPayload,
 } from "./cadence-ai-review-route-event.mjs";
+
+import { authorityFetch, repository, token } from "../../../scripts/test-fixtures/review-authority.mjs";
+const routeCadenceReviewEvent = options => routeEvent({
+  ...options, repository, token,
+  payload: { repository: { full_name: repository }, ...options.payload },
+  fetchImpl: authorityFetch(options.payload, options.eventName),
+});
 
 const pr = (overrides = {}) => ({
   number: 3592,
@@ -113,7 +120,7 @@ test("requests Cadence review for human-facing event surfaces", async (t) => {
       action: "created",
       payload: {
         issue: issue(),
-        comment: { user: { login: "example-lead" } },
+        comment: { id: 22, body: "Change the design", user: { id: 42, type: "User", login: "example-lead" } },
       },
     },
     {
@@ -122,7 +129,7 @@ test("requests Cadence review for human-facing event surfaces", async (t) => {
       action: "submitted",
       payload: {
         pull_request: pr(),
-        review: { user: { login: "example-lead" } },
+        review: { id: 22, body: "Change the design", user: { id: 42, type: "User", login: "example-lead" } },
       },
     },
     {
@@ -131,7 +138,7 @@ test("requests Cadence review for human-facing event surfaces", async (t) => {
       action: "created",
       payload: {
         pull_request: pr(),
-        comment: { user: { login: "example-lead" } },
+        comment: { id: 22, body: "Change the design", user: { id: 42, type: "User", login: "example-lead" } },
       },
     },
     {
@@ -140,7 +147,7 @@ test("requests Cadence review for human-facing event surfaces", async (t) => {
       action: "edited",
       payload: {
         pull_request: pr(),
-        comment: { user: { login: "example-lead" } },
+        comment: { id: 22, body: "Change the design", user: { id: 42, type: "User", login: "example-lead" } },
       },
     },
     {
@@ -304,8 +311,8 @@ test("does not queue non-push Symphony bot activity", async () => {
 
   assert.equal(routed.shouldReview, false);
   assert.equal(routed.shouldRequestReview, false);
-  assert.equal(routed.skipReason, "non-human-actor");
-  assert.equal(routed.actorClassification, "ai_actor");
+  assert.equal(routed.skipReason, "unverified-feedback-author");
+  assert.equal(routed.actorClassification, "unknown");
 });
 
 test("known bots, dependency bots, and generic bot actors do not queue review", async (t) => {
@@ -330,7 +337,7 @@ test("known bots, dependency bots, and generic bot actors do not queue review", 
 
       assert.equal(routed.shouldReview, false);
       assert.equal(routed.shouldRequestReview, false);
-      assert.equal(routed.skipReason, "non-human-actor");
+      assert.equal(routed.skipReason, "unverified-feedback-author");
     });
   }
 });

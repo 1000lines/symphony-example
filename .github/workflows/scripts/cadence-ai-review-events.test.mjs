@@ -19,7 +19,7 @@ test("request-review uses workflow token for delete and bot token for post", () 
   assert.match(workflow, /pull-requests: write/);
   assert.match(
     workflow,
-    /GH_TOKEN: \$\{\{ secrets\.CADENCE_BOT_GITHUB_TOKEN \}\}/
+    /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/
   );
   assert.match(workflow, /DELETE_GH_TOKEN: \$\{\{ github\.token \}\}/);
 });

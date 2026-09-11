@@ -208,6 +208,102 @@ const githubHeaders = (token) => ({
   "x-github-api-version": "2022-11-28",
 });
 
+const positiveId = (id) => Number.isSafeInteger(id) && id > 0;
+const repositorySlug = (repo) => /^[a-z0-9-]+\/[a-z0-9_.-]+$/i.test(repo || "");
+const humanAccount = (user) => user?.type === "User" && positiveId(user.id) &&
+  /^[a-z0-9-]+$/i.test(user.login || "") && !user.app &&
+  !KNOWN_AI_ACTORS[normalize(user.login)] && !KNOWN_DEPENDENCY_BOTS[normalize(user.login)];
+const untrusted = (reason) => ({ allowed: false, contentTrust: "untrusted", reason });
+
+// Only these authenticated, repository-scoped reads supply authority. Neither
+// an actor classification nor a caller-provided permission/association does.
+const readAuthorityJson = async (url, token, fetchImpl) => {
+  const response = await fetchImpl(url, {
+    headers: { ...githubHeaders(token), "cache-control": "no-cache" },
+    redirect: "error",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`github-authority-http-${response.status}`);
+  if (response.url && response.url !== url) throw new Error("github-authority-url-mismatch");
+  return response.json();
+};
+
+export const verifyGitHubHumanWriteAccess = async ({
+  author, repository, token, fetchImpl = fetch,
+}) => {
+  if (!repositorySlug(repository)) return untrusted("invalid-target-repository");
+  if (!humanAccount(author)) return untrusted("unverified-human-author");
+  // This path accepts the existing App's installation token only; never fall
+  // back to a PAT or the workflow sender's permissions.
+  if (!/^ghs_[A-Za-z0-9]+$/.test(token || "")) return untrusted("app-installation-token-required");
+  try {
+    const permission = await readAuthorityJson(
+      `https://api.github.com/repos/${repository}/collaborators/${author.login}/permission`, token, fetchImpl,
+    );
+    if (!humanAccount(permission?.user) || permission.user.id !== author.id ||
+        normalize(permission.user.login) !== normalize(author.login) ||
+        !["admin", "write", "maintain", "read", "triage", "none"].includes(permission.permission)) {
+      return untrusted("malformed-author-permission");
+    }
+    // GitHub maps maintain to write and custom roles to their effective base
+    // permission. role_name is descriptive, never an authority allowlist.
+    if (!["admin", "write", "maintain"].includes(permission.permission) ||
+        permission.user.permissions?.push === false) return untrusted("author-lacks-write-access");
+    return {
+      allowed: true, contentTrust: "verified-human-writer", reason: "verified-human-write-access",
+      repository, author: normalize(author.login), authorId: author.id,
+      permission: permission.permission,
+    };
+  } catch (error) {
+    // Do not expose API bodies, thrown network messages, or credentials.
+    return untrusted(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
+      ? error.message : "github-authority-unavailable");
+  }
+};
+
+export const verifyReviewEventAuthority = async ({
+  payload, eventName, repository, token, fetchImpl = fetch,
+}) => {
+  const isReview = eventName === "pull_request_review";
+  const isComment = ["issue_comment", "pull_request_review_comment"].includes(eventName);
+  if (!(isReview ? ["submitted", "edited"] : isComment ? ["created", "edited"] : []).includes(payload.action)) {
+    return untrusted("unsupported-feedback-action");
+  }
+  const feedback = isReview ? payload.review : payload.comment;
+  const pr = payload.pull_request || payload.issue;
+  if (!repositorySlug(repository) || normalize(payload.repository?.full_name) !== normalize(repository) ||
+      (pr?.base?.repo?.full_name && normalize(pr.base.repo.full_name) !== normalize(repository))) {
+    return untrusted("event-repository-mismatch");
+  }
+  if (!positiveId(pr?.number) || !positiveId(feedback?.id) || !humanAccount(feedback?.user)) {
+    return untrusted("unverified-feedback-author");
+  }
+  const sender = payload.sender;
+  if (sender?.type === "Bot" || sender?.app || normalize(sender?.login).endsWith("[bot]") ||
+      KNOWN_AI_ACTORS[normalize(sender?.login)] || KNOWN_DEPENDENCY_BOTS[normalize(sender?.login)]) {
+    return untrusted("non-human-feedback-editor");
+  }
+  if (!/^ghs_[A-Za-z0-9]+$/.test(token || "")) return untrusted("app-installation-token-required");
+  try {
+    const root = `https://api.github.com/repos/${repository}`;
+    const url = isReview ? `${root}/pulls/${pr.number}/reviews/${feedback.id}`
+      : `${root}/${eventName === "issue_comment" ? "issues" : "pulls"}/comments/${feedback.id}`;
+    const current = await readAuthorityJson(url, token, fetchImpl);
+    const parent = eventName === "issue_comment" ? current?.issue_url : current?.pull_request_url;
+    const expectedParent = `${root}/${eventName === "issue_comment" ? "issues" : "pulls"}/${pr.number}`;
+    if (current?.id !== feedback.id || parent !== expectedParent ||
+        !humanAccount(current.user) || current.user.id !== feedback.user.id ||
+        normalize(current.user.login) !== normalize(feedback.user.login)) return untrusted("feedback-author-or-target-mismatch");
+    if (typeof current.body !== "string" || current.body !== feedback.body ||
+        (isReview && normalize(current.state) !== normalize(feedback.state)) ||
+        (feedback.updated_at && current.updated_at !== feedback.updated_at)) return untrusted("stale-feedback-event");
+    return verifyGitHubHumanWriteAccess({ author: current.user, repository, token, fetchImpl });
+  } catch (error) {
+    return untrusted(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
+      ? error.message : "github-authority-unavailable");
+  }
+};
+
 const ensureTeamReadable = async ({ org, teamSlug, token, fetchImpl }) => {
   const response = await fetchImpl(githubTeamUrl({ org, teamSlug }), {
     headers: githubHeaders(token),

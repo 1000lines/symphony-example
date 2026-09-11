@@ -35,6 +35,7 @@ const cadenceReview = (
 const review = (actor, submittedAt = "2026-06-27T10:05:00Z") => ({
   __typename: "PullRequestReview",
   author: { login: actor },
+  authority: { allowed: ["example-human", "example-reviewer"].includes(actor), contentTrust: ["example-human", "example-reviewer"].includes(actor) ? "verified-human-writer" : "untrusted" },
   submittedAt,
   state: "COMMENTED",
   commit: { oid: "head" },
@@ -43,6 +44,7 @@ const review = (actor, submittedAt = "2026-06-27T10:05:00Z") => ({
 const comment = (actor, createdAt = "2026-06-27T10:06:00Z") => ({
   __typename: "IssueComment",
   author: { login: actor },
+  authority: { allowed: ["example-human", "example-reviewer"].includes(actor), contentTrust: ["example-human", "example-reviewer"].includes(actor) ? "verified-human-writer" : "untrusted" },
   createdAt,
 });
 
@@ -159,14 +161,13 @@ test("known AI actor and dependency-bot comments are workpad-only by default", (
   );
 });
 
-test("unknown non-bot actors remain human-facing and review-relevant", () => {
+test("unverified outside feedback stays untrusted and cannot reset the review loop", () => {
   const state = stateFor([cadenceReview(), comment("new-contributor")]);
 
-  assert.equal(state.decision, "incremental");
-  assert.equal(state.since.length, 1);
-  assert.equal(state.since[0].actorClassification.classification, "unknown");
-  assert.equal(state.since[0].actorClassification.humanFacing, true);
-  assert.equal(state.since[0].humanGrounded, true);
+  assert.equal(state.decision, "skip");
+  assert.equal(state.since.length, 0);
+  assert.equal(state.humanGroundedSince.length, 0);
+  assert.equal(state.workpadSince[0].authority.contentTrust, "untrusted");
 });
 
 test("force-push after Cadence's review still forces a full re-review", () => {

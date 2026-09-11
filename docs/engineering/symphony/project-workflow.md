@@ -86,8 +86,8 @@ fallback and verifies the mutation response.
 | Human accepts the work                                        | Human or accepted merge automation moves to `Done` | Approval, merge or acceptance evidence.                                               |
 
 Before rework, read submitted GitHub reviews, inline comments and thread status,
-top-level PR comments, current checks, and fresh Linear comments. Direct human
-feedback is actionable without Cadence repeating it. Read `## Cadence Workpad`
+top-level PR comments, current checks, and fresh Linear comments. Direct verified
+human-writer feedback is actionable without Cadence repeating it. Read `## Cadence Workpad`
 for the AI handoff and update only the pinned `## Codex Workpad` with execution
 progress and the incoming/addressed/deferred/blocked feedback ledger.
 
@@ -109,6 +109,14 @@ perform these actions:
 | Failed required check on the current PR head                                                       | Wake with check name, result, head SHA, and run/check URL. Nonrequired, stale, and successful ordinary checks do not wake.                                           |
 | Confirmed current PR merge conflict                                                                | Wake only for `mergeable: false` and `mergeable_state: dirty`. PR events and the sweep at minutes 17 and 47 handle base changes and previously unknown mergeability. |
 | Issue-scoped `workflow_dispatch` completion                                                        | Wake on success or failure with run id/attempt, conclusion, workflow head SHA, and URL. Completion requests follow-up; it does not prove acceptance.                 |
+
+Human review/comment routes first verify the current content author and their
+effective repository write access through GitHub's permission API. Creation,
+submission, and edit events require fresh evidence; sender identity and author
+association do not grant permission. Inline comments pass the same check before
+requesting Cadence. Denied or unavailable evidence causes no wake or request and
+is recorded as untrusted. See the
+[permission gate and App rollout requirements](../review/github-actor-classification.md#human-feedback-permission-gate).
 
 The non-review workflow listens to failed Actions `workflow_run` completions,
 external `check_run` completions, commit statuses, selected PR events, and its

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   classifyGitHubActorWithTeams,
   normalize,
+  verifyReviewEventAuthority,
 } from "../../../scripts/github-actor-classification.mjs";
 
 const CADENCE_LOOP_CAP = 3;
@@ -264,6 +265,8 @@ export const routeCadenceReviewEvent = async ({
   eventName,
   actor,
   token,
+  repository = process.env.GITHUB_REPOSITORY,
+  fetchImpl = fetch,
   classifyActor = (login) => classifyGitHubActorWithTeams(login, { token }),
 } = {}) => {
   if (!token) {
@@ -272,7 +275,10 @@ export const routeCadenceReviewEvent = async ({
     );
   }
 
-  const triggerActor = payload.sender?.login || actor;
+  const isFeedback = ["issue_comment", "pull_request_review", "pull_request_review_comment"].includes(eventName);
+  const triggerActor = isFeedback
+    ? (eventName === "pull_request_review" ? payload.review : payload.comment)?.user?.login || ""
+    : payload.sender?.login || actor;
   const triggerSource = `${eventName}.${payload.action || "unknown"}`;
   const prNumber = prNumberFromPayload(payload);
   const prPayload = payload.pull_request || payload.issue || {};
@@ -285,11 +291,17 @@ export const routeCadenceReviewEvent = async ({
   let skipReason = "";
   let actorClassification = null;
   let symphonyPush = false;
+  let authority = null;
 
   if (!prNumber) {
     skipReason = "event-is-not-a-pr";
   } else {
-    actorClassification = await classifyActor(triggerActor);
+    if (isFeedback) {
+      authority = await verifyReviewEventAuthority({ payload, eventName, repository, token, fetchImpl });
+      actorClassification = { classification: authority.allowed ? "human" : "unknown", humanFacing: authority.allowed };
+    } else {
+      actorClassification = await classifyActor(triggerActor);
+    }
     symphonyPush =
       eventName === "pull_request_target" &&
       SYMPHONY_BOT_PR_EVENT_ACTIONS.has(payload.action) &&
@@ -327,6 +339,8 @@ export const routeCadenceReviewEvent = async ({
       skipReason = isCadenceReviewRequest
         ? "review-request-owned-by-trigger-workflow"
         : "non-cadence-review-request";
+    } else if (isFeedback && !authority.allowed) {
+      skipReason = authority.reason;
     } else if (!actorClassification.humanFacing && !symphonyPush) {
       skipReason = "non-human-actor";
     } else {
@@ -352,6 +366,7 @@ export const routeCadenceReviewEvent = async ({
     currentHeadSha,
     lastReviewedSha: "",
     skipReason,
+    ...(authority ? { authority } : {}),
     actorClassification: actorClassification?.classification || "",
     actorHumanFacing: String(Boolean(actorClassification?.humanFacing)),
     symphonyPush: String(symphonyPush),
@@ -412,6 +427,8 @@ const main = async () => {
     actor: process.env.GITHUB_ACTOR,
     token: process.env.GH_TOKEN,
   });
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+    `### Review event authority\n\n${JSON.stringify(result.authority || { reason: result.skipReason || "not-feedback" })}\n`);
   writeRouteResult(result);
 };
 
