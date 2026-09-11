@@ -1,6 +1,6 @@
 # Deployment rehearsal: 100-19
 
-Status: **accepted bundle refreshed; Cadence repairs and delivery rehearsal pending**.
+Status: **native human-feedback activation proved; helper deployment and complete review/delivery pending**.
 Observed September 11, 2026, starting from
 `main@a3b7428a9e0298592e119a57923854b75a9b61a0` in
 `1000lines/symphony-example`. Task branch:
@@ -22,8 +22,12 @@ records subsequent task-head CI and feedback.
 - [100-35 / PR #26](https://github.com/1000lines/symphony-example/pull/26) owns
   the installed repository-helper symlink and reusable reviewer key-delivery
   repairs. Jeremy explicitly authorized both source fixes despite the earlier
-  ownership gap. They must land on main and the helper must be deployed through
-  the operator path; their unmerged code is not included in this task branch.
+  ownership gap. It merged to main at
+  `790b9609a310fd373e0097c288c9ec5c8bfe1bf8`; the helper still needs operator
+  deployment. The post-merge reusable-reviewer failure is recorded below.
+- [100-36 / PR #27](https://github.com/1000lines/symphony-example/pull/27)
+  merged at `e7be7a702fd37d6b6251e34e6ae4141508d2b0ec`. Its native workflow
+  verified Jeremy's original feedback and activated 100-20, as recorded below.
 - [PR #10](https://github.com/1000lines/symphony-example/pull/10) selects task
   repositories through the installed skill and target-owned `.symphony.cfg.json`.
   The removed central mapping is superseded.
@@ -37,8 +41,8 @@ records subsequent task-head CI and feedback.
   dormant alternative controller. Provider migration and App-owned acceptance
   checks remain unimplemented project outcomes. Preserve the working reviewer.
 - [PR #23](https://github.com/1000lines/symphony-example/pull/23) landed current
-  guidance at the selected base above. Its installed CLI regression remains
-  reproducible; human merge did not change that test result.
+  guidance at the branch's starting base above. PR #26 repairs its CLI source;
+  the installed host still has the older version.
 
 These accepted changes replace the corresponding historical interfaces in the
 [pinned execution contract](https://github.com/1000lines/symphony-example/blob/8f4eafe3999040f67cd68e696e29bcb27eb44149/docs/symphony-plans/hackathon-ready/execution-contract.md).
@@ -48,7 +52,65 @@ Rust CI (100-13) and the Rust monitor (100-24) are canceled; whether to retain
 the second-repository rehearsal is an explicit pending scope question in the
 workpad. R07's Rust fallback and R12 remain unverified.
 
-## Current readback — September 11, 11:55 UTC
+## Current readback — September 11, 12:17 UTC
+
+[Jeremy's operator report](https://github.com/1000lines/symphony-example/pull/25#issuecomment-5634285527)
+supersedes the unmerged-repair and local-replay-only blockers. GitHub merge/run
+APIs, job logs and Linear readback independently confirm the source and handoff
+results below. These are separate from installed-host and provider evidence.
+
+- **R10, operator deployment:** Jeremy reports SSM reconciliation
+  `49ba4bd2-e215-4dea-ae44-c7816a43dbda` succeeded, runtime secrets were reloaded,
+  and bundle freshness, HTTP readiness and ALB health passed. The nested workflow
+  was loaded at the 11:40:53 UTC restart. Those SSM/health results are
+  operator-reported; this worker independently reread the installed manifest and
+  service: bundle `a3b7428a9e0298592e119a57923854b75a9b61a0`, installed
+  11:40:46 UTC, digest
+  `f9da3201fffc6bcdb62ef728213b95d5de2c9e39939d1a8b2fba428b1a7e60b3`,
+  active/running PID 303853 since 11:40:53 UTC. Runtime remains
+  `e4d3f6a05b0a00201c9d04d3ceca02b206e22de5`. This refresh predates PR #26;
+  invoking the installed helper symlink still returns zero bytes. Its repair
+  needs installation and nonempty JSON readback.
+- **Accepted source:** GitHub confirms PR #26 merged at 12:04:06 UTC and
+  PR #27 at 12:11:45 UTC, at the merge SHAs above; Linear 100-35 and 100-36
+  are Done. Fetched `main` and its repository configuration resolve to
+  `e7be7a702fd37d6b6251e34e6ae4141508d2b0ec`. Their source is no longer an
+  unmerged prerequisite. No predecessor commits were imported into this task.
+- **R08, deployed original-author handoff:** Jeremy's
+  [PR #28 comment 5634194152](https://github.com/1000lines/symphony-example/pull/28#issuecomment-5634194152)
+  originally failed with `app-installation-token-required`. After PR #27 landed,
+  [the same secret-free ingress, attempt 2](https://github.com/1000lines/symphony-example/actions/runs/34597372002/attempts/2)
+  produced [handoff run 34597692187 / job 103257211217](https://github.com/1000lines/symphony-example/actions/runs/34597692187/job/103257211217),
+  attempt 1, `.github/workflows/cadence-linear-rework.yml`, `workflow_run`,
+  trusted main `e7be7a7`. The job verified original author `jeremycarroll`
+  (user 549519) as repository admin and confirmed **100-20 Inactive → Active**
+  at 12:12:16 UTC with mutation success and no fallback. Target PR #28 head:
+  `00c6f5312d9ad13c03dff2a653e332c167f16ea1`.
+  The [100-20 Cadence workpad](https://linear.app/1000lines/issue/100-20#comment-e52a5eca)
+  matches the job log; the issue read back Active. Jeremy confirms no manual
+  state change. This same-project sibling proof establishes deployed human
+  feedback → Linear activation. It does not establish App-authored implementation
+  or a completed Claude review. Local support: `.git/100-19/deployed-feedback.log`.
+- **R05, remaining post-merge review failure:** Jeremy's new PR #25 comment
+  triggered [native run 34597953615 / reviewer job 103258118146](https://github.com/1000lines/symphony-example/actions/runs/34597953615/job/103258118146),
+  attempt 1, `.github/workflows/cadence-ai-review-events.yml`, `workflow_run`.
+  Both caller and referenced reusable workflow ran at `e7be7a7` on main.
+  Route job `103258042583` passed; reviewer token mint still failed at
+  12:15:32 UTC with `privateKey option is required`. Target PR #25 head:
+  `7b2599fd1499ff14d476af90f4575a8c3c5cceb6`. No provider execution or
+  current-head acceptance is demonstrated by that run. This is a fresh failure
+  after PR #26, replacing the earlier unmerged-fix explanation. Jeremy must
+  arrange the remaining reusable-key-delivery correction; a blind secret write
+  or unchanged retry is not proof. Local support:
+  `.git/100-19/operator-comment-review.log`.
+- **Read-only preflight:** at 12:16:38 UTC, the smoke command below collected
+  all six observations successfully against fetched main `e7be7a7` and task
+  head `7b2599f`. Workflows are active; the review Environment remains main-only
+  with key metadata present; retained timer configuration is unchanged.
+  `readiness: not assessed`. Local support: `.git/100-19/operator-preflight.json`.
+  These metadata observations do not prove key delivery or App rollout.
+
+## Earlier checkpoint — September 11, 11:55 UTC
 
 The following observations supersede the older host baseline below. They do
 not claim that the pending App rollout or ticket rehearsal has passed.
@@ -87,7 +149,7 @@ not claim that the pending App rollout or ticket rehearsal has passed.
 - **R05, task review:** [run 34565616135 / job 103157045119](https://github.com/1000lines/symphony-example/actions/runs/34565616135/job/103157045119)
   routed PR #25 but failed at token mint with `privateKey option is required`.
   No successful provider execution, current-head approval or human handoff is
-  claimed. Resume normal ticket review after the 100-35 repair lands.
+  claimed. The repair subsequently landed; see the post-merge failure above.
 - **Operator boundary:** `sudo -n true` still fails because of
   `no new privileges`. Jeremy's authorized operator session must deploy the
   accepted repair and approved App configuration. The earlier App grant denial
@@ -141,23 +203,34 @@ durable reviewer artifact.
 
 ## Remaining operator and source actions
 
-1. Correct the installed CLI entry-point check in
-   `scripts/symphony/runtime-bundle/skills/symphony-repository/scripts/config.mjs`.
-   The 100-35 correction compares the real paths of `process.argv[1]`
-   and `fileURLToPath(import.meta.url)` so invocation through the personal skill
-   symlink executes. The source repair is explicitly owned by 100-35 / PR #26.
-   Rerun the two integration suites above and merge the correction to main
-   before deploying it; do not patch the installed bundle directly.
+1. Jeremy installs the merged PR #26 helper correction using the existing
+   authorized host session. Select an accepted main SHA containing `790b960`,
+   persist it as the EC2 `symphony:bootstrap-ref` tag, then run:
+
+   ```bash
+   sudo env SYMPHONY_BOOTSTRAP_REF="$accepted_sha" /opt/symphony/src/example-repo/scripts/symphony/host/install-runtime.sh --runtime-bundle-refresh
+   node /var/lib/symphony/cache/codex-home/skills/symphony-repository/scripts/config.mjs inspect /var/lib/symphony/code/1000lines-symphony-workspaces/100-19 main
+   systemctl is-active symphony
+   ```
+
+   Set `accepted_sha` to that full verified commit before the command. Read back
+   the installed manifest SHA and require nonempty, valid fetched-base JSON from
+   the symlink invocation. The refresh command does not restart the service.
+   The source repair has landed; worker root access remains unavailable under
+   `no new privileges`. Do not patch the installed bundle directly.
+
 2. Jeremy approves Symphony Actions write and Commit statuses read on the
    registration/installation and updates the existing signing secret's
    permission ceiling. Follow the existing
    [INSTALL operator recipe](installation-evidence.md#jeremy-operator-actions);
    preserve signing material and other fields. Re-run exact-target preflight.
    Cadence remains the Claude review path under the current amendment.
-3. Complete 100-35's repair of `CADENCE_APP_PRIVATE_KEY` delivery to the native
-   reusable reviewer. Its Environment metadata is present and the router uses the key
-   successfully, so another blind secret write is not evidence of a fix.
-   Reproduce on this task's PR through the accepted direct workflow entry point:
+3. Jeremy arranges follow-up to the merged 100-35 key-delivery repair:
+   `cadence-ai-review-trigger.yml` still receives no key at token mint when
+   called by `cadence-ai-review-events.yml` on `e7be7a7`. Keep the Environment
+   restricted to main and the working reviewer available. The run above is the
+   reproduction; obtain corrected trusted-source/configuration evidence before
+   retrying. After correction, the accepted direct entry point is:
 
    ```bash
    gh workflow run cadence-ai-review-trigger.yml --repo 1000lines/symphony-example --ref main -f pr_number="$REHEARSAL_PR"
@@ -165,9 +238,9 @@ durable reviewer artifact.
 
    Set `REHEARSAL_PR` to the actual open task PR first. Record the new run,
    exact reviewed head, author-permission outcome and Cadence workpad. Workflow
-   source corrections are authorized in 100-35; deployment evidence must not
+   source follow-up belongs to the 100-35 repair scope; deployment evidence must not
    replace the reviewer with the removed controller. Use an actual ticket PR
-   (100-35's PR where practical) to prove normal ingress, current-head review,
+   (the still-open PR #25) to prove normal ingress, current-head review,
    matching Cadence workpad and the expected handoff.
 
 4. After these prerequisites close, use the existing authorized root session
@@ -198,9 +271,11 @@ Remove dedicated smoke files after recording their evidence.
 - R03/R04: App-authored docs/code push, PR, labels and assignment; installation
   expiry renewal and denied/revoked/suspended/unselected cases; exact scope and
   no-bot-collaborator proof. Current discovery is insufficient.
-- R05/R06/R08: current-head CI and Claude review, authorized original feedback
-  author, stale-head/feedback rejection, failure → correction → fresh success
+- R05/R06/R08: current-head CI and Claude review, stale-head/feedback rejection,
+  failure → correction → fresh success
   → ready/human handoff, and actual released worker slot.
+  Authorized original-author feedback → Active is proved above at `e7be7a7`;
+  it is no longer a local-replay-only gap.
 - R08/R09: retain applicable CI/event conflict recovery and duplicate/terminal
   safeguards. The separate timer/dropped-event rehearsal, its harness and
   anchor/due/jitter/forced-drop measurements are removed from acceptance by
@@ -213,5 +288,6 @@ Remove dedicated smoke files after recording their evidence.
   scope decision. No Rust fixture, installation or CI acceptance is claimed.
 
 Local smoke/format/CLI validation and mandatory CI for this checkpoint are
-recorded in the task PR and pinned workpad. The known upstream installation
-failure remains a deployment blocker even if this checkpoint's CI is green.
+recorded in the task PR and pinned workpad. Installing the merged helper and
+correcting live reusable-reviewer key delivery remain deployment blockers even
+if this checkpoint's CI is green.

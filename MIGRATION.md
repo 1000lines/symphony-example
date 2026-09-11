@@ -6,20 +6,38 @@ deployment progress. Configuration changes are not proof of a working deployment
 
 ## Deployment preflight — 2026-09-11
 
-At 11:55 UTC, 100-19 read back the operator-refreshed host bundle at accepted
+At 12:17 UTC, 100-19 read back the operator-refreshed host bundle at accepted
 `main@a3b7428a9e0298592e119a57923854b75a9b61a0`, installed at 11:40:46 UTC.
 The service is active since 11:40:53 UTC, PID 303853. Its per-ticket
 Unhappy/15m/Evaluating configuration is present and will be retained. The bundle's
 repository CLI still fails through its installed symlink; worker-side root
 installation remains unavailable under `no new privileges`.
 
-GitHub CI/review/wakeup workflows now read back active. A real CI completion
-moved 100-18 from Unhappy to Inactive. PR #25's first exact-head CI run passed
-all required jobs, but its native reviewer failed to receive its App key.
-[100-35 / PR #26](https://github.com/1000lines/symphony-example/pull/26) owns the
-helper and key-delivery repairs and their real ticket review proof. The last
-Symphony installation preflight denied Actions write. App-only implementation
-and the complete current-head CI/review/human handoff remain unverified.
+[Jeremy's operator report](https://github.com/1000lines/symphony-example/pull/25#issuecomment-5634285527)
+records successful SSM reconciliation `49ba4bd2-e215-4dea-ae44-c7816a43dbda`,
+runtime-secret reload, bundle freshness, HTTP readiness and ALB health. The
+worker independently confirmed the manifest/service readbacks above. Runtime
+revision remains `e4d3f6a05b0a00201c9d04d3ceca02b206e22de5`.
+
+[100-35 / PR #26](https://github.com/1000lines/symphony-example/pull/26) merged
+at `790b9609a310fd373e0097c288c9ec5c8bfe1bf8` and
+[100-36 / PR #27](https://github.com/1000lines/symphony-example/pull/27) at
+`e7be7a702fd37d6b6251e34e6ae4141508d2b0ec`. The host refresh predates the helper
+repair; its installation still needs separate readback. The repaired native
+[human-feedback handoff](https://github.com/1000lines/symphony-example/actions/runs/34597692187/job/103257211217)
+ran on `e7be7a7`, verified Jeremy's original PR #28 comment as an admin, and
+automatically changed **100-20 Inactive → Active at 12:12:16 UTC**. The job log
+and Cadence workpad agree; Jeremy confirms no manual state change. This removes
+the unmerged-fix and local-replay-only blockers for that handoff.
+
+GitHub CI/review/wakeup workflows read back active. PR #25's CI at `7b2599f`
+passed all required jobs and its completion bridge confirmed Unhappy → Inactive.
+The [new native review after both repairs merged](https://github.com/1000lines/symphony-example/actions/runs/34597953615/job/103258118146)
+still failed at reusable-reviewer token mint with `privateKey option is required`
+on `e7be7a7`; routing passed, provider execution did not begin. Jeremy must arrange
+the remaining key-delivery correction. The last Symphony installation preflight
+denied Actions write. App-only implementation and complete current-head
+CI/review/human handoff remain unverified.
 
 [Jeremy's September 11 decision](https://github.com/1000lines/symphony-example/pull/25#issuecomment-5634002190)
 drops the separate timer/dropped-event rehearsal and its anchor/due/jitter/
@@ -35,8 +53,8 @@ rehearsal cases. Current accepted source uses target-owned configuration and
 per-ticket timers; central mapping and scanning monitors were superseded.
 The 100-34 amendment preserves Claude review and leaves Codex migration and
 App-owned acceptance checks as unimplemented outcomes. Existing credentials
-remain in place. The recorded host refresh does not prove App rollout, deployment
-of the pending repairs, or retirement.
+remain in place. The recorded host refresh does not prove App rollout, installation
+of the merged helper repair, or retirement.
 
 ## Decisions — 2026-09-09
 
