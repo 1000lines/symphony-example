@@ -42,16 +42,16 @@ The separate relation-table call is intentional: `parseProjectPlan` derives
 expected relations from the manifest; it does not validate that Markdown table.
 The APIs also do not prove acyclicity, ownership or live prerequisites. Manual
 inspection checks that every edge goes to a strictly higher numbered round,
-which proves this graph acyclic; I/CHECK→R→T→U→V→F→A→Z attains eight rounds.
-No graph edge has a redundant transitive alternative. CT-C/R are disjoint after
-CT-I; CT-O/U are disjoint after CT-T. All later overlapping files/resources have
+which proves this graph acyclic; I→M→T→L→U→V→F→A→Z attains nine rounds.
+No graph edge has a redundant transitive alternative. CT-Q is disjoint from CT-I/M/C/R; CT-M/C/R are disjoint after
+CT-I; CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U are disjoint after CT-L. All later overlapping files/resources have
 explicit ownership handoffs. No new test or planning engine is needed.
 
 Local results from the proposed tree:
 
-- Shared parse: one manifest, 11 nodes, 12 edges; standalone graph identical.
-- Shared relation table: exactly the same 12 blocker→blocked edges.
-- Shared dry-run renderer: CT-I/C/R/T/O/U/V/F/A/Z, ten new issue payloads;
+- Shared parse: one manifest, 14 nodes, 16 edges; standalone graph identical.
+- Shared relation table: exactly the same 16 blocker→blocked edges.
+- Shared dry-run renderer: CT-I/Q/M/C/R/T/L/O/U/V/F/A/Z, thirteen new issue payloads;
   existing 100-43 produces no create payload. Defaults are Active, main/main,
   draft, Jeremy, pink/symphony; existing 100-43 remains Misc/blue.
 - Required source and D1–D9/AC1–AC13 ownership review performed; no unavailable
@@ -91,16 +91,16 @@ Compose each description in this stable order:
 5. Main plan's ticket execution contract, including pinned workpad, human review,
    current-head CI, mature rules, state handling, metadata and PR requirements.
 
-Inspection example for CT-I: it owns the three inventory files, creates all three,
+Inspection example for CT-I: it owns the four inventory files, creates all four,
 edits none, reads source files only, has no external mutable resource or direct
-blocker, and directly blocks CT-C and CT-R. Its formatting/source-path checks and
+blocker, and directly blocks CT-M, CT-C and CT-R. Its formatting/source-path checks and
 mandatory docs CI must be in its generated body. CT-V instead carries its explicit
 workflow-repository override and reviewed-export import scope; neither description
 may merely link a plan and omit the work.
 
 This turn produces both raw shared payload JSON and complete inspection payloads
 under the issue workspace's `.task-evidence/`, with no Linear writes. The latter
-has the ten full item descriptions, common contract, direct relation keys and
+has the thirteen full item descriptions, common contract, direct relation keys and
 actual committed plan links. This is ephemeral evidence, not a checked-in tool.
 No future issue UUIDs are supplied, so live relation inputs intentionally remain
 unresolved. The pinned workpad records the inspection results and artifact paths.

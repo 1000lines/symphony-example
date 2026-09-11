@@ -21,18 +21,21 @@ except the reused 100-43. Payload keys below are placeholders, never Linear IDs.
 
 The result is a small client for Jeremy's shared host: build in the example,
 publish the template and workflows separately, then adopt the published pair
-back into the example. The ten new tasks and one reused task require **eight
+back into the example. The thirteen new tasks and one reused task require **nine
 minimum dependency rounds**, counting nodes on the longest path, not elapsed
 time or worker availability. Every task begins and opens its PR against `main`
 in its explicitly named target repository. No predecessor branch is a PR base.
 
 | Key    | Outcome / owned surface                                    | Estimated additions / deletions                               | Difficulty |
 | ------ | ---------------------------------------------------------- | ------------------------------------------------------------- | ---------- |
-| CT-I   | Three inventories and extraction boundaries                | +180 / -0                                                     | easy       |
+| CT-I   | Four inventories and extraction boundaries                 | +180 / -0                                                     | easy       |
 | 100-43 | Existing PR #31; advisory lifecycle and readiness          | Existing work; no new estimate or ticket                      | hard       |
 | CT-C   | Existing config reader, CI/wakeup workflow and tests       | +450 / -220                                                   | hard       |
 | CT-R   | Native review workflows, provider result and tests         | +650 / -350                                                   | hard       |
-| CT-T   | Staging root, render tests and seed CI caller              | +650 / -0                                                     | hard       |
+| CT-Q   | Seven-answer package and isolated question tests           | +180 / -0                                                     | easy       |
+| CT-M   | Exact copy of every reviewed client-list path              | +500–1,500 / -0, entirely copy                                | easy       |
+| CT-T   | Convert copied files and test the initial template         | +300 / -400–1,300                                             | hard       |
+| CT-L   | Add final CI/review callers and register render CI         | +170 / -50                                                    | hard       |
 | CT-O   | One onboarding entry skill and fork/direct resources       | +240 / -0                                                     | hard       |
 | CT-U   | Whole reviewed template root into public repository        | +650 / -0, primarily copy                                     | easy       |
 | CT-V   | Reviewed workflow/helper export into public repository     | +2,000–5,000 / -0, primarily copy; ≤250 behavior/pin/CI lines | hard       |
@@ -41,7 +44,9 @@ in its explicitly named target repository. No predecessor branch is a PR base.
 | CT-Z   | Evidence and obsolete bodies after consumer checks         | +100 / -500–1,500                                             | easy       |
 
 Estimates include tests and docs, are not quotas, and must not motivate extra code.
-CT-R is the largest behavioral change; native execution and a small common result
+CT-M may exceed 1,000 lines only as an exact whole-list copy; CT-T removes raw
+bodies while introducing the template in a separate behavioral PR. CT-R is the
+largest workflow behavior change; native execution and a small common result
 keep one reviewable owner for the shared trigger. CT-V's larger diff is justified
 only for copying the exact reviewed lists from CT-I/C/R. Selection or behavior
 changes must be distinguished from that copy and reviewed before publication.
@@ -67,12 +72,19 @@ changes must be distinguished from that copy and reviewed before publication.
   This supersedes the design's requirement to wait before writing this plan.
   Do not restore that old blocker. Reuse 100-43 as a hard input to CT-R, where
   its merged source and initial live proof are actually consumed.
-- [100-43 / PR #31](https://github.com/1000lines/symphony-example/pull/31): at planning,
-  Inactive, open draft, source head `36f5bb6b6b02e64e721f9cbbd6e7b8948661b4db`.
-  CI passed; Cadence and post-merge live proof are pending. This is context,
-  not accepted source to copy or proof to reuse as completed.
+- [Jeremy's PR #34 decomposition decision](https://github.com/1000lines/symphony-example/pull/34#issuecomment-5635719306),
+  September 11 at 14:12 UTC, supersedes the combined CT-T and its CT-C/R gate.
+  Make list → straight copy → template conversion separate PRs, run the seven
+  answers independently and integrate late Docker/Codex additions afterward.
+  Verified GitHub admin authority; this revises the existing unaccepted plan,
+  with no new planning seed or live downstream ticket.
+- [100-43 / PR #31](https://github.com/1000lines/symphony-example/pull/31): refreshed
+  September 11, now Done; PR merged at 14:02:53Z as
+  `ca5c37344df600468ee69e73c04c54197a5b062c`. CT-R still reads its workpad and
+  verifies required initial live proof; Done alone is not execution evidence.
 - Required baseline `3de96c9f739d732cc7efd498225b4444b547cc57` and selected main
-  `99d401c`: README, config, native workflow/AGENTS guidance, runtime WORKFLOW,
+  `99d401c` (initial); refreshed main `77b6b687e2213157ccfde75fef3867a4b886367c`
+  retains the same team/CI contract. README, config, native workflow/AGENTS guidance, runtime WORKFLOW,
   package/toolchain, CI, review contract, shared [schema](fan-out-plan-schema.md),
   [criteria](fan-out-criteria.md), proof/PR/replan guidance and DAG APIs read.
   PR #29's inheritance workaround and closed/unmerged #24 are context only.
@@ -95,47 +107,62 @@ plan neither claims it exists nor commissions another controller.
 
 ## Breakdown and dependency rationale
 
-A single template/publication PR would entangle provider execution, credential
-routing, host-reader compatibility and two publish destinations. A fully serial
-plan would avoid overlap but delay independent CI and review work. The chosen
-DAG splits those files after a short inventory, then composes them in CT-T.
-Onboarding source work and template publication can proceed together. Workflow
-publication follows the first template publication to honor the near-end move;
-final pins and live adoption follow both. CT-Z owns only evidence closure and
-retirement that cannot be justified before replacement consumer runs pass.
+The original combined CT-T offered ten new tasks/eight rounds, but mixed copying
+with template behavior and waited for all Docker/Codex work. A fully serial
+list/copy/questions/conversion plan would separate review but unnecessarily hold
+question authoring. The chosen split has thirteen new tasks/nine rounds: CT-Q
+owns package metadata/question tests in parallel with CT-I and CT-M's file work;
+CT-M is only exact copying, then CT-T introduces the template. CT-C/R progress
+alongside those lanes, and CT-L adds their completed interfaces before release.
+This preserves all final acceptance criteria while accepting one extra minimum
+round and three more focused PRs. The large copy diff contains no hidden changes.
+
+The explicit preparation path is I → M → T. Q → T joins the independently
+implemented seven-answer package only for the actual conversion/render tests.
+Neither Q, M nor T waits on C/R; their later additions join at L. I/Q/M/C/R own
+disjoint writable paths and isolated fixtures when unordered: copied source is
+pinned and read-only even while C/R edit their own workflow sources. T takes M's
+tree and Q's README/provenance only after both merges. L then takes T's tree/tests
+and consumes C/R without editing their implementations. O/U are disjoint after L.
+No live shared secret or proof resource is used by Q/M/T/L.
 
 Every drawn edge is hard: its downstream outcome needs a reviewed artifact on the
 selected base (or an accepted published ref), or relinquished write ownership.
-CT-U → CT-V also enforces the human-requested publication order. CT-O → CT-A
-supplies the actual skill for its walkthrough. Transitive edges are omitted.
-The longest paths are I/CHECK → R → T → U → V → F → A → Z. No no-op join nodes.
-Read-only shared source/API inspection does not conflict. Mutable resources and
-same-file handoffs are listed in each item; ordinary PR/branch resources are
-unique per generated ticket.
+U → V also preserves the near-end workflow-publication sequence; O → A supplies
+the actual skill for its walkthrough. Transitive edges are omitted. The longest
+path is I → M → T → L → U → V → F → A → Z, nine nodes. No no-op joins.
+Publication, final pins, real adoption and consumer-aware retirement stay intact.
 
 ## DAG
 
 ```mermaid
 %% symphony-dag/v1
 flowchart LR
-  I["Round 1: CT-I · Inventory client files and justify export lists"]
-  CHECK["Round 1: 100-43 · Inherit advisory Cadence check and ready handoff"]
-  C["Round 2: CT-C · Support portable config and native Docker remote CI"]
-  R["Round 2: CT-R · Make native review reusable with explicit secrets and Codex"]
-  T["Round 3: CT-T · Build and test the seven-answer staging template"]
-  O["Round 4: CT-O · Deliver fork direct and repeat onboarding skill"]
-  U["Round 4: CT-U · Publish the reviewed template repository"]
-  V["Round 5: CT-V · Publish reusable workflows and required helpers"]
-  F["Round 6: CT-F · Release template pinned to published workflows"]
-  A["Round 7: CT-A · Adopt published template and prove live consumer paths"]
-  Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
+  I["Round 1: CT-I · Review exact client-copy manifest and export lists"]
+  Q["Round 1: CT-Q · Define seven answers independently"]
+  CHECK["Round 1: 100-43 · Reuse accepted advisory check and ready handoff"]
+  M["Round 2: CT-M · Straight copy of every listed file in its own PR"]
+  C["Round 2: CT-C · Support native Docker remote CI and portable config"]
+  R["Round 2: CT-R · Add reusable explicit-secret Codex and Claude review"]
+  T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
+  L["Round 4: CT-L · Add late CI and Codex parts before release"]
+  O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
+  U["Round 5: CT-U · Publish complete template repository"]
+  V["Round 6: CT-V · Publish reusable workflows and required helpers"]
+  F["Round 7: CT-F · Release template pinned to published workflows"]
+  A["Round 8: CT-A · Adopt published pair and prove live consumer paths"]
+  Z["Round 9: CT-Z · Retire migrated bodies and finalize evidence"]
+  I --> M
   I --> C
   I --> R
   CHECK --> R
-  C --> T
-  R --> T
-  T --> O
-  T --> U
+  M --> T
+  Q --> T
+  T --> L
+  C --> L
+  R --> L
+  L --> O
+  L --> U
   U --> V
   V --> F
   O --> A
@@ -235,14 +262,59 @@ nodes:
       base: main
       draft: true
       labels: [pink, symphony]
+  - id: Q
+    payload_key: CT-Q
+    title: Define and test the seven Copier answers
+    type: task
+    difficulty: easy
+    labels: [pink]
+    branch:
+      template: symphony/client-template/${issue}/answers
+      base: main
+      birth: on_dispatch
+    pr:
+      create: on_branch_birth
+      base: main
+      draft: true
+      labels: [pink, symphony]
+  - id: M
+    payload_key: CT-M
+    title: Copy every listed client file without changes
+    type: task
+    difficulty: easy
+    labels: [pink]
+    branch:
+      template: symphony/client-template/${issue}/copy
+      base: main
+      birth: on_dispatch
+    pr:
+      create: on_branch_birth
+      base: main
+      draft: true
+      labels: [pink, symphony]
   - id: T
     payload_key: CT-T
-    title: Build and test the seven-answer staging template
+    title: Convert the copied files into the initial template
     type: task
     difficulty: hard
     labels: [pink]
     branch:
       template: symphony/client-template/${issue}/template
+      base: main
+      birth: on_dispatch
+    pr:
+      create: on_branch_birth
+      base: main
+      draft: true
+      labels: [pink, symphony]
+  - id: L
+    payload_key: CT-L
+    title: Integrate late CI and Codex additions before release
+    type: task
+    difficulty: hard
+    labels: [pink]
+    branch:
+      template: symphony/client-template/${issue}/integrate-template
       base: main
       birth: on_dispatch
     pr:
@@ -342,18 +414,26 @@ nodes:
       labels: [pink, symphony]
 edges:
   - from: I
+    to: M
+  - from: I
     to: C
   - from: I
     to: R
   - from: CHECK
     to: R
+  - from: M
+    to: T
+  - from: Q
+    to: T
+  - from: T
+    to: L
   - from: C
-    to: T
+    to: L
   - from: R
-    to: T
-  - from: T
+    to: L
+  - from: L
     to: O
-  - from: T
+  - from: L
     to: U
   - from: U
     to: V
@@ -371,18 +451,22 @@ edges:
 
 Resolve each key to its actual issue UUID after creation/reuse; then submit exactly
 `{issueId: blockerUUID, relatedIssueId: blockedUUID, type: "blocks"}`. This table
-and the graph/manifest have the same twelve direct edges. There are no live UUIDs
+and the graph/manifest have the same sixteen direct edges. There are no live UUIDs
 for future tasks yet; do not submit a placeholder or reverse an endpoint.
 
 | Source    | issueId (blocker key) | relatedIssueId (blocked key) | type     |
 | --------- | --------------------- | ---------------------------- | -------- |
+| I → M     | `CT-I`                | `CT-M`                       | `blocks` |
 | I → C     | `CT-I`                | `CT-C`                       | `blocks` |
 | I → R     | `CT-I`                | `CT-R`                       | `blocks` |
 | CHECK → R | `100-43`              | `CT-R`                       | `blocks` |
-| C → T     | `CT-C`                | `CT-T`                       | `blocks` |
-| R → T     | `CT-R`                | `CT-T`                       | `blocks` |
-| T → O     | `CT-T`                | `CT-O`                       | `blocks` |
-| T → U     | `CT-T`                | `CT-U`                       | `blocks` |
+| M → T     | `CT-M`                | `CT-T`                       | `blocks` |
+| Q → T     | `CT-Q`                | `CT-T`                       | `blocks` |
+| T → L     | `CT-T`                | `CT-L`                       | `blocks` |
+| C → L     | `CT-C`                | `CT-L`                       | `blocks` |
+| R → L     | `CT-R`                | `CT-L`                       | `blocks` |
+| L → O     | `CT-L`                | `CT-O`                       | `blocks` |
+| L → U     | `CT-L`                | `CT-U`                       | `blocks` |
 | U → V     | `CT-U`                | `CT-V`                       | `blocks` |
 | V → F     | `CT-V`                | `CT-F`                       | `blocks` |
 | O → A     | `CT-O`                | `CT-A`                       | `blocks` |
@@ -391,16 +475,19 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
 
 ## Decisions
 
-1. **Inventory before generation or copying.** CT-I justifies exact paths; CT-C/R
-   update only their own export list. CT-T/U/V compare against those lists.
+1. **List, copy, conversion are separate PRs.** Jeremy's PR #34 decision is
+   enforced by CT-I's fixed copy manifest, CT-M's byte/mode-identical copy and
+   CT-T's template conversion. CT-Q owns the independent seven-answer package;
+   CT-L integrates late CT-C/R additions before publication. CT-C/R update only
+   their own export lists; CT-U/V compare against the final accepted lists.
 2. **Keep native review and one small verdict.** CT-R wires Codex/Claude into the
    existing workflow, preserving author checks, freshness, feedback and 100-43.
    OpenAI wins when present; Anthropic alone selects Claude; neither fails early.
    API failures do not switch providers. No dormant controller is revived.
-3. **Explicit least-secret boundaries.** CT-R/T/V/F map App, Linear and optional
+3. **Explicit least-secret boundaries.** CT-R/L/V/F map App, Linear and optional
    provider secrets at every review call; handoff has App/Linear; wakeups have
    Linear only; CI and ingress have none. IDs/slugs are named config inputs.
-4. **Seven answers and many projects per repo.** CT-C/T/O keep only repo slug,
+4. **Seven answers and many projects per repo.** CT-Q/T/L/O keep only repo slug,
    default branch, Linear team, two App slugs, build and test commands. Optional
    `ci.mode` belongs to existing config, not an eighth question; project metadata
    comes from the issue. Preserve actual required-check name/workflow/App values.
@@ -435,7 +522,7 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
 Copy this section, the item's complete section and its incoming relation rows
 into every generated description. The per-task files are part of this plan:
 
-- [CT-I/C/R/T/O: implementation items](client-template/implementation-items.md).
+- [CT-I/Q/M/C/R/T/L/O: implementation items](client-template/implementation-items.md).
 - [100-43 and CT-U/V/F/A/Z: delivery and reuse items](client-template/delivery-items.md).
 - [Validation and dry-run rendering](client-template/plan-validation.md).
 
@@ -472,7 +559,7 @@ checks, records missing tools and hands the prepared head to GitHub CI; it does
 not call skipped tests passes or waive known failures.
 
 Seed CI is `CI Required` / `.github/workflows/ci.yml` / GitHub Actions App `15368`,
-with build, lint, test and Changed Markdown children. CT-T adds its render check.
+with build, lint, test and Changed Markdown children. CT-Q creates render CI; CT-L registers the completed template check.
 Publication repos must carry reviewed CI for the actual package, discover its
 real check/workflow/App provenance and record required checks before activation;
 never assume seed job names are universal. Record target SHA, local commands,
@@ -499,8 +586,8 @@ authorizes no merge or admin override.
 
 ## Completion gates
 
-CT-Z must account for every design AC: CT-I/T (AC1/2), CT-R/T (AC3/4), CT-R early
-and CT-A final real Codex review (AC5), CT-U (AC6), CT-A (AC7), CT-C/T/A (AC8),
+CT-Z must account for every design AC: CT-I/M/Q/T/L (AC1/2), CT-R/L (AC3/4), CT-R early
+and CT-A final real Codex review (AC5), CT-U (AC6), CT-A (AC7), CT-C/L/A (AC8),
 CT-O/A (AC9), all delivery owners (AC10), CT-V/F/A (AC11), CT-C/A (AC12), and
 100-43 plus CT-R/V/A (AC13). Missing live evidence leaves the responsible delivery
 open; it cannot be relabeled as a documentation pass.

@@ -12,8 +12,8 @@ repositories created by this planning ticket.
   repository `1000lines/symphony-example`, Misc/blue, PR #31. Reuse its existing
   assignment, branch, scope, check/ready implementation and initial live proof.
   Never create a payload, duplicate issue, second implementation or relabel it pink.
-- **Known state:** at planning it is Inactive with an open draft PR and passing
-  CI; Cadence/post-merge live proof remain open. Reread its actual status/ref and
+- **Known state:** refreshed September 11: Done, PR #31 merged at 14:02:53Z
+  as `ca5c37344df600468ee69e73c04c54197a5b062c`. State is not proof; Reread its actual status/ref and
   workpad at fan-out and CT-R start. A later Done needs its accepted evidence.
 - **Ownership/use:** its existing ticket owns the native advisory helper/workflows
   and seed proof until accepted; CT-R takes those files only afterward. No new
@@ -34,7 +34,7 @@ repositories created by this planning ticket.
   branch and PR base `main`. `symphony-client-template` is the working name.
 - **Scope:** copy the entire reviewed staging root to this public repository,
   preserve license/provenance and prove rendering from its published ref.
-- **owned_files:** the entire new root copied exactly from CT-T's
+- **owned_files:** the entire new root copied exactly from CT-L's completed
   `templates/symphony-client/`; publication-only additions/edits to root
   `README.md`, `PROVENANCE.md`, `.symphony.cfg.json` and `.github/workflows/ci.yml`
   for this repository's own setup/CI. These files are outside the rendered tree.
@@ -45,7 +45,7 @@ repositories created by this planning ticket.
 - **creates:** all owned import files except the bootstrap README.
   **edits:** bootstrap `README.md`; publication metadata changes to imported
   `PROVENANCE.md` and `.github/workflows/ci.yml` remain part of their new-file diff.
-- **dependencies:** CT-T, hard, accepted staging commit with passing render CI;
+- **dependencies:** CT-L, hard, complete accepted staging commit with passing render CI;
   reason: exact import source. CT-O is independent and shares no mutable resource.
 - **source_files:** full staging root at its accepted SHA, client inventory,
   license, template tests and source CI; all source reads are immutable.
@@ -61,14 +61,14 @@ repositories created by this planning ticket.
   an immutable reviewed ref and perform a fresh Git-URL render at that ref.
 - **acceptance_checks:** public anonymous readback; source/tree comparison with
   no lost dotfiles, secrets or additional rendered assets; seven answers and
-  `_src_path`/`_commit`; exact published render passes CT-T's matrix. Template
+  `_src_path`/`_commit`; exact published render passes CT-L's full matrix. Template
   still pins reviewed seed workflows at this intermediate release; CT-F owns
   final pins. Record actual destination CI/reviewer provenance and ref links.
 - **Validation, in order:** local `git diff --no-index` between export and
   destination (explicit publication differences reviewed), pinned requirements
   install and `python -m unittest discover -s tests`; `copier copy --vcs-ref
 <published-sha> <published-git-url> <isolated-target>` with fixture answer files.
-  Docker skipped on local pass; otherwise CT-T's pinned Python/Git environment
+  Docker skipped on local pass; otherwise CT-Q's pinned Python/Git environment
   and workspace UID/mount policy. Mandatory destination `.github/workflows/ci.yml`
   render tests on the published task head, plus any observed required checks.
   CI must exist and run; absence is not a green import. Record App/check names
@@ -139,7 +139,7 @@ repositories created by this planning ticket.
 
 - **Repository override:** `https://github.com/1000lines/symphony-client-template`;
   main/main. **Scope:** final release from the CT-U repository using CT-V refs.
-- **owned_files:** `template/.github/workflows/` caller files from CT-T's
+- **owned_files:** `template/.github/workflows/` caller files from CT-L's final
   inventory (only source/ref mappings), root `README.md`, `PROVENANCE.md`,
   `tests/test_render.py` (expected destination refs only).
 - **owned_external_resources:** template task branch/PR and new immutable release
@@ -156,7 +156,7 @@ repositories created by this planning ticket.
   active seed-workflow pin in rendered callers. Historical source refs stay valid.
 - **Validation, in order:** local pinned render unittest matrix and diff check;
   real published-ref Copier render; Docker skipped on local pass or same pinned
-  CT-T/U Python/Git fallback. Mandatory current-head template CI and discovered
+  CT-Q/U Python/Git fallback. Mandatory current-head template CI and discovered
   required checks, even for this small pin change; then release-ref readback.
 - **delivery_notes / exclusions:** CT-A consumes this pair; no seed/staging edits,
   workflow behavior changes, copier update or unreviewed floating refs.

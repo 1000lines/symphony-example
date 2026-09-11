@@ -11,11 +11,12 @@ participant projects or operates the parent rehearsal.
 - **Scope:** establish the smallest client tree and separately reviewed export
   lists before copying. This is selection work, not a second design exercise.
 - **owned_files:** `docs/symphony-plans/client-template/client-inventory.md`,
+  `docs/symphony-plans/client-template/client-copy.txt`,
   `docs/symphony-plans/client-template/review-export.txt`,
   `docs/symphony-plans/client-template/ci-export.txt` (new).
 - **owned_external_resources:** none beyond this task's branch/PR. Existing
   repositories, App permissions and source refs are read-only inputs.
-- **creates:** all three owned inventory files. **edits:** none.
+- **creates:** all four owned inventory files. **edits:** none.
 - **dependencies:** none. Read 100-43's available PR for context; do not copy it.
 - **source_files:** merged `client-template-design.md`; `.github/workflows/AGENTS.md`;
   native ingress, event, trigger, manual review, handoff and wakeup workflows;
@@ -27,6 +28,12 @@ participant projects or operates the parent rehearsal.
   and license attribution. Identify planned new paths in CT-C/R; expand imports
   rather than copying the tooling package or dormant controller wholesale.
   The inventory names source-to-template mappings and publication CI assets.
+  `client-copy.txt` fixes an existing, reviewed source SHA and every source →
+  `templates/symphony-client/template/` destination, with file mode/hash. It
+  includes only existing nonsecret files; new Copier metadata belongs to CT-Q,
+  and later Docker/Codex additions are listed separately, never invented copies.
+  Specify which copied files can be converted immediately and which raw workflow
+  bodies must be omitted until CT-L adds their thin reusable callers.
 - **acceptance_checks:** every proposed client file is local for a concrete
   reason; no host/secret/application payload or reusable body is rendered. Review
   and CI export lists are disjoint, except explicitly read-only/common files
@@ -38,7 +45,7 @@ participant projects or operates the parent rehearsal.
   skip on local pass; if Node is absent use a digest-pinned Node 20 container
   with the workspace mount/UID policy from the main plan. Mandatory seed CI,
   including Changed Markdown and CI Required, on this docs-only PR's head.
-- **delivery_notes / exclusions:** hand `client-inventory.md` to CT-T,
+- **delivery_notes / exclusions:** hand the frozen `client-copy.txt` to CT-M and `client-inventory.md` to CT-T,
   `review-export.txt` to CT-R and `ci-export.txt` to CT-C only after merge. Do not
   implement workflows, create a validator or mutate repository/App settings.
 - **split_criteria:** `risk-blast-radius`, `external-system-boundary`.
@@ -108,7 +115,7 @@ participant projects or operates the parent rehearsal.
   local passes record Docker fallback skipped. Mandatory seed CI plus actual
   command-runner check on the published head; future integrated remote state
   proof remains explicitly CT-A's gate.
-- **delivery_notes:** CT-T consumes merged reader/runner and owns template CI
+- **delivery_notes:** CT-L consumes merged reader/runner and owns final template CI
   registration; CT-A owns installed-reader readback and live mode proof before
   activation. A missing host rollout grant blocks that activation only. CT-C
   and CT-R share no writable files or external test targets; common wakeup/Linear
@@ -197,59 +204,158 @@ participant projects or operates the parent rehearsal.
   provider question, blanket workflow deletion or public-fork key service.
 - **split_criteria:** `automation-identity-boundary`, `async-pipeline-boundary`.
 
-## CT-T — Build and test the seven-answer staging template
+## CT-Q — Define and test the seven Copier answers
 
-- **Scope:** implement the reviewed minimal tree at `templates/symphony-client/`
-  using ordinary Copier, ready to extract as one self-contained root.
-- **owned_files:** all new files under `templates/symphony-client/`, specifically
-  `copier.yml`, `README.md`, `LICENSE`, `PROVENANCE.md`,
-  `.github/workflows/ci.yml`, `tests/test_render.py`, `tests/requirements.txt`,
-  and `template/` containing only CT-I's approved generated paths;
-  `.github/workflows/client-template-test.yml` (seed render-test workflow),
-  `.symphony.cfg.json` (add observed render-check provenance after CT-C),
-  `docs/symphony-plans/client-template/client-inventory.md` (actual-path readback).
-- **owned_external_resources:** task-local render fixtures only; this task's
-  seed PR/checks. No live onboarding secrets, Apps, repositories or project writes.
-- **creates:** entire staging root and `.github/workflows/client-template-test.yml`.
-  **edits:** `.symphony.cfg.json` and the owned `client-inventory.md`.
-- **dependencies:** CT-C and CT-R, both hard: merged reader/runner/workflow
-  interfaces and reviewed refs are required to produce valid literal callers.
-- **source_files:** merged inventory, both export lists, CT-C config reader,
-  CT-R reusable declarations, design D1–D6 and existing target instruction/config.
+- **Scope:** build the ordinary Copier question/answers package independently
+  of file inventory, copying, Docker compatibility and provider implementation.
+- **owned_files:** `templates/symphony-client/copier.yml`, `README.md`, `LICENSE`,
+  `PROVENANCE.md`, `tests/requirements.txt`, `tests/test_answers.py`, and
+  `.github/workflows/ci.yml` under that staging root;
+  `.github/workflows/client-template-test.yml` at the seed root.
+- **owned_external_resources:** task-local temporary Copier fixture directories
+  and its seed PR/checks only. No live secrets, App/repo/project writes.
+- **creates:** all owned files. **edits:** none.
+- **dependencies:** none. D4 already fixes the answer interface; CT-I's file
+  selection is unnecessary to ask and serialize those answers.
+- **source_files:** merged design D4 and ordinary Copier configuration guidance.
 - **required_actions:** `_subdirectory: template`; exactly `repo_slug`,
   `default_branch`, `linear_team_key`, `symphony_app_slug`, `cadence_app_slug`,
-  `build_command`, `test_command`. Escape GitHub expressions and serialize shell
-  argument arrays/YAML/JSON; answers record `_src_path`/`_commit`, never secrets.
-  Default native mode by omission; onboarding can add mode without another answer.
-  Retain requiredChecks with observed provenance or an explicit unconfigured
-  list requiring discovery before activation. Review callers pin CT-R's reviewed
-  full seed SHA with named secrets. Emit thin ingress/review/handoff/wakeup/CI
-  callers, short worker/reviewer guidance, config and direct App manifest per
-  inventory. Reuse existing application CI when sufficient; don't overwrite it.
-  Preserve pre-existing AGENTS/CLAUDE/application license/content. The template's
-  license/usage/provenance/CI/tests are outside the rendered subdirectory.
-- **acceptance_checks:** two slugs, two default branches including non-main,
-  differing teams and commands (quotes/newlines/GitHub expressions), existing-file
-  preservation/collision inspection; no project key, provider toggle, host
-  assets, reusable bodies or secrets. App manifest verifies minimal needed grants
-  including checks write; fork path uses existing App. Config loads through
-  actual reader for native/optional modes; no new validator. Rendered callers
-  preserve 100-43 without adding a setting/secret or required advisory check.
-- **Validation, in order:** local locked Copier environment from
-  `tests/requirements.txt`, `python -m unittest discover -s
-templates/symphony-client/tests`; real `copier copy` through those tests,
-  existing config validation on generated JSON, locked Prettier and diff check.
-  Docker skipped if these pass; otherwise a digest-pinned Python 3.12 image with
-  Git, only workspace mounted and workspace UID/GID, installing the same pinned
-  requirements there and running that unittest command. Mandatory seed CI and
-  the new `client-template-test.yml` render job on the published head; include
-  its actual check name/workflow/App in required-check evidence. Published-root
-  CI uses the same tests, not a copied Node tooling suite.
-- **delivery_notes / exclusions:** own the entire new staging root until CT-A
-  deletes it; CT-U copies its reviewed root without edits to the seed. Source refs
-  are release constants, not questions. No Copier hooks/update mechanism,
-  onboarding operator skills in generated clients, or live adoption yet.
+  `build_command`, `test_command`. Keep defaults/types and source/ref metadata
+  ordinary Copier. No credentials, project binding, mode/provider/ref question.
+  Pin the Python/Copier requirements. Build tests in a task-local minimal
+  `template/` fixture so CI exercises the questions even before CT-M/T land.
+  Root CI discovers the package tests; the seed caller uses the same command.
+  Record the interim package's limited scope and the later CT-L release gate.
+- **acceptance_checks:** seven answers work noninteractively for two repo slugs,
+  non-main branches, teams and commands with quotes/newlines; ordinary answer
+  metadata retains `_src_path`/`_commit` without secrets. No writes inside the
+  committed `template/` tree, no CI registration or claim of live client behavior.
+- **Validation, in order:** local install of pinned `tests/requirements.txt`,
+  `python -m unittest discover -s templates/symphony-client/tests`, actual
+  `copier copy` into temporary fixtures and locked formatting/diff checks.
+  Docker skipped on pass; otherwise digest-pinned Python 3.12 with Git, the same
+  requirements/command and workspace UID/mount policy. Mandatory seed CI and
+  `client-template-test.yml` at the published head; record actual emitted checks.
+- **delivery_notes / exclusions:** CT-Q can run with CT-I/M/C/R: it owns package
+  metadata and question tests, CT-M owns only copied `template/` files. CT-T
+  consumes the accepted question interface; CT-L later registers final CI.
+  No Copier hooks/update, rendered operator skill or late workflow integration.
+- **split_criteria:** `ticket-template-contract`, `risk-blast-radius`.
+
+## CT-M — Copy every listed client file without changes
+
+- **Scope:** a separate, mechanically verifiable PR copies the complete CT-I
+  list into staging before any template conversion.
+- **owned_files:** exactly the `templates/symphony-client/template/` destination
+  paths in accepted `client-copy.txt`; no package metadata or inventory edits.
+- **owned_external_resources:** task-local immutable source export and its own
+  branch/PR. No Actions/secret/repository settings or participant operations.
+- **creates:** every listed destination. **edits:** none. **deletes:** none.
+- **dependencies:** CT-I, hard, accepted source/path/hash list. No CT-Q/C/R gate.
+- **source_files:** every exact source path/ref in CT-I's merged copy list.
+- **required_actions:** use ordinary Git/copy tools to copy all listed bytes and
+  modes, including dotfiles. No selection, substitutions, redaction, formatting,
+  thin-wrapper rewrite or new helper hidden in this PR. An invalid/sensitive
+  entry returns to inventory review before copying. Source commits are read as
+  data; do not merge or cherry-pick their history into the task branch.
+- **acceptance_checks:** destination path set equals the list; `cmp` and Git
+  mode/hash readbacks match every entry at its pinned source. Any size is
+  justified solely by copying the whole reviewed list. Raw workflow copies are
+  inert under staging and are not a usable/generated client release.
+- **Validation, in order:** local `git ls-tree` and `git show <source-sha>:<path>`
+  comparison, `cmp` per listed destination and `git diff --check`; Docker skipped
+  on local pass, otherwise digest-pinned Git-capable image with workspace policy.
+  Mandatory seed CI on this copy-only head, including Changed Markdown for copied
+  Markdown. Do not silently reformat a byte mismatch to fix CI; prepare the
+  source correction and refreshed list for review before recopying if needed.
+- **delivery_notes / exclusions:** relinquish the copied tree to CT-T after
+  acceptance. CT-Q uses disjoint package files and temporary test fixtures.
+  No template syntax, new behavior, credentials or live review proof here.
+- **split_criteria:** `risk-blast-radius`, `ticket-template-contract`.
+
+## CT-T — Convert the copied files into the initial template
+
+- **Scope:** a behavioral PR after the straight copy introduces template syntax
+  and a testable initial generated tree, independently of CT-C/R completion.
+- **owned_files:** CT-M's copied `templates/symphony-client/template/` paths;
+  `templates/symphony-client/tests/test_render.py` (new);
+  `templates/symphony-client/README.md`, `PROVENANCE.md`;
+  `docs/symphony-plans/client-template/client-inventory.md` (conversion readback).
+- **owned_external_resources:** task-local render fixtures and its PR/checks;
+  no shared secret, App, repository or live-project writes.
+- **creates:** `tests/test_render.py` under staging and any new generated paths
+  explicitly approved by CT-I for the initial conversion.
+  **edits:** copied generated paths, owned README/PROVENANCE/inventory.
+  **deletes:** raw workflow bodies which CT-I assigns to later thin callers.
+- **dependencies:** CT-M, hard, accepted exact copy; CT-Q, hard, merged Copier
+  package/question interface for actual renders. CT-C/R are independent.
+- **source_files:** CT-I mappings, CT-M snapshot, CT-Q package, design D1–D6.
+- **required_actions:** introduce substitutions for the seven established names;
+  escape GitHub expressions and serialize shell arrays/YAML/JSON correctly.
+  Render short instructions, config, direct App manifest and only callers whose
+  interfaces already exist at reviewed seed refs. Default native mode by omission.
+  Reuse existing application CI and preserve unrelated instructions/license/files.
+  Omit unavailable review/CI callers from this initial cut and enumerate their
+  exact CT-L additions in PROVENANCE; never invent refs/interfaces, emit raw
+  reusable bodies or claim Docker/Codex support before its integration.
+- **acceptance_checks:** real Copier render matrix covers two slugs/default
+  branches (including non-main), teams, quoted/newline commands and file
+  collisions. No project key, provider toggle, secrets, host or reusable bodies
+  in output. The direct App manifest includes required checks-write grants;
+  public forks use the accepted existing App. Initial config loads with the
+  current reader; any unconfigured
+  required-check list is explicit. The bounded pending additions are CT-L-owned
+  and prevent publication/onboarding, not this initial conversion's acceptance.
+- **Validation, in order:** local pinned Python/Copier environment,
+  `python -m unittest discover -s templates/symphony-client/tests`, actual render
+  and current config reader, locked formatting/diff checks. Docker skipped on
+  pass or CT-Q's pinned Python/Git fallback. Mandatory seed CI and render job on
+  the current head. No live review/mode proof is claimed by structural rendering.
+- **delivery_notes / exclusions:** CT-L takes the tree/tests/metadata after merge.
+  CT-Q's package tests exercise isolated fixtures; conversion tests own separate
+  fixtures. No Dockerfile, Codex implementation or changed question contract.
 - **split_criteria:** `cross-package-contract`, `ticket-template-contract`.
+
+## CT-L — Integrate late CI and Codex additions before release
+
+- **Scope:** compose the initial template with accepted CT-C/R interfaces;
+  close every explicitly deferred caller/mode addition before publication.
+- **owned_files:** `templates/symphony-client/template/` paths selected by CT-I,
+  staging `README.md`, `PROVENANCE.md`, `tests/test_render.py`,
+  `.symphony.cfg.json` (seed render-check registration), and
+  `docs/symphony-plans/client-template/client-inventory.md` (final readback).
+- **owned_external_resources:** task-local render fixtures and seed task checks.
+  No live provider/App/secret/project operations; CT-R/A retain those proofs.
+- **creates:** the deferred thin review/handoff/wakeup/CI caller paths in the
+  accepted inventory. **edits:** other owned paths. **deletes:** none.
+- **dependencies:** CT-T, CT-C and CT-R, hard: merged initial tree and final
+  reader/runner/reviewer interfaces, export lists and reviewed seed refs.
+- **source_files:** CT-T pending-addition list, CT-C/R final files/proof,
+  actual config reader and both reviewed exports.
+- **required_actions:** add the missing thin callers and any client-Dockerfile
+  mode guidance/config changes without changing the seven answers. The client
+  supplies its Dockerfile; do not introduce a generic application Dockerfile.
+  Pin reviewed full seed refs, explicitly map named secrets at every hop and
+  preserve 100-43's advisory/ready behavior without a setting or required check.
+  Handoff has App/Linear only; CI/ingress have no review secrets. Register the
+  observed render job name/workflow/App in seed required checks. Close the
+  PROVENANCE pending list and keep source/version metadata.
+- **acceptance_checks:** full CT-T matrix plus native/optional Docker/remote
+  reader compatibility passes; generated paths equal the final inventory;
+  no remaining deferred caller, placeholder ref or raw workflow body. Exact
+  secret mappings and provider matrix match CT-R's tested interface; no new
+  questions. Existing application/instruction/license content is preserved.
+  Template is now complete for CT-U publication and CT-O onboarding authoring.
+- **Validation, in order:** local pinned render unittest matrix, existing reader
+  validation for all three modes, YAML/secret/pin boundary inspection, locked
+  formatting/diff checks. Docker fallback skipped on pass or CT-Q's pinned
+  environment; CT-C owns executing Docker mode, CT-A owns final live proof.
+  Mandatory seed CI plus registered render check at this published head, with
+  actual check/workflow/App provenance. Rendering is not provider execution.
+- **delivery_notes / exclusions:** CT-U copies the completed root, CT-O consumes
+  its usage contract, CT-A eventually deletes staging. No change to `copier.yml`
+  answers, workflow implementations, host rollout or new orchestration.
+- **split_criteria:** `cross-package-contract`, `integration-validation-dependency`.
 
 ## CT-O — Deliver fork/direct and repeat onboarding skill
 
@@ -261,9 +367,9 @@ templates/symphony-client/tests`; real `copier copy` through those tests,
   operations, do not execute participant setup. CT-A later owns the one live
   walkthrough; Jeremy/parent owns installing/invoking the skill.
 - **creates:** all four owned skill files. **edits:** none.
-- **dependencies:** CT-T, hard, merged template/actual seven-answer interface
+- **dependencies:** CT-L, hard, complete merged template/actual seven-answer interface
   needed for executable skill instructions and render dry runs.
-- **source_files:** CT-T README/template/config/manifest and test fixtures,
+- **source_files:** CT-L README/template/config/manifest and test fixtures,
   existing repository/Linear/planning skills and their tools; D7/D8/D9.
 - **required_actions:** apply installed skill-creator guidance; reuse existing
   GitHub, repository, Linear and planning operations. Fork by default into
