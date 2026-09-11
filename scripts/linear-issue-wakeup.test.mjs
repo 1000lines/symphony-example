@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readLinearIssue, wakeLinearIssue } from "./linear-issue-wakeup.mjs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { readLinearIssue, readLinearTeamKey, wakeLinearIssue } from "./linear-issue-wakeup.mjs";
 
 const state = (name) => ({ id: `state-${name}`, name });
 const issue = ({
@@ -185,4 +189,28 @@ test("API failures keep the HTTP error and redact credentials", async () => {
       return true;
     }
   );
+});
+
+test('team lookup reads the target repository root, not the helper or workflow file', t => {
+  const root = mkdtempSync(join(tmpdir(), 'linear-team-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  execFileSync('git', ['init', '--quiet', root]);
+  const child = join(root, 'src');
+  mkdirSync(child);
+  writeFileSync(join(root, 'WORKFLOW.md'), '---\ntracker:\n  team_key: WRONG\n---\n');
+  assert.throws(() => readLinearTeamKey(child), /ENOENT/);
+  const config = JSON.parse(readFileSync(new URL('../.symphony.cfg.json', import.meta.url), 'utf8'));
+  const file = join(root, '.symphony.cfg.json');
+  for (const teamKey of ['ENG', '100']) {
+    config.linear = { teamKey };
+    writeFileSync(file, JSON.stringify(config));
+    assert.equal(readLinearTeamKey(child), teamKey);
+  }
+  for (const linear of [undefined, {}, { teamKey: 'eng' }, { teamKey: 100 }, { teamKey: 'ENG-15' }]) {
+    config.linear = linear;
+    writeFileSync(file, JSON.stringify(config));
+    assert.throws(() => readLinearTeamKey(child), /configuration|linear.teamKey/);
+  }
+  writeFileSync(file, 'not json');
+  assert.throws(() => readLinearTeamKey(child), SyntaxError);
 });

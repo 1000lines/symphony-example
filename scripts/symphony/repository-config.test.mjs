@@ -11,6 +11,7 @@ import {
 
 const config = () => ({
   schemaVersion: "symphony-repository/v1",
+  linear: { teamKey: "ENG" },
   workingDirectory: ".",
   instructions: ["AGENTS.md"],
   commands: { test: [["cargo", "test", "--workspace"]] },
@@ -25,7 +26,7 @@ const config = () => ({
   },
 });
 
-test("repo-owned config describes development without selecting credentials or identity", () => {
+test("repo-owned config specifies the team and development settings without credentials", () => {
   assert.deepEqual(validateConfig(config()), config());
   for (const change of [
     (c) => {

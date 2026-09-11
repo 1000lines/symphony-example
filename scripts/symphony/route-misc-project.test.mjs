@@ -16,7 +16,7 @@ const actor = {
   email: "linear-bot@example.invalid",
 };
 
-test("routes a no-project DEMO issue to the active misc project", () => {
+test("routes a no-project 100 issue to the active misc project", () => {
   const plan = routePlan();
 
   assert.equal(plan.action, "route");
@@ -30,7 +30,7 @@ test("routes a no-project DEMO issue to the active misc project", () => {
     { id: "blue-label-id", name: "blue", operation: "add" },
   ]);
   assert.equal(plan.actor.email, "linear-bot@example.invalid");
-  assert.equal(plan.reason, "eligible-demo-issue-without-project");
+  assert.equal(plan.reason, "eligible-team-issue-without-project");
   assert.equal(plan.linearApiResult.operation, "dry-run");
   assert.deepEqual(plan.linearApiResult.mutations, [
     "issueUpdate",
@@ -40,7 +40,7 @@ test("routes a no-project DEMO issue to the active misc project", () => {
 
 test("routes by the configured example team when the identifier prefix differs", () => {
   const plan = planMiscProjectRoute({
-    issue: demoIssue({ identifier: "ENG-123", team: { key: "DeMo" } }),
+    issue: demoIssue({ identifier: "ENG-123", team: { key: "100" } }),
     projects: [miscProject()],
     issueLabels: [blueLabel()],
     actor,
@@ -49,7 +49,7 @@ test("routes by the configured example team when the identifier prefix differs",
   assert.equal(plan.newProject.id, "misc-project-id");
 });
 
-test("already-project DEMO issues are no-ops", () => {
+test("already-project 100 issues are no-ops", () => {
   const plan = planMiscProjectRoute({
     issue: demoIssue({
       project: {
@@ -75,12 +75,12 @@ test("already-project DEMO issues are no-ops", () => {
   assert.equal(plan.linearApiResult.operation, "skipped");
 });
 
-test("non-DEMO issues are no-ops", () => {
+test("non-100 issues are no-ops", () => {
   const plan = planMiscProjectRoute({
     issue: {
       id: "issue-eng",
       identifier: "ENG-123",
-      title: "Not DEMO",
+      title: "Not 100",
       team: { key: "ENG", name: "Engineering" },
       project: null,
       labels: { nodes: [] },
@@ -92,7 +92,7 @@ test("non-DEMO issues are no-ops", () => {
 
   assert.equal(plan.action, "skipped");
   assert.equal(plan.shouldMutate, false);
-  assert.equal(plan.reason, "non-demo-issue");
+  assert.equal(plan.reason, "different-team");
 });
 
 test("retired or missing misc project metadata fails closed", () => {
@@ -104,7 +104,7 @@ test("retired or missing misc project metadata fails closed", () => {
         issueLabels: [blueLabel()],
         actor,
       }),
-    /Active misc project with project-code "misc" for DEMO-123 was not found/
+    /Active misc project with project-code "misc" for 100-123 was not found/
   );
 });
 
@@ -118,7 +118,7 @@ test("ambiguous misc metadata fails closed", () => {
         ],
         { issue: demoIssue() }
       ),
-    /Ambiguous active misc project metadata for DEMO-123/
+    /Ambiguous active misc project metadata for 100-123/
   );
 });
 
@@ -144,7 +144,7 @@ test("missing misc project metadata fails closed", () => {
 
 test("read input fetches active projects and resolves identity by project-code", async () => {
   const requests = [];
-  const input = await readMiscProjectRoutingInput("DEMO-123", {
+  const input = await readMiscProjectRoutingInput("100-123", {
     token: "linear-token",
     fetchImpl: async (_url, options) => {
       const request = JSON.parse(options.body);
@@ -210,7 +210,7 @@ test("expected mutation payload assigns the project and missing label", async ()
               success: true,
               issue: {
                 id: "issue-demo",
-                identifier: "DEMO-123",
+                identifier: "100-123",
                 project: { id: "misc-project-id", name: "Misc 2026-06" },
               },
             },
@@ -224,7 +224,7 @@ test("expected mutation payload assigns the project and missing label", async ()
             success: true,
             issue: {
               id: "issue-demo",
-              identifier: "DEMO-123",
+              identifier: "100-123",
               labels: { nodes: [{ id: "blue-label-id", name: "blue" }] },
             },
           },
@@ -294,11 +294,11 @@ test("ticket-start routing skips already-project issues without invoking the rou
     url: "https://linear.app/project/existing",
   };
 
-  const result = await routeMiscProjectOnTicketStart("DEMO-123", {
+  const result = await routeMiscProjectOnTicketStart("100-123", {
     token: "linear-token",
     fetchImpl: async (_url, options) => {
       const request = JSON.parse(options.body);
-      assert.equal(request.variables.issueId, "DEMO-123");
+      assert.equal(request.variables.issueId, "100-123");
       assert.match(request.query, /SymphonyMiscProjectTicketStartDecision/);
 
       return jsonResponse({
@@ -325,7 +325,7 @@ test("ticket-start routing invokes the router once for no-project issues", async
   let routeCalls = 0;
   const fetchImpl = async (_url, options) => {
     const request = JSON.parse(options.body);
-    assert.equal(request.variables.issueId, "DEMO-123");
+    assert.equal(request.variables.issueId, "100-123");
     assert.match(request.query, /SymphonyMiscProjectTicketStartDecision/);
 
     return jsonResponse({
@@ -335,12 +335,12 @@ test("ticket-start routing invokes the router once for no-project issues", async
     });
   };
 
-  const result = await routeMiscProjectOnTicketStart("DEMO-123", {
+  const result = await routeMiscProjectOnTicketStart("100-123", {
     token: "linear-token",
     fetchImpl,
     routeIssue: async (issueId, options) => {
       routeCalls += 1;
-      assert.equal(issueId, "DEMO-123");
+      assert.equal(issueId, "100-123");
       assert.equal(options.dryRun, false);
       assert.equal(options.token, "linear-token");
       assert.equal(options.fetchImpl, fetchImpl);
@@ -349,7 +349,7 @@ test("ticket-start routing invokes the router once for no-project issues", async
         action: "route",
         shouldMutate: true,
         dryRun: false,
-        reason: "eligible-demo-issue-without-project",
+        reason: "eligible-team-issue-without-project",
         linearApiResult: { operation: "mutated", success: true },
       };
     },
@@ -373,10 +373,10 @@ function routePlan() {
 function demoIssue(overrides = {}) {
   return {
     id: "issue-demo",
-    identifier: "DEMO-123",
+    identifier: "100-123",
     title: "Route me",
-    url: "https://linear.app/example-workspace/issue/DEMO-123/route-me",
-    team: { key: "DEMO", name: "Symphony" },
+    url: "https://linear.app/example-workspace/issue/100-123/route-me",
+    team: { key: "100", name: "Symphony" },
     project: null,
     labels: { nodes: [] },
     ...overrides,

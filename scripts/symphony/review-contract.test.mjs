@@ -6,6 +6,7 @@ import { CADENCE_APP_ID, REVIEW_SCHEMA, createReviewGeneration, feedbackWatermar
 
 const head = "a".repeat(40), base = "b".repeat(40), revision = base, controllerRevision = "c".repeat(40);
 const config = () => ({ schemaVersion: "symphony-repository/v1", workingDirectory: ".",
+  linear: { teamKey: "ENG" },
   instructions: ["SYMPHONY.md"], commands: { test: [["cargo", "test"]] },
   ci: { requiredChecks: [{ name: "CI Required", workflow: ".github/workflows/ci.yml", appId: 15368 }] } });
 const sources = () => Object.fromEntries(["reviews", "comments", "threads", "linearComments"]
