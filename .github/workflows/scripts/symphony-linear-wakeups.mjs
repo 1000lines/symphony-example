@@ -9,6 +9,7 @@ import {
 import {
   linearRequest,
   readLinearIssue,
+  readLinearTeamKey,
   redactToken,
   terminalStateReason,
   wakeLinearIssue,
@@ -34,24 +35,27 @@ export const resolveIssue = ({
   ticketNumber,
   pullRequests = [],
   branch = "",
+  teamKey = readLinearTeamKey(),
 }) => {
+  if (!/^[A-Z0-9]+$/.test(teamKey)) throw new Error("Invalid Linear team key.");
+  const identifier = `${teamKey}-[1-9]\\d*`;
   if (ticketNumber !== undefined && ticketNumber !== "") {
-    if (!/^DEMO-[1-9]\d*$/.test(ticketNumber)) {
+    if (!new RegExp(`^${identifier}$`).test(ticketNumber)) {
       throw new Error(
-        "Invalid explicit ticket_number; expected one DEMO-N identifier."
+        `Invalid explicit ticket_number; expected one ${teamKey}-N identifier.`
       );
     }
     return { issueIdentifier: ticketNumber, identitySource: "ticket_number" };
   }
   const titles = unique(
-    pullRequests.map((pr) => pr.title?.match(/^\[(DEMO-[1-9]\d*)\]/)?.[1])
+    pullRequests.map((pr) => pr.title?.match(new RegExp(`^\\[(${identifier})\\]`))?.[1])
   );
   const candidates = titles.length
     ? titles
     : unique(
         [branch, ...pullRequests.map((pr) => pr.head?.ref)].flatMap((ref) =>
-          [...String(ref || "").matchAll(/\bDEMO-[1-9]\d*\b/g)].map(
-            (match) => match[0]
+          [...String(ref || "").matchAll(new RegExp(`\\b${identifier}\\b`, "gi"))].map(
+            (match) => match[0].toUpperCase()
           )
         )
       );

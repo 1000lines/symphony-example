@@ -2,7 +2,6 @@ import yaml from "js-yaml";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { runInNewContext } from "node:vm";
 import {
   parseCadenceWorkpad,
   renderCadenceWorkpad,
@@ -21,11 +20,11 @@ import {
 const repo = "example-org/example-repo";
 const head = "a".repeat(40);
 const base = "b".repeat(40);
-const branch = "symphony/sample-workpad/DEMO-502/github-linear-wakeups";
+const branch = "symphony/sample-workpad/100-502/github-linear-wakeups";
 const runUrl = `https://github.com/${repo}/actions/runs/123`;
 const pr = (overrides = {}) => ({
   number: 42,
-  title: "[DEMO-502]: wake Linear",
+  title: "[100-502]: wake Linear",
   state: "open",
   html_url: `https://github.com/${repo}/pull/42`,
   labels: [{ name: "symphony" }, { name: "yellow" }],
@@ -92,7 +91,7 @@ const active = { id: "active", name: "Active", type: "started" };
 const inactive = { id: "inactive", name: "Inactive", type: "unstarted" };
 const fixtureIssue = () => ({
   id: "issue-502",
-  identifier: "DEMO-502",
+  identifier: "100-502",
   state: inactive,
   team: { states: { nodes: [active] } },
   labels: { nodes: [{ name: "yellow" }] },
@@ -211,7 +210,7 @@ const mutations = (fixture) =>
 test("required failure from Actions workflow completion uses the current required check", async () => {
   const [result] = await plan();
   assert.equal(result.shouldWake, true);
-  assert.equal(result.issueIdentifier, "DEMO-502");
+  assert.equal(result.issueIdentifier, "100-502");
   assert.equal(result.reason, "required-check-failed");
   assert.equal(result.checkName, "tooling-check");
   assert.equal(result.headSha, head);
@@ -328,7 +327,7 @@ test("workflow marker resolves an explicit issue without inputs or PRs", async (
     payload: event({
       workflow_run: workflow({
         event: "workflow_dispatch",
-        display_title: "[linear:DEMO-600] Validate",
+        display_title: "[linear:100-600] Validate",
         pull_requests: [],
         conclusion: "success",
       }),
@@ -336,7 +335,7 @@ test("workflow marker resolves an explicit issue without inputs or PRs", async (
     github: github({ listPrs: async () => [] }),
   });
   assert.equal(result.shouldWake, true);
-  assert.equal(result.issueIdentifier, "DEMO-600");
+  assert.equal(result.issueIdentifier, "100-600");
   assert.equal(result.identitySource, "ticket_number");
   assert.equal(result.reason, "workflow-completed");
 });
@@ -351,10 +350,10 @@ test("workflow completion resolves a PR title before branch with empty payload P
       }),
     }),
     github: github({
-      getPr: async () => pr({ title: "[DEMO-600]: validation" }),
+      getPr: async () => pr({ title: "[100-600]: validation" }),
     }),
   });
-  assert.equal(result.issueIdentifier, "DEMO-600");
+  assert.equal(result.issueIdentifier, "100-600");
   assert.equal(result.identitySource, "pr-title");
 });
 
@@ -370,7 +369,7 @@ test("workflow branch fallback supports issue-scoped validation without a PR", a
     }),
     github: github({ listPrs: async () => [] }),
   });
-  assert.equal(result.issueIdentifier, "DEMO-502");
+  assert.equal(result.issueIdentifier, "100-502");
   assert.equal(result.identitySource, "branch");
 });
 
@@ -396,9 +395,9 @@ test("unticketed manual runs and bridge completions are no-ops", async () => {
 test("missing, malformed and ambiguous issue candidates fail closed", async () => {
   for (const ticketNumber of [
     "502",
-    "DEMO-1 DEMO-2",
+    "100-1 100-2",
     "demo-502",
-    "DEMO-502] [linear:DEMO-2",
+    "100-502] [linear:100-2",
   ])
     assert.throws(() => resolveIssue({ ticketNumber }), /Invalid explicit/);
   assert.throws(
@@ -406,20 +405,20 @@ test("missing, malformed and ambiguous issue candidates fail closed", async () =
     /Invalid explicit/
   );
   assert.throws(() => resolveIssue({ branch: "main" }), /Missing or ambiguous/);
-  assert.throws(() => resolveIssue({ branch: "DEMO-1-and-DEMO-2" }), /ambiguous/);
+  assert.throws(() => resolveIssue({ branch: "100-1-and-100-2" }), /ambiguous/);
   assert.equal(
     resolveIssue({
-      ticketNumber: "DEMO-3",
+      ticketNumber: "100-3",
       pullRequests: [pr()],
-      branch: "DEMO-1-DEMO-2",
+      branch: "100-1-100-2",
     }).issueIdentifier,
-    "DEMO-3"
+    "100-3"
   );
   await assert.rejects(
     plan({
       github: github({
         getPr: async (number) =>
-          pr({ number, title: `[DEMO-${number}]: change` }),
+          pr({ number, title: `[100-${number}]: change` }),
       }),
       payload: event({
         workflow_run: workflow({
@@ -485,7 +484,7 @@ test("fixture proof: failed check, conflict and Symphony workflow completion wak
       bridgeRunUrl: `${runUrl}4`,
     });
     assert.equal(result.operation, "updated", JSON.stringify(result));
-    assert.equal(result.issueIdentifier, "DEMO-502");
+    assert.equal(result.issueIdentifier, "100-502");
     assert.equal(result.previousState, "Inactive");
     assert.equal(result.state, "Active");
     assert.deepEqual(mutations(fixture)[0].variables, {
@@ -993,7 +992,7 @@ test("errors redact both credentials before evidence persistence and output", as
 test("workflow rerun invalidates completion before any Linear write", async () => {
   const run = workflow({
     event: "workflow_dispatch",
-    display_title: "[linear:DEMO-502] Validate",
+    display_title: "[linear:100-502] Validate",
   });
   const [eventPlan] = await plan({ payload: event({ workflow_run: run }) });
   const fixture = linearFixture();
@@ -1019,7 +1018,7 @@ test("changed PR ticket prefix cannot wake the previously resolved issue", async
     token: "fixture",
     fetchImpl: fixture.fetchImpl,
     github: github({
-      getPr: async () => pr({ title: "[DEMO-700]: changed owner" }),
+      getPr: async () => pr({ title: "[100-700]: changed owner" }),
     }),
   });
   assert.match(result.error, /identity changed/);
@@ -1157,192 +1156,134 @@ test("GitHub adapter paginates current-head checks and newer reruns supersede fa
   assert.equal(checks[1].conclusion, "FAILURE");
 });
 
-test("actual job condition rejects irrelevant events before runner allocation", async (t) => {
-  const wake = yaml.load(
-    readFileSync(
-      new URL("../symphony-linear-wakeups.yml", import.meta.url),
-      "utf8"
-    )
-  );
-  // Evaluate the actual YAML expression's boolean operators and functions.
-  // Only Actions array projections need translating for the JS fixture VM;
-  // payload data is passed separately and is never interpolated as code.
-  const expression = wake.jobs.wake.if
-    .replace(
-      "github.event.branches.*.name",
-      "github.event.branches.map(x => x.name)"
-    )
-    .replace(
-      "github.event.pull_request.labels.*.name",
-      "github.event.pull_request.labels.map(x => x.name)"
-    );
-  const evaluate = (eventName, payload) =>
-    Boolean(
-      runInNewContext(expression, {
-        github: { repository: repo, event_name: eventName, event: payload },
-        contains: (value, item) =>
-          Array.isArray(value)
-            ? value.some(
-                (x) => String(x).toLowerCase() === String(item).toLowerCase()
-              )
-            : String(value || "")
-                .toLowerCase()
-                .includes(String(item).toLowerCase()),
-        startsWith: (value, prefix) =>
-          String(value || "")
-            .toLowerCase()
-            .startsWith(prefix.toLowerCase()),
-        fromJSON: JSON.parse,
-        join: (value, separator) => value.join(separator),
-        format: (value, item) => value.replace("{0}", item),
-      })
-    );
-  const workflowCases = [
-    ["failed Symphony check", {}, true],
-    ["successful Symphony check", { conclusion: "success" }, false],
-    [
-      "Symphony validation completion",
-      { event: "workflow_dispatch", conclusion: "success" },
-      true,
-    ],
-    ["main failure with PR association", { head_branch: "main" }, false],
-    ["main success", { head_branch: "main", conclusion: "success" }, false],
-    ["human branch failure", { head_branch: "human/DEMO-502/fix" }, false],
-    [
-      "lookalike Symphony branch",
-      { head_branch: "other-symphony/DEMO-502" },
-      false,
-    ],
-    [
-      "unrelated main validation with marker",
-      {
-        head_branch: "main",
-        event: "workflow_dispatch",
-        display_title: "[linear:DEMO-502] Validate",
-      },
-      false,
-    ],
-    ["recursive workflow", { event: "workflow_run" }, false],
-    [
-      "bridge itself with custom run name",
-      {
-        path: ".github/workflows/symphony-linear-wakeups.yml",
-        display_title: "Bridge reconciliation on a custom run title",
-      },
-      false,
-    ],
-    ["fork workflow", { head_repository: { full_name: "fork/repo" } }, false],
-  ];
-  for (const conclusion of [
-    "failure",
-    "error",
-    "timed_out",
-    "cancelled",
-    "action_required",
-    "startup_failure",
-  ]) {
-    workflowCases.push([`required check ${conclusion}`, { conclusion }, true]);
-  }
-  for (const [name, overrides, expected] of workflowCases) {
-    const payload = event({ workflow_run: workflow(overrides) });
-    assert.equal(evaluate("workflow_run", payload), expected, name);
-    if (expected) {
-      const [result] = await plan({ payload });
-      assert.equal(result.shouldWake, true, name);
-    }
-    if (!expected && name !== "fork workflow") {
-      const [result] = await plan({ payload, github: {} });
-      assert.equal(result.shouldWake, false, name);
-    }
-  }
-  const external = {
-    check_run: {
-      conclusion: "failure",
-      check_suite: { head_branch: branch, app: { slug: "external-ci" } },
-    },
+const wakeWorkflow = yaml.load(readFileSync(new URL('../symphony-linear-wakeups.yml', import.meta.url), 'utf8'));
+const AsyncFunction = Object.getPrototypeOf(async function () { return; }).constructor;
+
+async function runWorkflowFixture(t, {
+  eventName = 'pull_request_target', currentState = 'Inactive', conflict = false,
+  ci = null, changedState = '', changedHead = false, required = true,
+  prTitle = '[100-502]: fix CI', prBranch = branch, releaseAfter = 0,
+} = {}) {
+  const originalEnv = { ...process.env };
+  const originalFetch = globalThis.fetch;
+  const outputs = {};
+  const writes = [];
+  let reads = 0;
+  const currentPr = pr({ title: prTitle, head: { ...pr().head, ref: prBranch }, mergeable: conflict });
+  currentPr.mergeable = !conflict;
+  const states = ['Active', 'Inactive', 'Unhappy', 'Done', 'Backlog'].map(name => ({ id: name, name }));
+  const issue = () => ({ id: 'issue-502', identifier: '100-502',
+    state: states.find(s => s.name === currentState), team: { states: { nodes: states } } });
+  process.env.GITHUB_WORKSPACE = new URL('../../../', import.meta.url).pathname.replace(/\/$/, '');
+  process.env.LINEAR_API_TOKEN = 'fixture-token';
+  process.env.GH_TOKEN = 'fixture-github-token';
+  globalThis.fetch = async (url, options) => {
+    const { query, variables } = JSON.parse(options.body);
+    let data;
+    if (url === 'https://api.github.com/graphql') {
+      data = { repository: { pullRequest: { headRefOid: head, commits: { nodes: [{ commit: {
+        statusCheckRollup: { contexts: { nodes: [check({ isRequired: required })], pageInfo: { hasNextPage: false } } }
+      } }] } } } };
+    } else if (query.includes('query LinearWakeupIssue')) {
+      reads++;
+      if (releaseAfter && reads > releaseAfter) currentState = 'Inactive';
+      data = { issue: issue() };
+    } else if (query.includes('CadenceWorkpadIssue')) {
+      data = { issue: { ...issue(), comments: { nodes: [{ id: 'workpad', body: renderCadenceWorkpad({ status: 'reviewing' }) }],
+        pageInfo: { hasNextPage: false } } } };
+    } else if (query.includes('commentUpdate')) {
+      writes.push({ kind: 'workpad', body: variables.body });
+      data = { commentUpdate: { success: true } };
+    } else if (query.includes('team{labels')) {
+      data = { issue: { team: { labels: { nodes: [{ id: 'wake', name: 'wake:15m' }], pageInfo: { hasNextPage: false } } } } };
+    } else if (query.includes('issueUpdate')) {
+      writes.push({ kind: 'state', input: variables.input });
+      data = { issueUpdate: { success: true, issue: { state: { id: variables.input.stateId } } } };
+    } else throw new Error(`Unexpected request: ${query}`);
+    return { ok: true, status: 200, json: async () => ({ data }) };
   };
-  assert.equal(evaluate("check_run", external), true);
-  assert.equal(
-    evaluate("check_run", {
-      check_run: { ...external.check_run, conclusion: "success" },
-    }),
-    false
-  );
-  assert.equal(
-    evaluate("check_run", {
-      check_run: {
-        ...external.check_run,
-        check_suite: { head_branch: "main", app: { slug: "external-ci" } },
-      },
-    }),
-    false
-  );
-  assert.equal(
-    evaluate("check_run", {
-      check_run: {
-        ...external.check_run,
-        check_suite: { head_branch: branch, app: { slug: "github-actions" } },
-      },
-    }),
-    false
-  );
-  assert.equal(
-    evaluate("status", {
-      state: "failure",
-      branches: [{ name: "main" }, { name: branch }],
-    }),
-    true
-  );
-  assert.equal(
-    evaluate("status", { state: "success", branches: [{ name: branch }] }),
-    false
-  );
-  assert.equal(
-    evaluate("status", {
-      state: "failure",
-      branches: [{ name: "main" }, { name: "other-symphony/DEMO-502" }],
-    }),
-    false
-  );
-  assert.equal(evaluate("pull_request_target", { pull_request: pr() }), true);
-  assert.equal(
-    evaluate("pull_request_target", { pull_request: pr({ labels: [] }) }),
-    false
-  );
-  assert.equal(
-    evaluate("pull_request_target", {
-      pull_request: pr({
-        head: { ...pr().head, repo: { full_name: "fork/repo" } },
-      }),
-    }),
-    false
-  );
-  assert.equal(evaluate("schedule", {}), true);
-  t.diagnostic(
-    `${workflowCases.length} workflow completion cases plus check/status/PR/schedule gates evaluated from jobs.wake.if; no live runner or workflow dispatched.`
-  );
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
+    Object.assign(process.env, originalEnv);
+  });
+  const context = { eventName, repo: { owner: 'example-org', repo: 'example-repo' }, payload: {
+    ...(eventName === 'pull_request_target' ? { pull_request: currentPr } : {}),
+    ...(eventName === 'workflow_run' ? { workflow_run: workflow() } : {}),
+    ...(eventName === 'check_run' ? { check_run: { id: 99, head_sha: head } } : {}),
+    ...(eventName === 'status' ? { sha: head, context: 'tooling-check' } : {}),
+  } };
+  const github = { rest: { pulls: { get: async () => ({ data: currentPr }) },
+    repos: { listPullRequestsAssociatedWithCommit: 'prs' }, actions: { listWorkflowRuns: 'runs' } },
+    paginate: async method => method === 'prs' ? [currentPr] : ci ? [{ status: 'completed', conclusion: ci, run_number: 1, html_url: runUrl }] : [] };
+  let waits = 0;
+  const run = async (name, env = {}) => {
+    Object.assign(process.env, env);
+    const step = wakeWorkflow.jobs.wake.steps.find(step => step.id === name || step.name === name);
+    const result = {};
+    const core = { info() { return; }, setOutput: (key, value) => { result[key] = String(value); } };
+    await new AsyncFunction('github', 'context', 'core', 'setTimeout', step.with.script)(
+      github, context, core, (resolve, ms) => { assert.equal(ms, 10000); waits++; resolve(); });
+    outputs[name] = result;
+    return result;
+  };
+  const ticket = await run('ticket');
+  if (!ticket.issue) return { writes, waits, outputs };
+  const state = await run('ticket_state', { ISSUE: ticket.issue });
+  if (!state.state) return { writes, waits, outputs };
+  const outcome = await run('outcome', { PR_NUMBER: ticket.pr, HEAD_SHA: ticket.sha, ISSUE_STATE: state.state });
+  if (outcome.conflict) await run('Record conflict resolution in the Cadence workpad', { REASON: outcome.reason });
+  if (changedState) currentState = changedState;
+  if (changedHead) currentPr.head.sha = 'new-head';
+  if (outcome.state) await run('Set the ticket state and wake label', {
+    PREVIOUS_STATE: state.state, TARGET_STATE: outcome.state, REASON: outcome.reason,
+  });
+  return { writes, waits, outputs };
+}
+
+for (const [name, options, expected] of [
+  ['pending CI sleeps', {}, 'Unhappy'],
+  ['successful CI parks for review', { eventName: 'workflow_run', ci: 'success', currentState: 'Unhappy' }, 'Inactive'],
+  ['failed CI activates', { eventName: 'workflow_run', ci: 'failure', currentState: 'Unhappy' }, 'Active'],
+  ['late PR event preserves completed CI', { ci: 'success' }, 'Inactive'],
+  ['required external check failure activates', { eventName: 'check_run' }, 'Active'],
+  ['optional external check failure is ignored', { eventName: 'check_run', required: false }, undefined],
+  ['active worker keeps control', { currentState: 'Active' }, undefined],
+  ['worker releases during wait', { currentState: 'Active', releaseAfter: 2 }, 'Unhappy'],
+  ['terminal ticket is left alone', { currentState: 'Done' }, undefined],
+  ['backlog ticket is left alone', { currentState: 'Backlog' }, undefined],
+  ['concurrent activation is preserved', { changedState: 'Active' }, undefined],
+  ['new head prevents transition', { changedHead: true }, undefined],
+  ['another team is ignored', { prTitle: '[ENG-502]: fix CI', prBranch: 'symphony/eng-502/fix' }, undefined],
+  ['lowercase branch identifies configured team', { prTitle: 'Fix CI', prBranch: 'symphony/100-502/fix' }, 'Unhappy'],
+]) {
+  test(`YAML workflow: ${name}`, async t => {
+    const { writes, waits } = await runWorkflowFixture(t, options);
+    const update = writes.find(write => write.kind === 'state');
+    assert.equal(update?.input.stateId, expected);
+    if (update) assert.deepEqual(update.input[expected === 'Unhappy' ? 'addedLabelIds' : 'removedLabelIds'], ['wake']);
+    if (options.currentState === 'Active') assert.equal(waits, options.releaseAfter || 6);
+  });
+}
+
+test('YAML workflow: conflict instruction preserves the Cadence workpad before activation', async t => {
+  const { writes } = await runWorkflowFixture(t, { conflict: true });
+  assert.deepEqual(writes.map(write => write.kind), ['workpad', 'state']);
+  const workpad = parseCadenceWorkpad(writes[0].body);
+  assert.equal(workpad.status, 'reviewing');
+  assert.match(workpad.coordination.lastNonReviewWakeup.reason, /Resolve the merge conflict/);
+  assert.equal(writes[1].input.stateId, 'Active');
 });
 
-test("workflow syntax keeps trusted checkout and generic completion triggers", () => {
-  const read = (name) =>
-    yaml.load(readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8"));
-  const wake = read("symphony-linear-wakeups");
-  assert.deepEqual(wake.on.workflow_run, {
-    workflows: ["*"],
-    types: ["completed"],
-  });
-  assert.ok(wake.on.schedule.length);
-  assert.deepEqual(wake.on.check_run, { types: ["completed"] });
-  assert.ok(Object.hasOwn(wake.on, "status"));
-  assert.deepEqual(wake.on.pull_request_target, {
-    types: ["opened", "synchronize", "reopened", "edited", "labeled"],
-  });
-  assert.match(wake.jobs.wake.steps[0].with.ref, /repository.default_branch/);
-  assert.equal(wake.jobs.wake.steps[0].with["persist-credentials"], false);
-  assert.equal(wake.permissions.contents, "read");
-  assert.deepEqual(wake.jobs.wake.concurrency, {
-    group: "symphony-linear-wakeups-${{ github.repository }}",
-    "cancel-in-progress": false,
-    queue: "max",
-  });
+test('workflow configuration runs CI once per PR update and handles CI completions', () => {
+  const ci = yaml.load(readFileSync(new URL('../ci.yml', import.meta.url), 'utf8'));
+  assert.deepEqual(ci.on.push, { branches: ['main'] });
+  assert.ok(ci.on.pull_request.types.includes('synchronize'));
+  assert.deepEqual(wakeWorkflow.on.workflow_run, { workflows: ['CI'], types: ['completed'] });
+  assert.equal(wakeWorkflow.on.schedule, undefined);
+  assert.match(wakeWorkflow.jobs.wake.steps[0].with.ref, /repository.default_branch/);
+  for (const step of wakeWorkflow.jobs.wake.steps.filter(step => step.with?.script)) {
+    assert.doesNotThrow(() => new AsyncFunction('github', 'context', 'core', step.with.script));
+    assert.ok(!step.with.script.includes('${{'), 'event values must be passed as data');
+  }
 });

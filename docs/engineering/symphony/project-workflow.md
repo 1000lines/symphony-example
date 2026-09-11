@@ -22,24 +22,23 @@ human-lead: Full Name
 PR base, and validation target. Missing metadata requires a workpad question
 before implementation.
 
-The hosted ticket-start hook routes unprojected DEMO issues to the uniquely
+The hosted ticket-start hook routes unprojected issues from the configured team to the uniquely
 resolved active project with `project-code: misc`, `project-color: blue`, and
-`base-branch: main`. It preserves existing project assignments and non-DEMO
-issues. Missing or ambiguous misc metadata fails visibly. The
+`base-branch: main`. It preserves existing project assignments and issues from other teams. Missing or ambiguous misc metadata fails visibly. The
 [misc routing guide](./misc-project-routing.md) describes the helper and its
 evidence; the helper does not create a project or guess from its display name.
 
 ## State Meanings
 
-| State                    | Meaning and owner                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| `Backlog`                | Outside the active pool; a human or accepted project action makes work eligible.          |
-| `Active`                 | Symphony can implement or rework the issue, subject to its dependency gate.               |
-| `Inactive`               | CI, deploy, AI review, human review, or missing input is pending outside the worker slot. |
-| `Happy` / `Unhappy`      | Sleeping daemon verdicts; daemon scheduling owns the next evaluation.                     |
-| `Evaluating`             | Configured daemon dispatch state in the current runtime.                                  |
-| `Done`                   | Accepted work is complete; human or accepted merge automation owns completion.            |
-| `Canceled` / `Duplicate` | Terminal work; event bridges do not reopen it.                                            |
+| State                    | Meaning and owner                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `Backlog`                | Outside the active pool; a human or accepted project action makes work eligible.      |
+| `Active`                 | Symphony can implement or rework the issue, subject to its dependency gate.           |
+| `Inactive`               | Deploy, AI review, human review, or missing input is pending outside the worker slot. |
+| `Unhappy`                | CI is pending; `wake:15m` schedules another evaluation.                               |
+| `Evaluating`             | The server wakes one sleeping ticket to check its current PR.                         |
+| `Done`                   | Accepted work is complete; human or accepted merge automation owns completion.        |
+| `Canceled` / `Duplicate` | Terminal work; event bridges do not reopen it.                                        |
 
 Planning and review are phases of work, not extra required Linear states. The
 runtime accepts `Todo`, `In Progress`, and `Rework` as legacy workable names.
@@ -54,7 +53,9 @@ issue or maintain them as an authoritative state machine.
 
 ## Current-Team Fallbacks
 
-The DEMO team provides `Active` and `Inactive`. Use them for new work and waits.
+Read the team from the target repository's `.symphony.cfg.json`. The CI timer
+requires `Active`, `Inactive`, `Unhappy`, `Evaluating`, and the `wake:15m` label.
+It does not substitute legacy states for its sleeping and evaluation states.
 On teams missing a target state, record the exact fallback in `## Codex Workpad`.
 
 | Missing target                                   | Supported compatibility action                                                                                       |
@@ -77,12 +78,12 @@ fallback and verifies the mutation response.
 | ------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Implementation or rework starts                               | `Active`                                           | Pinned Codex workpad, source reads, selected base, assumptions, and success criteria. |
 | Hard prerequisite is incomplete                               | Keep dependency-gated work in the active pool      | Exact blocker and required upstream result.                                           |
-| PR is opened or updated                                       | `Inactive`                                         | Draft PR URL, head SHA, labels, assignee, and local validation.                       |
-| Checks or configured AI review are pending                    | Stay `Inactive`                                    | Pending checks/review and next actor; release the worker slot.                        |
+| PR is opened or updated                                       | `Unhappy` with `wake:15m` while CI is pending      | Draft PR URL, head SHA, labels, assignee, and local validation.                       |
+| CI is pending                                                 | `Unhappy` with `wake:15m`                          | Pending checks/review and next actor; release the worker slot.                        |
 | Known CI or review fix is required                            | `Active`                                           | Failed check or finding, current head, and next action.                               |
 | A decision, source, credential, or environment is missing     | `Inactive`                                         | Specific question and exact missing prerequisite.                                     |
 | Required checks pass and AI review has no actionable findings | Stay `Inactive` for human review                   | Current-head checks, review verdict, artifact links, and closed feedback ledger.      |
-| A fix is pushed                                               | `Inactive`                                         | New head SHA and refreshed validation; old approval is not current-head evidence.     |
+| A fix is pushed                                               | `Unhappy` with `wake:15m` while CI is pending      | New head SHA and refreshed validation; old approval is not current-head evidence.     |
 | Human accepts the work                                        | Human or accepted merge automation moves to `Done` | Approval, merge or acceptance evidence.                                               |
 
 Before rework, read submitted GitHub reviews, inline comments and thread status,
@@ -103,44 +104,45 @@ The [Cadence event router](../../../.github/workflows/cadence-ai-review-events.y
 requests `example-cadence-bot` after Symphony pushes and human review activity.
 The review-request workflow reviews the current head. The separate
 [review handoff bridge](../../../scripts/cadence-linear-rework.mjs) and
-[non-review bridge](../../../.github/workflows/scripts/symphony-linear-wakeups.mjs)
+[CI wakeup workflow](../../../.github/workflows/symphony-linear-wakeups.yml)
 perform these actions:
 
-| Event                                                                                              | Implemented action                                                                                                                                                   |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Actionable Cadence review                                                                          | Wake to `Active`, or the explicit legacy `Rework` fallback.                                                                                                          |
-| Nonempty human PR conversation comment or non-approved review body; human changes-requested review | Wake directly. The review bridge requires an open, Symphony-authored PR with the `symphony` label.                                                                   |
-| Clean Cadence approval or human-needed finding                                                     | Request eligible human PR assignees; record a no-assignee gap when absent. This bridge leaves Linear state unchanged.                                                |
-| Human approval with notes                                                                          | The event router requests Cadence again; the review bridge does not directly wake Linear.                                                                            |
-| Failed required check on the current PR head                                                       | Wake with check name, result, head SHA, and run/check URL. Nonrequired, stale, and successful ordinary checks do not wake.                                           |
-| Confirmed current PR merge conflict                                                                | Wake only for `mergeable: false` and `mergeable_state: dirty`. PR events and the sweep at minutes 17 and 47 handle base changes and previously unknown mergeability. |
-| Issue-scoped `workflow_dispatch` completion                                                        | Wake on success or failure with run id/attempt, conclusion, workflow head SHA, and URL. Completion requests follow-up; it does not prove acceptance.                 |
+| Event                                                                                              | Implemented action                                                                                                    |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Actionable Cadence review                                                                          | Wake to `Active`, or the explicit legacy `Rework` fallback.                                                           |
+| Nonempty human PR conversation comment or non-approved review body; human changes-requested review | Wake directly. The review bridge requires an open, Symphony-authored PR with the `symphony` label.                    |
+| Clean Cadence approval or human-needed finding                                                     | Request eligible human PR assignees; record a no-assignee gap when absent. This bridge leaves Linear state unchanged. |
+| Human approval with notes                                                                          | The event router requests Cadence again; the review bridge does not directly wake Linear.                             |
+| Failed required external check on the current PR head                                              | Move a waiting ticket to `Active`; ignore optional or stale failures.                                                 |
+| Confirmed conflict on an `Inactive` ticket                                                         | Record the fix instruction in the Cadence workpad and move to `Active`.                                               |
+| Current PR CI completes                                                                            | `Inactive` on success, `Active` on failure; remove `wake:15m`.                                                        |
 
-The non-review workflow listens to failed Actions `workflow_run` completions,
-external `check_run` completions, commit statuses, selected PR events, and its
-conflict sweep. Its job gate excludes unrelated runs before allocating a runner.
-It excludes its own workflow and `workflow_run`-triggered runs to avoid recursion.
+The CI wakeup workflow listens to PR updates, CI workflow completions, external
+check failures, and failing commit statuses. It finds the ticket using the
+configured team key in the PR title or branch and checks the current PR head.
+An Active worker gets up to one minute to finish; if it is still Active, the
+workflow leaves it alone. Pending CI uses `Unhappy` with `wake:15m`.
 
-Dispatched completions qualify on `symphony/` branches. Resolution uses the
-anchored `[linear:<issue>] ` run-name marker first, then the PR title prefix
-or a unique branch identifier. An adopter-owned workflow can carry its
-`ticket_number` input in that marker; `workflow_run` does not include dispatch
-inputs. Keep the marker, PR/branch identifiers and configured team recognizers
-consistent. The [tooling setup guide](./tooling-setup.md#pr-labels-and-non-review-wakeups)
-documents event permissions, credential-owner setup and retained runtime gaps.
+The server's existing timer wakes `Unhappy` into `Evaluating` after approximately
+15 minutes, allowing for jitter, polling, dependency gates, and capacity. The
+profiles limit concurrent evaluations to one. An Evaluating worker checks only
+its current ticket's PR and records the result in the Codex workpad: conflict or
+failure becomes Active, success becomes Inactive, and pending checks return to
+Unhappy with wake:15m. It preserves unrelated labels and rereads the issue and
+PR before changing state. Active outcomes can continue into normal rework;
+waiting outcomes end the turn. No repository scan or worker sleep is required.
+See the profile's **CI Timer Evaluation** section for the complete instructions.
 
-Missing or ambiguous identity, missing project metadata/labels, mismatched
-repository/project, or missing SHA/evidence prevents a non-review mutation.
-PR-backed events are checked against the current PR head again before mutation.
+These transitions do not complete or reopen terminal tickets. The runtime owns
+the Symphony workpad and timer anchor; agents update the Codex workpad. The
+GitHub workflow records conflict instructions in the Cadence workpad and state
+results in its run log. Cadence review handoffs remain independent; the final
+issue-state reread preserves observed concurrent changes, but Linear offers no
+atomic compare-and-swap for these updates.
 
-Both state bridges preserve terminal names (`Done`, `Canceled`, `Cancelled`,
-`Duplicate`) and terminal Linear categories. They re-read state before waking;
-Linear does not provide an atomic compare-and-swap here. They record confirmed
-mutations, fallbacks, skips, and errors in `## Cadence Workpad` and the workflow
-summary. Non-review deduplication is bounded to ten recent records; independent
-Cadence writers are not serialized with the bridge. See the
-[workpad contract](../review/cadence-linear-workpad.md) for persistence limits and
-the [review guide](../review/cadence-ai-review.md) for trigger coalescing.
+The hosted profile changes take effect when the accepted runtime bundle is
+installed and its configuration reloaded. Committing the files alone does not
+change a running server.
 
 ## Branching And Finalization
 

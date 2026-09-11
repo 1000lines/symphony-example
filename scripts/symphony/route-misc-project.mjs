@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from "node:url";
+import { readLinearTeamKey } from "../linear-issue-wakeup.mjs";
 
 const LINEAR_API_URL = "https://api.linear.app/graphql";
-const ROUTE_REASON = "eligible-demo-issue-without-project";
+const ROUTE_REASON = "eligible-team-issue-without-project";
 
 export const MISC_PROJECT_LOOKUP = Object.freeze({
+  teamKey: readLinearTeamKey(),
   projectCode: "misc",
   projectColor: "blue",
   baseBranch: "main",
@@ -76,8 +78,8 @@ export function planMiscProjectRoute({
     lookupSource: miscLookupSource(lookup),
   };
 
-  if (!isDemoIssue(issue)) {
-    return skippedPlan(base, "non-demo-issue");
+  if (normalize(issue.team?.key) !== normalize(lookup.teamKey)) {
+    return skippedPlan(base, "different-team");
   }
   if (issue.project) {
     return skippedPlan(base, "issue-already-has-project");
@@ -566,13 +568,6 @@ async function linearRequest({
   return payload.data || {};
 }
 
-function isDemoIssue(issue) {
-  return (
-    /^DEMO-\d+$/.test(issue.identifier || "") ||
-    normalize(issue.team?.key) === "demo"
-  );
-}
-
 function labelsOf(issue) {
   const labels = Array.isArray(issue?.labels)
     ? issue.labels
@@ -688,10 +683,10 @@ async function main() {
 
 const HELP_TEXT = `
 Usage:
-  node scripts/symphony/route-misc-project.mjs --issue DEMO-123 --dry-run
-  node scripts/symphony/route-misc-project.mjs --issue DEMO-123 --apply
+  node scripts/symphony/route-misc-project.mjs --issue TEAM-123 --dry-run
+  node scripts/symphony/route-misc-project.mjs --issue TEAM-123 --apply
 
-Routes an eligible no-project DEMO issue to the active misc project. The helper
+Routes an eligible no-project configured-team issue to the active misc project. The helper
 defaults to dry-run; --apply performs the Linear project assignment and missing
 color-label write only when the Linear viewer is linear-bot@example.invalid.
 `.trim();

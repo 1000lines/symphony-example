@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "symphony-repository/v1",
+  "linear": { "teamKey": "100" },
+  "workingDirectory": ".",
+  "instructions": [],
+  "commands": {
+    "setup": [["npm", "ci"]],
+    "build": [["npm", "run", "build"]],
+    "test": [["npm", "test"]],
+    "lint": [["npm", "run", "lint"]]
+  },
+  "ci": {
+    "requiredChecks": [
+      {
+        "name": "CI Required",
+        "workflow": ".github/workflows/ci.yml",
+        "appId": 15368
+      }
+    ]
+  }
+}

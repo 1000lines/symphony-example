@@ -24,6 +24,7 @@ function keys(value, allowed) {
 export function validateConfig(config) {
   keys(config, [
     "schemaVersion",
+    "linear",
     "workingDirectory",
     "instructions",
     "commands",
@@ -33,6 +34,11 @@ export function validateConfig(config) {
     config.schemaVersion === "symphony-repository/v1",
     "Unsupported repository config schema"
   );
+  requireThat(
+    object(config.linear) && typeof config.linear.teamKey === "string" && /^[A-Z0-9]+$/.test(config.linear.teamKey),
+    ".symphony.cfg.json requires linear.teamKey, e.g. 100 or ENG"
+  );
+  keys(config.linear, ["teamKey"]);
   requireThat(
     relative(config.workingDirectory),
     "workingDirectory must stay within the repository"
