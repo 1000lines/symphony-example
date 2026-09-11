@@ -148,7 +148,7 @@ test("route job serializes all receipt checks and mutations for a PR", () => {
   assert.match(workflow, /concurrency:/);
   assert.match(
     workflow,
-    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ inputs.pr_number \}\}\n/
+    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ fromJSON\(github.event.workflow_run.display_title\).number \}\}\n/
   );
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /queue: max/);

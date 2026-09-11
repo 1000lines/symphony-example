@@ -1,28 +1,15 @@
 name: Cadence AI Review Events
 
-# Secret-free ingress completes first. A trusted workflow_run job forwards only
-# candidate source-run/PR IDs; existing privileged jobs execute by dispatch on
-# main and fetch current feedback before the original-author authority check.
-# Existing per-PR receipts and reviewer selection remain in the route below.
+# workflow_run executes the default branch, so no second dispatch is needed.
+# Only current GitHub API data reaches the existing authority and receipt checks.
 
 on:
   workflow_run:
     workflows: [Cadence Review Ingress]
     types: [completed]
-  workflow_dispatch:
-    inputs:
-      source_run_id:
-        description: Completed Cadence ingress run
-        required: true
-        type: string
-      pr_number:
-        description: Candidate PR number (verified against the source run)
-        required: true
-        type: string
 
 permissions:
   contents: read
-  actions: read
   issues: read
   pull-requests: write
 
@@ -32,38 +19,17 @@ env:
   SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
 
 jobs:
-  forward:
-    name: Forward ingress to main
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
-    permissions:
-      actions: write
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out trusted forwarding code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          ref: main
-          persist-credentials: false
-      - name: Dispatch existing event and handoff jobs on main
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
-        with:
-          script: |
-            const { pathToFileURL } = require('node:url');
-            const { forwardCadenceEvent } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-forwarded-event.mjs`));
-            const workflows = await forwardCadenceEvent({ github, context });
-            await core.summary.addHeading('Forwarded to main').addRaw(workflows.join(', ')).write();
-
   route:
     name: Route review-causing event
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' &&
+      fromJSON(github.event.workflow_run.display_title).eligible
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
       group: >-
-        cadence-ai-review-events-${{ github.repository }}-${{ inputs.pr_number }}
+        cadence-ai-review-events-${{ github.repository }}-${{ fromJSON(github.event.workflow_run.display_title).number }}
       cancel-in-progress: false
       # Keep distinct feedback queued; the default single pending slot can
       # discard a new context when a duplicate delivery arrives after it.
@@ -91,12 +57,16 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: Resolve current forwarded event
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
-          PR_NUMBER: ${{ inputs.pr_number }}
-        run: node .github/workflows/scripts/cadence-forwarded-event.mjs
+      - name: Read current event from GitHub
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { resolveCadenceEvent } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-forwarded-event.mjs`);
+            const { payload, eventName } = await resolveCadenceEvent({ github, context });
+            const path = `${process.env.RUNNER_TEMP}/cadence-event.json`;
+            require('node:fs').writeFileSync(path, JSON.stringify(payload));
+            core.exportVariable('CADENCE_EVENT_PATH', path);
+            core.exportVariable('CADENCE_EVENT_NAME', eventName);
 
       - name: Mint existing Cadence App token
         id: app-token

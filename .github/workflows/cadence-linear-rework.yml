@@ -1,19 +1,11 @@
 name: Cadence Review Handoff
 
 on:
-  workflow_dispatch:
-    inputs:
-      source_run_id:
-        description: Completed Cadence ingress run
-        required: true
-        type: string
-      pr_number:
-        description: Candidate PR number (verified against the source run)
-        required: true
-        type: string
+  workflow_run:
+    workflows: [Cadence Review Ingress]
+    types: [completed]
 
 permissions:
-  actions: read
   contents: read
   pull-requests: read
 
@@ -25,12 +17,15 @@ env:
 jobs:
   review-handoff:
     name: Route Cadence review handoff
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' &&
+      fromJSON(github.event.workflow_run.display_title).eligible &&
+      contains(fromJSON('["issue_comment","pull_request_review"]'), github.event.workflow_run.event)
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: cadence-review-handoff-${{ github.repository }}-${{ inputs.pr_number }}
+      group: cadence-review-handoff-${{ github.repository }}-${{ fromJSON(github.event.workflow_run.display_title).number }}
       cancel-in-progress: false
       queue: max
     steps:
@@ -40,12 +35,16 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: Resolve current forwarded event
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
-          PR_NUMBER: ${{ inputs.pr_number }}
-        run: node .github/workflows/scripts/cadence-forwarded-event.mjs
+      - name: Read current event from GitHub
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { resolveCadenceEvent } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-forwarded-event.mjs`);
+            const { payload, eventName } = await resolveCadenceEvent({ github, context });
+            const path = `${process.env.RUNNER_TEMP}/cadence-event.json`;
+            require('node:fs').writeFileSync(path, JSON.stringify(payload));
+            core.exportVariable('CADENCE_EVENT_PATH', path);
+            core.exportVariable('CADENCE_EVENT_NAME', eventName);
 
       - name: Mint existing Cadence App token
         id: app-token

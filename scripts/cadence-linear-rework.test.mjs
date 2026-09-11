@@ -913,9 +913,11 @@ for (const eventName of ["pull_request_review", "issue_comment"]) {
     const source = { id: 10, event: eventName, repository: { full_name: repository },
       path: ".github/workflows/cadence-review-ingress.yml", name: "Cadence Review Ingress",
       status: "completed", conclusion: "success", actor: feedback.user,
-      display_title: `cadence-event/v1 ${eventName} ${event.action} ${pr.number} ${feedback.id} ${eventName === "issue_comment" ? "-" : pr.head.sha}` };
-    const resolved = await resolveCadenceEvent({ repository, sourceRunId: "10", prNumber: String(pr.number),
-      read: async path => path.includes("/actions/runs/") ? source : path.endsWith(`/pulls/${pr.number}`) ? pr : feedback });
+      display_title: JSON.stringify({ event: eventName, action: event.action, number: pr.number, id: feedback.id, head: pr.head.sha }) };
+    const [owner, repo] = repository.split("/");
+    const resolved = await resolveCadenceEvent({
+      context: { ref: "refs/heads/main", repo: { owner, repo }, payload: { workflow_run: source } },
+      github: { request: async path => ({ data: path.endsWith(`/pulls/${pr.number}`) ? pr : feedback }) } });
     const fixture = harness();
     const fetchImpl = authorityFetch(resolved.payload, eventName, fixture.fetchImpl);
     const review = await routeCadenceReviewEvent({ ...resolved, repository, token: appToken, fetchImpl });

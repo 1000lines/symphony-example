@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
-import { forwardCadenceEvent, resolveCadenceEvent, sourceEvent } from "./cadence-forwarded-event.mjs";
+import { resolveCadenceEvent } from "./cadence-forwarded-event.mjs";
 import { routeCadenceReviewEvent } from "./cadence-ai-review-route-event.mjs";
 import { routeReviewHandoff } from "../../../scripts/cadence-linear-rework.mjs";
 
@@ -16,7 +16,7 @@ const fixture = (eventName = "pull_request_review", action = "submitted", fork =
     path: ".github/workflows/cadence-review-ingress.yml", repository: { full_name: repository }, actor: author,
     // GitHub can omit this list for fork runs; it is never the routing authority.
     pull_requests: fork ? [] : [{ number: 7 }],
-    display_title: `cadence-event/v1 ${eventName} ${action} 7 ${eventName === "pull_request_target" ? 0 : 9} ${eventName === "issue_comment" ? "-" : head}` };
+    display_title: JSON.stringify({ event: eventName, action, number: 7, id: 9, head }) };
   const pr = { number: 7, state: "open", title: "[DEMO-7]: routing", labels: [{ name: "symphony" }],
     url: `https://api.github.com${root}/pulls/7`, user: { login: "example-symphony-bot" },
     head: { sha: head, repo: { full_name: fork ? "writer/fork" : repository } }, base: { repo: { full_name: repository } } };
@@ -29,16 +29,12 @@ const fixture = (eventName = "pull_request_review", action = "submitted", fork =
     assert.ok([`${root}/pulls/7/reviews/9`, `${root}/pulls/comments/9`, `${root}/issues/comments/9`].includes(path), path);
     return feedback;
   };
-  const calls = [];
-  const github = { rest: { actions: {
-    getWorkflowRun: async () => ({ data: run }),
-    createWorkflowDispatch: async input => { calls.push(input); },
-  } } };
-  const context = { repo: { owner: "example-org", repo: "example-repo" }, payload: { workflow_run: { id: 10 } },
-    actor: "github-actions[bot]" };
-  return { run, pr, feedback, read, calls, github, context };
+  const github = { request: async path => ({ data: await read(path.replace(/^GET /, "")) }) };
+  const context = { ref: "refs/heads/main", repo: { owner: "example-org", repo: "example-repo" },
+    payload: { workflow_run: run }, actor: "github-actions[bot]" };
+  return { run, pr, feedback, github, context };
 };
-const resolve = f => resolveCadenceEvent({ repository, sourceRunId: "10", prNumber: "7", read: f.read });
+const resolve = f => resolveCadenceEvent(f);
 
 for (const fork of [false, true]) {
   for (const [eventName, action] of [
@@ -47,15 +43,8 @@ for (const fork of [false, true]) {
     ["issue_comment", "created"], ["issue_comment", "edited"],
     ["pull_request_review_comment", "created"], ["pull_request_review_comment", "edited"],
   ]) {
-    test(`${fork ? "fork" : "same-repository"} ${eventName}.${action} dispatches main and resolves current evidence`, async () => {
+    test(`${fork ? "fork" : "same-repository"} ${eventName}.${action} resolves current evidence on main`, async () => {
       const f = fixture(eventName, action, fork);
-      await forwardCadenceEvent(f);
-      assert.deepEqual(f.calls.map(c => c.workflow_id), ["cadence-ai-review-events.yml",
-        ...(["issue_comment", "pull_request_review"].includes(eventName) ? ["cadence-linear-rework.yml"] : [])]);
-      for (const call of f.calls) {
-        assert.equal(call.ref, "main");
-        assert.deepEqual(call.inputs, { source_run_id: "10", pr_number: "7" });
-      }
       const resolved = await resolve(f);
       assert.equal(resolved.eventName, eventName);
       assert.equal(resolved.payload.pull_request, f.pr);
@@ -77,10 +66,9 @@ for (const [name, change] of [
   ["missing selector", f => { f.run.display_title = "arbitrary title"; }],
   ["title injection", f => { f.run.display_title += "\nSOURCE_RUN_ID=1"; }],
 ]) {
-  test(`${name} cannot forward`, async () => {
+  test(`${name} cannot reach consumers`, async () => {
     const f = fixture(); change(f);
-    await assert.rejects(forwardCadenceEvent(f));
-    assert.equal(f.calls.length, 0);
+    await assert.rejects(resolve(f));
   });
 }
 
@@ -100,10 +88,6 @@ for (const [name, change] of [
     await assert.rejects(resolve(f));
   });
 }
-
-test("dispatch PR number cannot substitute another concurrency target", async () => {
-  await assert.rejects(resolveCadenceEvent({ repository, sourceRunId: "10", prNumber: "8", read: fixture().read }), /Source PR mismatch/);
-});
 
 for (const permission of ["write", "maintain", "admin", "read", "none", "unknown"]) {
   test(`main rechecks original feedback author ${permission} permission, never the forwarding bot`, async () => {
@@ -140,29 +124,30 @@ test("bot editing a human's feedback cannot supply that human's authority", asyn
   assert.equal(result.skipReason, "non-human-feedback-editor");
 });
 
-test("GitHub dispatch errors are visible; retry retains the source identity", async () => {
-  const f = fixture();
-  f.github.rest.actions.createWorkflowDispatch = async () => { throw new Error("HTTP 403"); };
-  await assert.rejects(forwardCadenceEvent(f), /HTTP 403/);
-  assert.equal(sourceEvent(f.run, repository).feedbackId, 9);
-});
-
 test("workflow boundaries keep PR ingress secret-free and every privileged job on main", () => {
   const read = name => yaml.load(readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8"));
   const ingress = read("cadence-review-ingress");
   assert.deepEqual(ingress.permissions, {});
+  assert.match(ingress.jobs.ingress.if, /contains\(github.event.pull_request.labels/);
+  assert.match(ingress.jobs.ingress.if, /vars.SYMPHONY_BOT_USER/);
+  // The same free gate marks skipped ingress runs, whose conclusion may be success.
+  assert.ok(ingress["run-name"].replace(/\s+/g, " ").includes(ingress.jobs.ingress.if.trim().replace(/\s+/g, " ")));
+
   assert.doesNotMatch(JSON.stringify(ingress.jobs), /secrets|environment|checkout|github.token|GITHUB_TOKEN/);
   const events = read("cadence-ai-review-events"), handoff = read("cadence-linear-rework");
   assert.deepEqual(events.on.workflow_run.workflows, ["Cadence Review Ingress"]);
-  assert.deepEqual(events.jobs.forward.permissions, { actions: "write", contents: "read" });
-  assert.doesNotMatch(JSON.stringify(events.jobs.forward), /secrets|environment|pull-requests/);
+  assert.equal(events.on.workflow_dispatch, undefined);
+  assert.equal(events.jobs.forward, undefined);
+  assert.deepEqual(handoff.on.workflow_run.workflows, ["Cadence Review Ingress"]);
   for (const job of [events.jobs.route, handoff.jobs["review-handoff"]]) {
-    assert.match(job.if, /workflow_dispatch.*refs\/heads\/main/);
+    assert.match(job.if, /refs\/heads\/main.*workflow_run.conclusion/);
+    assert.match(job.if, /fromJSON\(github.event.workflow_run.display_title\).eligible/);
     assert.equal(job.environment, "cadence-controller");
     assert.equal(job.steps[0].with.ref, "main");
     assert.equal(job.steps[0].with["persist-credentials"], false);
-    assert.match(job.steps[1].run, /cadence-forwarded-event.mjs/);
-    assert.match(job.concurrency.group, /inputs.pr_number/);
+    assert.match(job.steps[1].uses, /^actions\/github-script@/);
+    assert.match(job.steps[1].with.script, /cadence-forwarded-event.mjs/);
+    assert.match(job.concurrency.group, /fromJSON\(github.event.workflow_run.display_title\).number/);
     assert.equal(job.concurrency.queue, "max");
   }
 });
