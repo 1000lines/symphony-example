@@ -12,15 +12,12 @@ comments as a substitute for review-state workpad updates, edit
 `## Codex Workpad`, or mutate issue state, labels, assignees, relations, or
 project metadata.
 
-These CLI write steps belong to the legacy Claude runner. Check-mode Codex
-assessment returns structured output without Linear credentials; trusted
-publication validates and persists its `reviewContract` before publishing a
-successful `Cadence Review`. Both fresh `ci_passes` and `ai_accepts`, closed
-mandatory feedback and a ready PR are required for normal handoff. Preserve
-generation, attempt, stable finding IDs and mandatory classifications across
-writes; generated bookkeeping cannot reset the generation or findings cap.
-A denied write or mismatched readback is an operational failure, never AI
-acceptance. Do not substitute a PR approval or another workpad.
+Preserve the reviewed SHA, stable finding IDs, mandatory classifications and
+ordinary review history across workpad writes. A denied write or mismatched
+readback is an operational failure, not acceptance. Do not substitute a PR
+approval or another workpad for persisted evidence. Normal handoff needs
+passing required CI, a fresh current-head review, closed mandatory feedback,
+a clean branch and a ready PR.
 
 ## Happy Path
 
@@ -50,7 +47,7 @@ acceptance. Do not substitute a PR approval or another workpad.
 
    Use `-` instead of a file path to read JSON from stdin.
 
-4. Read back the saved head and review state, then post the legacy runner's
+4. Read back the saved head and review state, then post Cadence's
    concise GitHub PR review assessment. The GitHub body should not
    duplicate the full workpad detail.
 

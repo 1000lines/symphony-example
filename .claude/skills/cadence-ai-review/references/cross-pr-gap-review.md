@@ -19,15 +19,14 @@ Finding ID: `AR-<project>-coverage-F<n>`.
   that another PR consumes. Check that the contracts match: names, shapes,
   defaults, and ordering.
 - Deploy-order or merge-order assumptions between PRs.
-- Acceptance consumers must agree on fresh `ci_passes` and `ai_accepts`, exact
-  head/latest human-feedback generation, persisted workpad and mandatory ledger,
-  clean branch and ready status. A legacy bot approval cannot satisfy check-mode
-  acceptance. Blocker-side maturity is removed for rejected/stale evidence or
-  severe regression, not ordinary edits alone.
+- Acceptance consumers must agree on passing required CI, a fresh review of
+  the current head, matching workpad evidence, closed mandatory feedback, a
+  clean branch and ready status. A prior approval cannot cover new
+  review-relevant activity. Blocker-side maturity is removed for rejected/stale
+  evidence or severe regression, not ordinary edits alone.
 - Distinguish available helper source, installed refs and real execution.
-  Name an unwired producer/consumer or missing deployment proof as a seam gap;
-  keep working bootstrap review until verified cutover. Do not infer live App,
-  Codex, timer or CI behavior from fixtures.
+  Name an unwired producer/consumer or missing deployment proof as a seam gap.
+  Do not infer live App, provider, timer or CI behavior from fixtures.
 
 Finding ID: `AR-<project>-seam-F<n>`.
 

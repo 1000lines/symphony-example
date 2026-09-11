@@ -95,11 +95,9 @@ workpad if GitHub publication is unavailable. Proposed rules are not active
 until merged into the selected base. `AGENTS.md` remains working guidance.
 
 Read the target's README, applicable AGENTS/CLAUDE guidance, toolchain files and
-`.github` workflows. Both `1000lines/symphony-example` and
-`jeremycarroll/venn-search-rs` use this selection path; neither name is a hardcoded
-clone target. Their commands and required CI come from their own selected base.
-The installed config helper and App broker already provide the required
-interfaces; no extra manifest entry or executable hook is needed.
+`.github` workflows. Repository selection has no hardcoded clone target;
+commands and required CI come from each target's selected base. The installed
+config helper and App broker provide this interface without executable hooks.
 
 In App mode, `40-credentials` installs `github-app-auth.mjs`, the `gh` adapter
 and Git askpass outside the checkout. Follow the repository skill's `bind` and
@@ -121,13 +119,13 @@ mode), `45-runtime-bundle` and `80-config` installation steps, plus the normal
 service reload. Merging the source does not activate it on an existing host.
 Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
 
-Normal acceptance after verified check cutover requires both fresh `ci_passes`
-and `ai_accepts`, closed mandatory feedback, a clean branch and ready PR. See the
-[Cadence contract and current bootstrap boundary](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
-and [operator prerequisites](../../../docs/engineering/symphony/tooling-setup.md#check-cutover-prerequisites).
-Run local tests first, Docker only for an environment gap, then mandatory CI on
-the published head. Source/staged/rendered fixtures prove installation behavior;
-they do not prove host reload, App grants, a Codex route, or a timer wake.
+Normal acceptance requires passing required CI and a fresh Cadence review of
+the current head, closed mandatory feedback, a clean branch and ready PR. The
+[native review contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract)
+describes the Claude reviewer's PR-review output and workpad. Run local tests
+first, Docker only for an environment gap, then mandatory CI on the published
+head. Source/staged/rendered fixtures prove installation behavior; they do not
+prove host reload, App grants, provider execution, or a timer wake.
 
 ## Human feedback and replanning
 

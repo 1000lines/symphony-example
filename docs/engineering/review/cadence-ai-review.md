@@ -1,87 +1,5 @@
 # Cadence AI Review Automation
 
-## Acceptance contract and rollout boundary
-
-After verified check cutover, normal human handoff requires both fresh
-`ci_passes` and `ai_accepts`, a closed mandatory-feedback ledger, a clean task
-branch, and a PR marked ready from draft. Human approval and merge own final
-acceptance. A bot approval or GitHub's `reviewDecision` never substitutes for
-either predicate. Apply `mature` to the blocker only at this readiness point;
-remove it for request-changes, rejected or stale acceptance evidence, or a
-similarly severe regression that makes dependent work unsafe. Ordinary edits
-alone do not revoke maturity.
-
-The source implementation is
-[`review-contract.mjs`](../../../scripts/symphony/review-contract.mjs):
-
-- `evaluateCi` implements `ci_passes`. Read the nonempty required-check list
-  from the target's selected-base `.symphony.cfg.json` and acquire complete
-  workflow/branch-rule provenance. Verify repository, current head, workflow
-  path, allowed event/ref, emitting App, latest attempt of each applicable run,
-  and all required child jobs. A newer peer run cannot hide an older failing
-  peer. Missing, ambiguous, pending, stale, failed, canceled, timed-out,
-  skipped, neutral, action-required or unknown results do not pass. Review,
-  routing, label and deploy jobs are not implicitly required CI.
-- `evaluateAi` implements `ai_accepts`. Require an open correctly associated
-  and labeled PR, `Cadence Review` from Cadence App `4866513`, the exact head
-  and latest required generation, validated output, and matching persisted
-  `reviewContract` state in the linked Cadence workpad. Both output and retained
-  ledger must have no open mandatory findings or unresolved requirements.
-  `blocker` and `human-needed` prevent acceptance; `should-fix` and `suggestion`
-  remain nonblocking unless a human makes them mandatory.
-- Generation binds repository/PR/head, base and configuration revisions,
-  verified human feedback IDs/update times, and explicit manual retry. Acquire
-  submitted reviews, conversation comments, inline threads and replies, Linear
-  comments, and commits completely. Incomplete history cannot accept and forces
-  full review. Generated workpad bookkeeping cannot reset the generation or
-  three-pass findings cap, even when written using a human-owned credential.
-  Queue before dispatch and recheck live head/generation before publication;
-  superseded attempts cannot publish over newer evidence.
-
-The prepared producer in
-[`cadence-codex-review.mjs`](../../../scripts/cadence-codex-review.mjs) separates
-trusted acquisition, bounded read-only assessment in a fresh Codex home, and
-trusted publication. Assessment has no publication credentials and does not
-run PR scripts with provider credentials. Its accepted pins are Action
-`86365089eb2b84e0a8fb0717b304f8bdcb13b20e`, CLI `0.153.4`, model `gpt-6-astra`,
-effort `xhigh`, read-only sandbox, drop-sudo, and the Action API proxy.
-
-| Check observation                 | Meaning                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| queued / in_progress              | Pending; release the worker slot.                                                               |
-| success                           | Validated assessment and matching persisted workpad; still verify both predicates.              |
-| failure                           | Actionable blocker, or operational provider/API/output/persistence failure; inspect the reason. |
-| action_required                   | Human-needed finding or findings cap; name the human action.                                    |
-| canceled / timed_out / superseded | No acceptance.                                                                                  |
-
-The source generation policy permits three findings passes and at most one
-operational retry per generation. Those are separate budgets; neither a stale
-success nor a loop label establishes freshness.
-
-**Current routing still calls the existing Claude reviewer.** The native
-`workflow_call` path in `cadence-ai-review-events.yml` and the manual matrix
-does not invoke the prepared Codex producer or these predicates. Source helpers
-and unit tests establish availability, not a deployed check gate. Do not select
-check-only acceptance until the deployment owner supplies a reviewed executable
-route, actual current-head check/workpad proof, and verified consumer cutover.
-This is an explicit remaining deployment prerequisite, not an available CLI.
-
-Keep the working bootstrap reviewer selected until that proof exists. Inventory
-all opted-in open PRs, dismiss only legacy Cadence approvals and remove its
-pending requests with ID/readback evidence, preserve human reviews, and queue
-fresh checks before cutover. A denied dismissal needs the exact repository,
-review ID, failed API operation and required operator permission in the PR and
-workpad. Never combine a legacy approval with an absent or stale check to claim
-`ai_accepts`. DEPLOY owns rollout; RETIRE owns obsolete credential/selector
-removal. See [setup and operator handoff](../symphony/tooling-setup.md#check-cutover-prerequisites).
-
-## Legacy Claude compatibility
-
-The remaining sections document the existing bootstrap runner only. Its review
-events, bot identity preflight and loop labels are compatibility behavior; they
-do not define check-mode acceptance. The legacy skill is still consumed by that
-runner and must stay usable until a verified replacement is selected.
-
 Cadence AI Review is the mandatory automation lane for Symphony-managed PRs.
 The normal gate is the shared `symphony` label; PR-open and synchronize events
 from `example-symphony-bot` to its own open PR may run before that label is applied
@@ -96,6 +14,38 @@ credentials and run Claude Code against that skill. Cadence writes detailed
 review state to one Linear comment headed `## Cadence Workpad`, then posts one
 concise GitHub PR review per completed pass (`APPROVE` when clean, otherwise `COMMENT`;
 never `REQUEST_CHANGES`).
+
+## Acceptance contract
+
+Normal human handoff requires passing required CI and a fresh Cadence review of
+the current PR head, a closed mandatory-feedback ledger, a clean task branch,
+and a PR marked ready from draft. The Claude runner publishes `APPROVE` when
+there are no blocker or human-needed findings, otherwise `COMMENT`. Record the
+reviewer, reviewed SHA, verdict and matching Cadence workpad. Human approval and
+merge own final acceptance; Cadence approval does not replace required human
+branch-protection approval.
+
+Read the required CI checks from the target's selected-base `.symphony.cfg.json`
+and branch rules. Verify the current head, workflow/event/ref, emitting App,
+applicable run attempts and required child jobs. Missing, ambiguous, pending,
+stale, failed, canceled, timed-out or skipped results do not pass. Routing and
+review jobs do not implicitly become required product CI.
+
+The timeline helper reports `fresh-approval` or `stale-approval`; a changed head
+or review-relevant activity after approval requires another review. Read human
+feedback across submitted reviews, conversation comments, inline threads/replies
+and Linear comments. Incomplete timeline history requires a full review.
+Preserve stable finding IDs and workpad history, and close mandatory feedback
+before handoff. Agent-only review loops stop after three passes; verified
+human-grounded activity can reset the loop, while generated bookkeeping cannot.
+A cap or human-needed finding requires a concrete human handoff, not a clean
+acceptance claim.
+
+Apply `mature` to the blocker only at normal readiness. Remove it for
+request-changes, rejected or stale acceptance evidence, or a similarly severe
+regression that makes dependent work unsafe. Ordinary edits alone do not revoke
+maturity. Source availability does not prove installation or live execution;
+record those refs and results separately.
 
 ## PR Actor Flow
 
@@ -199,21 +149,18 @@ current state; its outcome verifier rejects missing or stale-head reviews.
 Manual `cadence-ai-review.yml` accepts `pr_numbers` (comma/space separated),
 `review_label`, or both, then calls the reviewer once per selected PR. Direct
 single-PR dispatch and `review_requested` remain compatibility entry points.
-The existing stale-approval fallback also remains inside the reviewer; migrating
-publication to an App is separate work.
+The stale-approval fallback runs inside the reviewer.
 
 CI wakeups and `cadence-linear-rework.yml` keep their existing responsibilities.
 There is no second CI evaluator, Linear state machine or human-invitation engine.
-This routing change retains Claude; it does not enable the experimental Codex
-producer or its acceptance-check contract.
-
-After merge, verify an authorized feedback event, an unauthorized author, and a
-manual selection. Record their Actions links and actual handoff. Local tests do
-not prove live environment admission or provider execution.
+Review execution uses Claude. Deployment evidence includes an authorized
+feedback event, an unauthorized author, and a manual selection, with Actions
+links and actual handoff results. Local tests do not prove live environment
+admission or provider execution.
 
 ## Automated Triggers And Manual Fallbacks
 
-For this project, automated Cadence review is label-gated and actor-gated:
+Automated Cadence review is label-gated and actor-gated:
 
 - A human-facing PR comment, PR review, inline review comment, or
   ready-for-review event can call Cadence when the PR has the

@@ -9,13 +9,11 @@ The actor classifier owns classification only; its `humanFacing` flag does not
 authorize work. The same module also provides the permission verifier below. It does not trigger workflows, update
 Linear, post PR reviews, or decide Cadence review behavior.
 
-Check-mode acceptance uses numeric App `4866513`, exact `Cadence Review` name,
-current head/latest human-feedback generation and persisted workpad through
-`ai_accepts`, alongside independent `ci_passes`. A bot login, actor class,
-review request, `reviewDecision` or legacy approval grants none of that evidence.
-Normal handoff additionally requires mandatory-feedback closure, a clean branch
-and ready PR. The prepared producer is not selected by the current bootstrap
-Claude route; see the [rollout boundary](./cadence-ai-review.md#acceptance-contract-and-rollout-boundary).
+An actor classification or review request does not prove acceptance. Normal
+handoff also needs required CI and a fresh review of the current head, matching
+workpad evidence, mandatory-feedback closure, a clean branch and a ready PR.
+See the [acceptance contract](./cadence-ai-review.md#acceptance-contract) for the
+reviewer's output and freshness requirements.
 
 ## Inputs
 

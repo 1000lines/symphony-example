@@ -134,17 +134,15 @@ For a DAG fan-out, preserve:
   not create a replacement unless the plan explicitly says the existing issue is
   canceled or unusable;
 - blocker-side mature-label instructions in generated ticket bodies: set
-  `mature` only when both fresh `ci_passes` and `ai_accepts` satisfy the
-  configured contract at the current head/latest human-feedback generation,
-  the mandatory-feedback ledger is closed, and the task branch is clean
-  of committed predecessor work that is not on the selected base branch, and the
-  PR is marked ready for human review from draft. Remove `mature` only for
-  request-changes review, rejected acceptance evidence, stale current-SHA
-  evidence, or a similarly severe regression that makes downstream work unsafe;
-- check-mode Cadence requires successful `Cadence Review` from App `4866513`,
-  validated output and matching persisted workpad, never a bot approval. Name
-  bootstrap review evidence separately until verified cutover; merged source
-  does not establish deployment or change the configured reviewer;
+  `mature` only when required CI passes and Cadence or the configured reviewer
+  approves the current PR head, mandatory feedback is closed, the task branch
+  is clean of committed predecessor work absent from the selected base, and the
+  PR is ready from draft. Record the reviewed SHA, verdict and matching workpad;
+  a prior approval cannot cover new review-relevant activity. Remove maturity
+  only for request-changes review, rejected or stale acceptance evidence, or a
+  similarly severe regression that makes downstream work unsafe;
+- merged source does not establish deployment; record installed refs and actual
+  execution separately when deployment is required;
 - fail-closed mutation policy for missing labels, workflow states, assignees,
   relation endpoints, existing issue ids, branch refs, or direction checks.
 

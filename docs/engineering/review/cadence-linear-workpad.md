@@ -6,24 +6,20 @@ finds that comment and updates it, or creates it when it is absent. Symphony pin
 and updates its own `## Codex Workpad`; `## Symphony Workpad` is engine-owned.
 Neither is a fallback destination for Cadence writes.
 
-After verified check cutover, `ai_accepts` requires `Cadence Review` from App
-`4866513` at the current head/latest required human-feedback generation and
-matching persisted `reviewContract` state. The prepared trusted publisher
-validates output, retains stable finding IDs/mandatory classifications and
-reads back the workpad before publishing success. Both output and retained
-ledger must close mandatory findings, requirements and feedback. Missing or
-denied persistence cannot accept; neither bot approval nor a prose verdict is
-a substitute. The existing Claude runner's records below are bootstrap evidence
-only until verified cutover. See the [acceptance contract](./cadence-ai-review.md#acceptance-contract-and-rollout-boundary).
+Cadence records the reviewed head, findings and verdict in its workpad before
+publishing the concise GitHub PR review. Preserve stable finding IDs and
+mandatory classifications across reviews. Missing or denied persistence is an
+operational failure, not acceptance; an unrelated workpad is not a substitute.
+See the [acceptance contract](./cadence-ai-review.md#acceptance-contract).
 
-`ci_passes` independently requires current-head workflow/App/run-attempt and
-child-job provenance. Normal human handoff needs both predicates, a closed
-mandatory-feedback ledger, a clean branch and a ready PR. Workpad bookkeeping,
-even with a human-owned credential, cannot reset generation or the three-pass
-findings cap. Recheck head, feedback IDs/update times, base/config revisions and
-attempt before publishing; an old attempt cannot overwrite newer evidence.
+Normal human handoff requires passing required CI and a fresh Cadence review of
+the current head, closed mandatory feedback, a clean branch and a ready PR.
+Recheck the head and incoming human feedback before publication. The timeline
+helper detects stale approvals and selects incremental or full review; generated
+bookkeeping cannot reset the agent-only review cap. Keep ordinary review history
+and bridge coordination intact when updating the snapshot.
 
-Legacy Cadence review and the retained standalone non-review bridge share this
+Cadence review and the retained standalone non-review bridge share this
 workpad using the configured Linear credential. The standalone bridge reserves
 `coordination.nonReviewWakeups` for ten recent deduplication records and
 `coordination.lastNonReviewWakeup` for the latest event's full evidence.

@@ -293,16 +293,13 @@ For coding tickets spawned from a DAG plan:
 - Treat `mature` as a label on the blocker issue, not the dependent and not the
   graph edge.
 - Set `mature` only when required checks for the current PR head pass, Cadence
-  acceptance is fresh, the mandatory-feedback ledger is closed, the task branch
-  is clean of unmerged predecessor work, and the PR is ready from draft. After
-  verified check cutover, require both `ci_passes` and `ai_accepts`: successful
-  `Cadence Review` from App `4866513` for the exact head/latest human-feedback
-  generation, validated output and matching persisted workpad. Bot approval and
-  `reviewDecision` cannot substitute. During bootstrap use the explicitly
-  configured existing reviewer and record its evidence; never claim check-mode
-  acceptance from legacy output. See the shared Cadence acceptance contract.
+  or the configured reviewer approves that current head, mandatory feedback is
+  closed, the task branch is clean of unmerged predecessor work, and the PR is
+  ready from draft. Record the reviewed SHA, verdict and matching workpad;
+  inspect incoming human feedback before handoff. A prior approval cannot cover
+  new review-relevant activity. See the shared Cadence acceptance contract.
 - Remove `mature` only when request-changes review, rejected acceptance
-  evidence, stale current-SHA/generation evidence, or a similarly severe
+  evidence, stale current-head review evidence, or a similarly severe
   regression makes downstream work unsafe.
   Ordinary review rework does not remove maturity by itself.
 - If the agent cannot apply or remove a required `mature` label, record the
@@ -559,7 +556,7 @@ passed locally`. Use the target's documented container or a compatible pinned
   evidence, credentials, or decisions keep the issue `Inactive`.
 - Source helpers and profile settings do not prove deployment. Read
   `$SYMPHONY_TOOLING_ROOT/docs/engineering/review/cadence-ai-review.md` for the
-  check contract and current bootstrap boundary. A missing admin operation
+  native review contract. A missing admin operation
   needs the target repository/App, failed operation, required grant, named
   operator and verification step in the prepared PR and pinned workpad.
 

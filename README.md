@@ -14,27 +14,6 @@ See the [migration log](MIGRATION.md) for top-level changes and deployment statu
 Use the [hackathon startup checklist](HACKATHON-START.md) for operator preparation
 and the first ticket's execution and review handoff.
 
-Current worker guidance uses one [authoritative workflow](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
-for local and hosted execution. The installed repository skill selects the
-target from Linear, binds its App credentials, and reads its selected-base
-`.symphony.cfg.json`; hooks are no-ops. Pending CI uses the ticket's
-`Unhappy`/`wake:15m` → `Evaluating` timer with one evaluation slot. Review waits
-use `Inactive`. Read each target's README, applicable AGENTS/CLAUDE instructions,
-toolchain files and `.github` workflows. Validate locally, use Docker only for
-environment gaps, and always inspect required CI at the published head.
-
-After verified check cutover, human readiness requires both fresh `ci_passes`
-and `ai_accepts`, closed mandatory feedback, a clean task branch and a ready
-PR. AI acceptance is the current-head/latest-generation `Cadence Review` from
-App `4866513` with matching persisted workpad; bot approval is not that gate.
-Apply blocker-side `mature` at readiness, and remove it for rejected/stale
-acceptance or severe regression, not ordinary edits alone. Human acceptance
-owns Done. The current route still calls the bootstrap Claude reviewer; the
-Codex producer/predicates are prepared source, not a deployed check route.
-See the [acceptance contract](docs/engineering/review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
-and [deployment prerequisites and missing-admin handoff](docs/engineering/symphony/tooling-setup.md#check-cutover-prerequisites).
-Merging or installing guidance is not proof of a host reload or live rehearsal.
-
 The original extraction notes are preserved below. They describe the starting
 snapshot and may contain placeholders or assumptions that the migration replaces.
 
@@ -50,6 +29,27 @@ These notes describe the supplied source, the values an adopter must provide,
 and known setup gaps. They are preparation guidance, not a tested installation
 procedure. **nothing in this extraction has been verified by execution; no
 extraction round trip was performed.**
+
+## Worker workflow and acceptance
+
+One [authoritative workflow](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
+serves local and hosted execution. The installed repository skill selects the
+target from Linear, binds its App credentials, and reads its selected-base
+`.symphony.cfg.json`; hooks are no-ops. Pending CI uses the ticket's
+`Unhappy`/`wake:15m` → `Evaluating` timer with one evaluation slot. Review waits
+use `Inactive`. Read each target's README, applicable AGENTS/CLAUDE instructions,
+toolchain files and `.github` workflows. Validate locally, use Docker only for
+environment gaps, and always inspect required CI at the published head.
+
+Human readiness requires passing required CI and a fresh Cadence review of the
+current head, closed mandatory feedback, a clean task branch and a ready PR.
+The native workflow hooks run the Claude reviewer, which records detailed
+findings in the Cadence workpad and publishes an `APPROVE` or `COMMENT` PR review.
+Apply blocker-side `mature` at readiness, and remove it for rejected/stale
+acceptance or severe regression, not ordinary edits alone. Human acceptance
+owns Done. The [review reference](docs/engineering/review/cadence-ai-review.md#acceptance-contract)
+describes review freshness, routing, credentials and human handoff.
+Deployment evidence identifies the installed refs, service reload and live runs.
 
 ## Hidden files
 
@@ -168,9 +168,8 @@ in; export the corresponding inputs separately for standalone helpers or the
 host. Actions settings do not populate a local shell, Terraform or host secret
 store automatically.
 
-For App installation, use the [current broker and target-binding recipe](scripts/symphony/runtime-bundle/README.md#repository-discovery-and-onboarding)
-and [operator prerequisites](docs/engineering/symphony/tooling-setup.md#check-cutover-prerequisites).
-The bot-account credentials below describe the existing legacy bootstrap only;
+For App installation, use the [broker and target-binding recipe](scripts/symphony/runtime-bundle/README.md#repository-discovery-and-onboarding).
+The bot-account credentials below describe legacy authentication;
 they are not an App-installation prerequisite.
 
 Choose the legacy coding and review bot accounts, their commit identities, repository

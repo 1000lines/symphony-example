@@ -106,22 +106,19 @@ Docker skip or image digest, workflow/event/ref, App, run attempt and required
 child-job evidence. A failing assertion needs a fix; unavailable tooling needs
 a precise environment/CI handoff. Source inspection is not deployed proof.
 
-After verified check cutover, normal human handoff and blocker-side `mature`
-require both fresh `ci_passes` and `ai_accepts`, closed mandatory feedback, a
-clean branch and a ready PR. Cadence acceptance is `Cadence Review` from App
-`4866513`, exact head/latest human-feedback generation, validated output and
-matching persisted workpad. Never substitute a bot approval. Remove maturity
-for request-changes, rejected/stale evidence or severe regression; ordinary
-edits alone do not revoke it. Human approval/merge owns acceptance and Done.
-Record configured bootstrap review separately until verified cutover.
+Normal human handoff and blocker-side `mature` require passing required CI and
+a fresh Cadence review of the current head, closed mandatory feedback, a clean
+branch and a ready PR. Record the reviewer, reviewed SHA, verdict and matching
+workpad. Recheck incoming human feedback before relying on a prior approval.
+Remove maturity for request-changes, rejected/stale evidence or severe
+regression; ordinary edits alone do not revoke it. Human approval/merge owns
+acceptance and Done.
 
-Audit actual installation/reload, enabled workflow and live execution at named
-controller/target/runtime refs. Prepared helpers and merged branches do not
-establish deployment. Retire project-specific temporary selectors only after
-replacement proof; preserve durable repository opt-in/configuration. Record
-exact missing-admin operations, affected repository/App, required grant, named
-operator and verification action. Do not claim the disabled AMI updater is a
-working App-only recovery route.
+Audit actual installation/reload, enabled workflows and live execution at named
+controller/target/runtime refs. Helpers and merged branches do not establish
+deployment. Follow the project's accepted cleanup obligations and preserve
+durable repository opt-in/configuration. Record exact missing-admin operations,
+affected repository/App, required grant, named operator and verification action.
 
 Record these items before claiming finalization:
 

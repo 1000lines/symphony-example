@@ -217,19 +217,17 @@ cleanly.
 - The label belongs on the blocker issue, not on the dependent and not on an
   edge.
 - Generated coding tickets should instruct the blocker agent to set the label
-  only when both fresh `ci_passes` and `ai_accepts` satisfy the configured
-  contract at the current head/latest human-feedback generation, the mandatory
-  feedback ledger is closed, and the task branch is clean of
-  committed predecessor work that is not on the selected base branch, and the PR
-  is marked ready for human review from its draft state.
+  only when required CI passes and Cadence or the configured reviewer approves
+  the current PR head, mandatory feedback is closed, the task branch is clean
+  of committed predecessor work absent from the selected base, and the PR is
+  marked ready for human review from draft. Record the reviewed SHA, verdict
+  and matching workpad. A prior approval cannot cover new review-relevant
+  activity.
 - Generated coding tickets should instruct the blocker agent to remove `mature`
-  only for request-changes review, rejected or stale acceptance evidence, or a similarly
-  severe downstream-invalidating regression.
-- Check-mode Cadence acceptance is successful `Cadence Review` from App
-  `4866513` with validated output and matching persisted workpad, never bot
-  approval. Record bootstrap review separately until verified cutover; source
-  availability is not deployment. These are acceptance instructions only and
-  add no manifest fields or renderer behavior.
+  only for request-changes review, rejected or stale acceptance evidence, or a
+  similarly severe downstream-invalidating regression.
+- Source availability is not deployment evidence; record installed refs and
+  actual execution separately when deployment is required.
 
 `decisions`
 

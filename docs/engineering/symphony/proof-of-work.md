@@ -170,19 +170,19 @@ handoff.
 ## Current-Head Review And Bridge Evidence
 
 For PR readiness, record the selected base SHA, current PR head SHA, required
-check results for that head, configuration revision, review generation and
-draft/ready status. After verified cutover, require both fresh `ci_passes` and
-`ai_accepts`: `Cadence Review` from App `4866513`, exact head/latest required
-human-feedback generation, validated output and matching persisted workpad.
-Capture run/attempt, workflow/event/ref, emitting App and required child-job IDs
-for CI; a rollup name alone is insufficient. Keep the mandatory-feedback ledger
-closed, task branch clean and PR ready before applying blocker-side `mature`.
-Remove maturity for request-changes, rejected/stale acceptance or a similarly
-severe regression; ordinary edits alone do not revoke it. Human acceptance owns
-Done. See the [shared contract](../review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary).
+check results for that head, Cadence's reviewed SHA and verdict, matching
+workpad evidence and draft/ready status. Capture run/attempt, workflow/event/ref,
+emitting App and required child-job IDs for CI; a rollup name alone is
+insufficient. Inspect review summaries, conversation comments, inline threads
+and Linear comments for mandatory feedback since the review. A changed head or
+new review-relevant activity makes a prior approval stale.
 
-During bootstrap, name the configured legacy reviewer and actual reviewed SHA
-and verdict. Do not relabel that evidence as `ai_accepts` or App/Codex proof.
+Keep mandatory feedback closed, the task branch clean and the PR ready before
+applying blocker-side `mature`. Remove maturity for request-changes,
+rejected/stale acceptance or a similarly severe regression; ordinary edits alone
+do not revoke it. Human acceptance owns Done. See the
+[shared contract](../review/cadence-ai-review.md#acceptance-contract).
+
 For deployment, record accepted controller/target/runtime refs, installed bundle
 provenance, actual service reload/polling, workflow enablement readback and real
 current-head runs. A source-only helper, successful fixture, or intended future

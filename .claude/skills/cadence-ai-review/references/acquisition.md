@@ -10,13 +10,13 @@ Use `gh` for PR data:
 - `gh pr diff <n>` and `gh pr diff <n> --name-only` for the file list.
 - `gh pr checks <n>` for a CI summary, then complete run/attempt, job and check
   evidence at the current head. Verify workflow/event/ref, emitting App and
-  required child jobs under `ci_passes`; a rollup or dispatched run alone is
+  required child jobs; a rollup or dispatched run alone is
   insufficient. Pending/missing/failed/skipped/stale checks cannot pass.
 - Fully paginated submitted reviews, conversation comments, inline threads and
   replies, plus current Linear comments and verified author permissions. Bind
-  feedback IDs/update times and base/config revisions to the review generation.
-  Incomplete history forces full review and prevents `ai_accepts`; generated
-  workpad bookkeeping cannot reset the generation or three-pass findings cap.
+  feedback IDs/update times to the reviewed head and retained workpad.
+  Incomplete history requires full review; generated workpad bookkeeping cannot
+  reset the agent-only three-pass cap.
 
 To expand a label into a group:
 

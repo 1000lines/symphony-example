@@ -23,14 +23,13 @@ Symphony PRs that carry the `symphony` label, but it is not yet a general
 review service for non-Symphony work. Human reviewers should not need that
 automation contract to review an ordinary PR.
 
-After verified check cutover, normal Symphony handoff requires both fresh
-`ci_passes` and `ai_accepts`, closed mandatory feedback, a clean task branch and
-ready PR. The [Cadence contract](./cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
-defines the exact-head/latest-generation App check and persisted workpad;
-bot approval does not establish it. Bootstrap reviewer evidence remains
-separate until cutover. Human approval and merge own final acceptance.
-Apply blocker-side `mature` at readiness and remove it for request-changes,
-rejected/stale evidence or severe regression, not ordinary edits alone.
+Normal Symphony handoff requires passing required CI and a fresh Cadence review
+of the current PR head, closed mandatory feedback, a clean task branch and ready
+PR. The [Cadence contract](./cadence-ai-review.md#acceptance-contract) describes
+the Claude runner's PR-review output and persisted workpad. Human approval and
+merge own final acceptance. Apply blocker-side `mature` at readiness and remove
+it for request-changes, rejected/stale evidence or severe regression, not
+ordinary edits alone.
 
 Cadence keeps detailed run state, trigger decisions, skipped events, and
 AI-to-AI coordination in the Linear

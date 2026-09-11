@@ -95,16 +95,14 @@ blocker handling, or state classification:
 
 ## Review And Evidence
 
-After verified check cutover, normal human handoff and blocker-side `mature`
-require both fresh `ci_passes` and `ai_accepts`, a closed mandatory-feedback
-ledger, a clean task branch and a ready PR. AI acceptance is `Cadence Review`
-from App `4866513` for the current head/latest human-feedback generation, with
-validated output and matching persisted workpad. A bot approval is not this
-gate. Remove maturity for request-changes, rejected/stale acceptance evidence
-or similarly severe regression; ordinary edits alone do not revoke it. Human
-acceptance owns Done. The bootstrap reviewer remains selected until verified
-cutover; record its actual evidence without claiming the prepared check path
-ran. Use the shared Cadence acceptance contract for generation and provenance.
+Normal human handoff and blocker-side `mature` require passing required CI and
+a fresh Cadence review of the current PR head, closed mandatory feedback, a
+clean task branch and a ready PR. Record the configured reviewer, reviewed SHA,
+verdict and matching workpad evidence. Check incoming human feedback before
+handoff; a prior approval cannot cover new review-relevant activity. Remove
+maturity for request-changes, rejected/stale acceptance evidence or similarly
+severe regression; ordinary edits alone do not revoke it. Human acceptance owns
+Done. Use the shared Cadence acceptance contract for freshness and provenance.
 
 Validate repository changes in order: **local → Docker if needed → mandatory CI**.
 Run relevant checks locally first. If they pass, skip Docker. Use Docker only

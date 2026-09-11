@@ -1,27 +1,17 @@
 ---
 name: cadence-ai-review
-description: Legacy Claude review compatibility for opt-in Symphony PRs. Preserve review axes, stable findings, Linear evidence and human handoff while the bootstrap runner remains selected.
+description: Review a group of opt-in Symphony PRs against their Linear acceptance criteria and linked design docs. Fan out review axes per PR plus cross-PR coverage and seam checks, write detailed review state to one Linear Cadence workpad, then post one concise GitHub PR review per PR (APPROVE when clean, else COMMENT; never REQUEST_CHANGES).
 ---
 
 # Cadence AI Review
 
-## Runner boundary
-
-This is the compatibility skill consumed by the existing Claude runner until
-verified cutover. The PR-review publication instructions below apply only to
-that runner. The prepared Codex assessment uses `.github/codex/review.md` and
-structured output; it must not execute this skill's credential or posting steps.
-No bot approval from this path establishes check-mode AI acceptance.
-
-After verified cutover, normal handoff requires both fresh `ci_passes` and
-`ai_accepts`, closed mandatory feedback, a clean task branch and ready PR.
-Cadence acceptance means `Cadence Review` from App `4866513` at the exact
-head/latest human-feedback generation, validated output and matching persisted
-workpad. Blocker-side `mature` follows those conditions; remove it for
-request-changes, rejected/stale evidence or severe regression, not ordinary edits
-alone. Human acceptance owns Done. The
-[shared contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract-and-rollout-boundary)
-records the current unwired producer boundary and deployment prerequisites.
+Normal human handoff requires passing required CI and a fresh review of the
+current head, closed mandatory feedback, a clean task branch and ready PR.
+Record the reviewed SHA, verdict and matching workpad, and inspect incoming
+human feedback before publication. Blocker-side `mature` follows those
+conditions; remove it for request-changes, rejected/stale evidence or severe
+regression, not ordinary edits alone. Human acceptance owns Done. See the
+[shared contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract).
 
 Use this skill to review a group of opt-in Symphony PRs before human review. The
 review reads evidence, records detailed state in the Linear `## Cadence Workpad`,
@@ -263,6 +253,7 @@ Why this is acceptable:
 for human review.>
 
 Non-blocking notes:
+
 - <optional concise should-fix or suggestion, explicitly labeled non-blocking>
 ```
 
@@ -270,12 +261,14 @@ Non-blocking notes:
 Assessment: Blocked
 
 Required follow-up:
+
 - `<finding-id>`: <concise blocker and smallest safe action>
 
 Why this matters:
 <one or two sentences with the human-readable risk or requirement gap.>
 
 Non-blocking notes:
+
 - <optional concise note, explicitly labeled non-blocking>
 ```
 
@@ -283,12 +276,14 @@ Non-blocking notes:
 Assessment: Human input needed
 
 Decision needed:
+
 - `<finding-id>`: <specific product, technical, credential, or scope question>
 
 Why Cadence cannot decide:
 <one or two sentences naming the missing authority or evidence.>
 
 Non-blocking notes:
+
 - <optional concise note, explicitly labeled non-blocking>
 ```
 
@@ -342,7 +337,7 @@ Do not infer complete feedback from this helper alone. Acquire submitted review
 summaries, top-level comments, inline threads/replies and Linear comments with
 full pagination and current author permission evidence. Missing history requires
 full review and prevents a fresh acceptance claim. Generated workpad bookkeeping
-does not reset the generation or three-pass cap. Put review-state detail such as skipped,
+does not reset the agent-only three-pass cap. Put review-state detail such as skipped,
 ignored, non-human, and pending follow-up events in the Cadence workpad unless a
 concise GitHub-visible assessment needs to mention them.
 

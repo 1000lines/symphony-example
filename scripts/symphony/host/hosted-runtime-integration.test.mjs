@@ -340,8 +340,11 @@ test("staged workflow renders the same per-ticket timer and skill entry point fo
         )
       );
       assert.match(workflow, /installed `symphony-repository` skill/);
-      assert.match(workflow, /ci_passes/);
-      assert.match(workflow, /ai_accepts/);
+      assert.match(workflow, /reviewer through `workflow_call`/);
+      assert.doesNotMatch(
+        workflow,
+        /ci_passes|ai_accepts|cadence-codex-review/
+      );
     }
   } finally {
     await rm(fixture.root, { recursive: true, force: true });

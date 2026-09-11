@@ -160,17 +160,16 @@ For a DAG plan, include:
 - direct fan-in semantics: represent fan-in with multiple direct incoming
   blocker relations to the downstream issue. Do not create no-op join tickets or
   generated join branches;
-- mature-label behavior: `mature` is set on a blocker only when both fresh
-  `ci_passes` and `ai_accepts` satisfy the configured acceptance contract for
-  the current PR head and required human-feedback generation, the mandatory
-  feedback ledger is closed, the task branch is clean, and the PR is ready for human
-  review from draft. Remove it only for request-changes review, rejected
-  acceptance evidence, stale current-SHA evidence, or a similarly severe
+- mature-label behavior: `mature` is set on a blocker only when required CI
+  passes and Cadence or the configured reviewer approves the current PR head,
+  mandatory feedback is closed, the task branch is clean, and the PR is ready
+  for human review from draft. Record the reviewed SHA, verdict and matching
+  workpad evidence; review-relevant activity after approval requires another
+  review. Remove maturity only for request-changes review, rejected acceptance
+  evidence, stale current-head evidence, or a similarly severe
   downstream-invalidating regression;
-- for check-mode Cadence, AI acceptance means successful `Cadence Review` from
-  App `4866513` with validated output and matching persisted workpad, never a
-  bot approval. Record the configured bootstrap reviewer separately until
-  verified cutover; source availability is not deployment evidence;
+- source availability is not deployment evidence; record installed refs and
+  actual execution separately when deployment is required;
 - fail-closed behavior for missing required labels, workflow states, assignees,
   branch refs, issue ids, relation endpoints, or relation direction.
 
