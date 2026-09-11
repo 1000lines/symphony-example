@@ -17,7 +17,7 @@ project. TL;DR states the result in one short sentence. Start Summary with the
 product outcome, followed by a few high-level change bullets. Include Alternatives
 only when a choice or tradeoff helps review. Record the selected base branch.
 
-For example, this template's own Context can say: “This adds a consistent PR
+For example, a PR adding a description template could say: “This adds a consistent PR
 description that explains the change and shows linked progress. It fulfills
 [100-28's goal of understandable PRs with project value and progress](https://linear.app/1000lines/issue/100-28),
 so Jeremy can judge why a change matters and navigate related work without
@@ -29,7 +29,8 @@ Link the current accepted plan revision and record the UTC time at which status
 was checked. Read accepted replans and fresh human decisions too. Copy that
 plan's nodes and edges; preserve IDs and dependency meaning. Do not derive edges
 from branch ancestry, issue order or convenience. Use the existing
-`tools/symphony-dag/` parser when checking accepted plan topology. The PR diagram
+`$SYMPHONY_TOOLING_ROOT/tools/symphony-dag/` parser when checking accepted plan
+topology (`SYMPHONY_TOOLING_ROOT` is the shared tooling checkout). The PR diagram
 is a progress view of that plan, not a new manifest or planning authority.
 
 Resolve each node's actual PR association from the issue/plan and GitHub. Check
@@ -56,6 +57,8 @@ unavailable, label the state unknown and record the gap rather than guessing.
 Keep the template's fill classes and text labels. Apply the current-node outline
 with a separate `style NODE stroke:#8250df,stroke-width:4px` and include “Current
 PR” in its label, so both completed and in-progress current nodes remain legible.
+Use a separator such as `#123 — In progress` in labels; Mermaid interprets
+`#123;` as a character escape, hiding the PR number.
 Keep the small legend disconnected from the plan. Label nodes without PRs
 “no PR yet”; use “no PR — not planned” for accepted no-PR work. For standalone
 work, retain just the current task and legend, with no dependency arrows.
@@ -90,11 +93,14 @@ Do not use JavaScript callbacks, HTML links in labels or custom renderer setting
 ## Verify and record evidence
 
 Follow the [proof standard](proof-of-work.md): local, Docker only if needed,
-then mandatory CI on the published head. This repository's commands come from
-[package.json](../../../package.json). For template/docs edits, use locked
-`node_modules/.bin/prettier --check <changed-markdown-paths>` and
-`git diff --check`; run relevant existing workflow tests for guidance changes.
-For implementation changes, select relevant npm/Node tests. Do not copy the
+then mandatory CI on the published head. Choose commands from the target
+repository's validation guidance and package/build configuration. For edits in
+`1000lines/symphony-example`, commands come from the tooling checkout's
+[package.json](../../../package.json) (`$SYMPHONY_TOOLING_ROOT/package.json`).
+Run locked `node_modules/.bin/prettier --check <changed-markdown-paths>` and
+`git diff --check` from that checkout for template/docs edits; run relevant
+existing workflow tests for guidance changes and npm/Node tests for implementation
+changes. Other target repositories use their own commands. Do not copy the
 reference repository's Elixir command. Record commands, outcomes, tested SHA,
 CI run links, material limitations and the next handoff in Test plan and the
 Codex workpad. Pending or stale checks are not passes.
@@ -103,8 +109,9 @@ Open the actual PR conversation in GitHub after saving the body. Confirm that
 Mermaid renders a diagram, inspect the completed/in-progress/neutral colors,
 current-node outline/text and legend, and click the PR nodes to verify their
 destinations. Check both a planned multi-node example and a standalone example
-when changing this template. A clearly labeled, dated example in the template
-PR's body can demonstrate a real planned PR without editing that sibling PR.
+when changing the template. A PR that changes the template may include a clearly
+labeled, dated example based on an actual planned PR, avoiding changes to the
+source PR's body solely for demonstration.
 Record the PR URL, body revision/time, browser, link destinations and result;
 attach screenshots or walkthrough notes. Syntax validation, GitHub's Markdown
 API response and local Mermaid rendering alone do not prove GitHub rendering.

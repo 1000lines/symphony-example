@@ -20,7 +20,8 @@ For a project DAG, replace CURRENT with its actual nodes/edges and verified PR
 links; preserve the styles and legend. For standalone work, keep one task node.
 Label each node with its issue, short purpose, PR number or "no PR yet", and state.
 After creation, add: click CURRENT href "ACTUAL_PR_URL" "Open current PR" _blank
-Never guess a PR URL. Refresh this graph and the summary on replan/status changes. -->
+Never guess a PR URL. Refresh this graph and the summary on replan/status changes.
+Uncomment and fill the scaffold below before publishing; do not leave placeholders.
 
 ```mermaid
 flowchart TD
@@ -38,6 +39,7 @@ flowchart TD
 ```
 
 Thick purple outline + “Current PR” identifies this PR independently of status.
+-->
 
 ## Summary
 
