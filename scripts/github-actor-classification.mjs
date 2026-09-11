@@ -214,6 +214,7 @@ const humanAccount = (user) => user?.type === "User" && positiveId(user.id) &&
   /^[a-z0-9-]+$/i.test(user.login || "") && !user.app &&
   !KNOWN_AI_ACTORS[normalize(user.login)] && !KNOWN_DEPENDENCY_BOTS[normalize(user.login)];
 const untrusted = (reason) => ({ allowed: false, contentTrust: "untrusted", reason });
+const authorityFailure = (reason) => ({ ...untrusted(reason), verificationFailed: true });
 
 // Only these authenticated, repository-scoped reads supply authority. Neither
 // an actor classification nor a caller-provided permission/association does.
@@ -233,17 +234,26 @@ export const verifyGitHubHumanWriteAccess = async ({
 }) => {
   if (!repositorySlug(repository)) return untrusted("invalid-target-repository");
   if (!humanAccount(author)) return untrusted("unverified-human-author");
-  // This path accepts the existing App's installation token only; never fall
-  // back to a PAT or the workflow sender's permissions.
-  if (!/^ghs_[A-Za-z0-9]+$/.test(token || "")) return untrusted("app-installation-token-required");
+  if (!token) return authorityFailure("app-installation-token-required");
   try {
+    // GitHub authenticates installation credentials at this endpoint. Token
+    // spelling is not authority: stateless installation tokens also contain
+    // underscores and dots. The repository-scoped read below checks access.
+    const installation = await readAuthorityJson(
+      "https://api.github.com/installation/repositories?per_page=1", token, fetchImpl,
+    );
+    if (!positiveId(installation?.total_count) || !Array.isArray(installation.repositories) ||
+        installation.repositories.length !== 1 || !positiveId(installation.repositories[0]?.id) ||
+        !repositorySlug(installation.repositories[0]?.full_name)) {
+      return authorityFailure("malformed-app-installation");
+    }
     const permission = await readAuthorityJson(
       `https://api.github.com/repos/${repository}/collaborators/${author.login}/permission`, token, fetchImpl,
     );
     if (!humanAccount(permission?.user) || permission.user.id !== author.id ||
         normalize(permission.user.login) !== normalize(author.login) ||
         !["admin", "write", "maintain", "read", "triage", "none"].includes(permission.permission)) {
-      return untrusted("malformed-author-permission");
+      return authorityFailure("malformed-author-permission");
     }
     // GitHub maps maintain to write and custom roles to their effective base
     // permission. role_name is descriptive, never an authority allowlist.
@@ -256,7 +266,7 @@ export const verifyGitHubHumanWriteAccess = async ({
     };
   } catch (error) {
     // Do not expose API bodies, thrown network messages, or credentials.
-    return untrusted(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
+    return authorityFailure(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
       ? error.message : "github-authority-unavailable");
   }
 };
@@ -283,7 +293,7 @@ export const verifyReviewEventAuthority = async ({
       KNOWN_AI_ACTORS[normalize(sender?.login)] || KNOWN_DEPENDENCY_BOTS[normalize(sender?.login)]) {
     return untrusted("non-human-feedback-editor");
   }
-  if (!/^ghs_[A-Za-z0-9]+$/.test(token || "")) return untrusted("app-installation-token-required");
+  if (!token) return authorityFailure("app-installation-token-required");
   try {
     const root = `https://api.github.com/repos/${repository}`;
     const url = isReview ? `${root}/pulls/${pr.number}/reviews/${feedback.id}`
@@ -301,7 +311,7 @@ export const verifyReviewEventAuthority = async ({
         (feedback.updated_at && current.updated_at !== feedback.updated_at)) return untrusted("stale-feedback-event");
     return verifyGitHubHumanWriteAccess({ author: current.user, repository, token, fetchImpl });
   } catch (error) {
-    return untrusted(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
+    return authorityFailure(/^github-authority-(http-\d{3}|url-mismatch)$/.test(error.message)
       ? error.message : "github-authority-unavailable");
   }
 };

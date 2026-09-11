@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import yaml from "js-yaml";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { routeReviewHandoff } from "./cadence-linear-rework.mjs";
 import { routeCadenceReviewEvent } from "../.github/workflows/scripts/cadence-ai-review-route-event.mjs";
 import { verifyGitHubHumanWriteAccess, verifyReviewEventAuthority } from "./github-actor-classification.mjs";
@@ -9,7 +12,8 @@ import { classifyPrReviewState, markFeedbackAuthority } from "./fetch-pr-review-
 
 const repository = "example-org/example-repo";
 const root = `https://api.github.com/repos/${repository}`;
-const token = "ghs_secretFixture";
+const token = "ghs_123_fixture.header-payload.signature";
+const installationUrl = "https://api.github.com/installation/repositories?per_page=1";
 const author = { id: 42, login: "writer", type: "User" };
 const surfaces = [
   ["pull_request_review", "submitted"], ["pull_request_review", "edited"],
@@ -33,9 +37,13 @@ const fixture = (payload, permission = { permission: "write", user: author }) =>
   const api = { calls, current: { ...feedback, issue_url: `${root}/issues/7`, pull_request_url: `${root}/pulls/7` }, permission };
   api.fetchImpl = async (url, options) => {
     calls.push({ url, method: options.method || "GET" });
-    assert.equal(options.headers.authorization, `Bearer ${token}`);
+    const credential = options.headers.authorization.slice("Bearer ".length);
     assert.equal(options.redirect, "error");
     assert.equal(options.headers["cache-control"], "no-cache");
+    if (url === installationUrl) {
+      return credential === "ghp_legacy" ? new Response(null, { status: 403 })
+        : Response.json({ total_count: 1, repositories: [{ id: 1, full_name: repository }] });
+    }
     if (url === `${root}/collaborators/writer/permission`) {
       if (api.permission instanceof Error) throw api.permission;
       if (api.permission instanceof Response) return api.permission.clone();
@@ -78,12 +86,12 @@ for (const [eventName, action] of surfaces) {
       assert.doesNotMatch(JSON.stringify(cadence), new RegExp(token));
       if (eventName !== "pull_request_review_comment") {
         const handoff = await routeReviewHandoff(args);
-        assert.equal(handoff.operation, "skipped");
+        assert.equal(handoff.operation, handoff.authority.verificationFailed ? "failed" : "skipped");
         assert.equal(handoff.shouldMove, false);
         assert.equal(handoff.authority.contentTrust, "untrusted");
         assert.doesNotMatch(JSON.stringify(handoff), new RegExp(token));
       }
-      assert.ok(api.calls.every(call => call.method === "GET" && call.url.startsWith(root)));
+      assert.ok(api.calls.every(call => call.method === "GET" && (call.url.startsWith(root) || call.url === installationUrl)));
       assert.ok(api.calls.some(call => call.url.endsWith("/collaborators/writer/permission")));
     });
   }
@@ -131,12 +139,12 @@ for (const [name, mutate] of [
   });
 }
 
-test("redirected permission evidence, PATs, missing tokens, and bots never establish authority", async () => {
+test("redirected permission evidence, missing tokens, and bots never establish authority", async () => {
   const args = { author, repository, token, fetchImpl: async () => ({ ok: true,
     url: "https://api.github.com/repos/elsewhere/repo/collaborators/writer/permission",
     json: async () => ({ permission: "admin", user: author }) }) };
   assert.equal((await verifyGitHubHumanWriteAccess(args)).reason, "github-authority-url-mismatch");
-  for (const deniedToken of [undefined, "", "ghp_pat", "github_pat_other"]) {
+  for (const deniedToken of [undefined, ""]) {
     assert.equal((await verifyGitHubHumanWriteAccess({ ...args, token: deniedToken,
       fetchImpl: () => assert.fail("must not fetch") })).allowed, false);
   }
@@ -144,6 +152,88 @@ test("redirected permission evidence, PATs, missing tokens, and bots never estab
     { ...author, login: "example-cadence-bot" }, { login: "writer" }]) {
     assert.equal((await verifyGitHubHumanWriteAccess({ ...args, author: user,
       fetchImpl: () => assert.fail("must not fetch") })).allowed, false);
+  }
+});
+
+test("both authority entry points authenticate opaque and stateless tokens through GitHub", async () => {
+  for (const credential of ["ghs_opaqueFixture", token, "future-format-fixture"]) {
+    const payload = event("issue_comment", "created");
+    const api = fixture(payload);
+    const args = { author, payload, eventName: "issue_comment", repository, token: credential, fetchImpl: api.fetchImpl };
+    assert.equal((await verifyGitHubHumanWriteAccess(args)).allowed, true);
+    assert.equal((await verifyReviewEventAuthority(args)).allowed, true);
+    assert.equal(api.calls.filter(call => call.url === installationUrl).length, 2);
+    assert.equal(api.calls.filter(call => call.url.endsWith("/permission")).length, 2);
+  }
+});
+
+test("installation authentication failures never reach the author permission lookup", async () => {
+  for (const credential of ["ghp_pat", "github_pat_other", "ghs_forged", token]) {
+    for (const response of [new Response(credential, { status: 403 }), Response.json({})]) {
+      const payload = event("issue_comment", "created");
+      const api = fixture(payload);
+      const fetchImpl = (url, options) => {
+        assert.ok(!url.endsWith("/permission"));
+        return url === installationUrl ? response.clone() : api.fetchImpl(url, options);
+      };
+      const args = { author, payload, eventName: "issue_comment", repository, token: credential, githubToken: credential, fetchImpl };
+      assert.equal((await verifyGitHubHumanWriteAccess(args)).verificationFailed, true);
+      const result = await routeReviewHandoff(args);
+      assert.equal(result.operation, "failed");
+      assert.equal(result.shouldMove, false);
+      assert.equal(result.authority.verificationFailed, true);
+      assert.equal(JSON.stringify(result).includes(credential), false);
+    }
+  }
+});
+
+test("valid stateless token distinguishes a denied writer from a broken permission API", async () => {
+  const payload = event("issue_comment", "created");
+  for (const [permission, operation, reason] of [
+    [{ permission: "read", user: author }, "skipped", "author-lacks-write-access"],
+    [new Response(token, { status: 403 }), "failed", "github-authority-http-403"],
+    [{}, "failed", "malformed-author-permission"],
+  ]) {
+    const api = fixture(payload, permission);
+    const result = await routeReviewHandoff({ payload, eventName: "issue_comment", repository,
+      githubToken: token, fetchImpl: api.fetchImpl });
+    assert.equal(result.operation, operation);
+    assert.equal(result.skippedReason, reason);
+    assert.equal(result.shouldMove, false);
+    assert.equal(JSON.stringify(result).includes(token), false);
+  }
+});
+
+test("both routing CLIs fail visibly when the permission API is unavailable", () => {
+  const directory = mkdtempSync(join(tmpdir(), "review-authority-"));
+  try {
+    const eventPath = join(directory, "event.json");
+    writeFileSync(eventPath, JSON.stringify(event("issue_comment", "created")));
+    const mockPath = join(directory, "fetch.mjs");
+    writeFileSync(mockPath, `import { readFileSync } from 'node:fs';
+      const payload = JSON.parse(readFileSync(process.env.CADENCE_EVENT_PATH));
+      globalThis.fetch = async url => {
+        if (url === '${installationUrl}') return Response.json({ total_count: 1,
+          repositories: [{ id: 1, full_name: '${repository}' }] });
+        if (url.endsWith('/permission')) return new Response(process.env.GH_TOKEN, { status: 503 });
+        if (url === '${root}/issues/comments/9') return Response.json({ ...payload.comment,
+          issue_url: '${root}/issues/7' });
+        throw new Error('Unexpected request');
+      };`);
+    for (const script of ["./cadence-linear-rework.mjs", "../.github/workflows/scripts/cadence-ai-review-route-event.mjs"]) {
+      const summary = join(directory, "summary.md");
+      writeFileSync(summary, "");
+      const result = spawnSync(process.execPath, ["--import", mockPath, new URL(script, import.meta.url).pathname], {
+        encoding: "utf8", env: { ...process.env, GH_TOKEN: token, CADENCE_EVENT_PATH: eventPath,
+          CADENCE_EVENT_NAME: "issue_comment", GITHUB_REPOSITORY: repository, GITHUB_STEP_SUMMARY: summary,
+          GITHUB_OUTPUT: join(directory, "output"), SYMPHONY_BOT_USER: "example-symphony-bot", CADENCE_REVIEWER: "example-cadence-bot" },
+      });
+      assert.equal(result.status, 1, result.stderr);
+      assert.match(readFileSync(summary, "utf8"), /github-authority-http-503/);
+      assert.equal((result.stdout + result.stderr + readFileSync(summary, "utf8")).includes(token), false);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -183,13 +273,13 @@ test("timeline permission reads share identical authors only within one acquisit
   const nodes = Array.from({ length: 60 }, () => ({ author: { login: "writer", __typename: "User", databaseId: 42 } }));
   const args = { repository, token, fetchImpl: api.fetchImpl };
   assert.ok((await markFeedbackAuthority(nodes, args)).every(node => node.authority.allowed));
-  assert.equal(api.calls.length, 1);
+  assert.equal(api.calls.filter(call => call.url.endsWith("/permission")).length, 1);
   const changedId = { author: { ...nodes[0].author, databaseId: 999 } };
   assert.equal((await markFeedbackAuthority([nodes[0], changedId], args))[1].authority.allowed, false);
-  assert.equal(api.calls.length, 3);
+  assert.equal(api.calls.filter(call => call.url.endsWith("/permission")).length, 3);
   api.permission = { permission: "read", user: author };
   assert.ok((await markFeedbackAuthority(nodes, args)).every(node => !node.authority.allowed));
-  assert.equal(api.calls.length, 4);
+  assert.equal(api.calls.filter(call => call.url.endsWith("/permission")).length, 4);
 });
 
 test("bodyless changes-requested reviews accept GitHub null bodies but reject malformed bodies", async () => {

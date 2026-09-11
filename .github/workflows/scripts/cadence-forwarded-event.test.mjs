@@ -98,6 +98,9 @@ for (const permission of ["write", "maintain", "admin", "read", "none", "unknown
     const reads = [];
     const fetchImpl = async url => {
       reads.push(url);
+      if (url === "https://api.github.com/installation/repositories?per_page=1") {
+        return Response.json({ total_count: 1, repositories: [{ id: 1, full_name: repository }] });
+      }
       if (url.endsWith("/reviews/9")) return Response.json(f.feedback);
       assert.equal(url, `https://api.github.com${root}/collaborators/writer/permission`);
       return Response.json({ permission, user: author });
@@ -108,7 +111,7 @@ for (const permission of ["write", "maintain", "admin", "read", "none", "unknown
     assert.equal(reads.filter(url => url.endsWith("/permission")).length, 1);
     if (!result.shouldRequestReview) {
       const handoff = await routeReviewHandoff({ ...resolved, repository, githubToken: "ghs_fixture", fetchImpl });
-      assert.equal(handoff.operation, "skipped");
+      assert.equal(handoff.operation, permission === "unknown" ? "failed" : "skipped");
       assert.equal(handoff.shouldMove, false);
     }
   });

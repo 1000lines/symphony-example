@@ -386,6 +386,7 @@ export const routeReviewHandoff = async ({
     result.authority = authority;
     if (!authority.allowed) return {
       ...result, shouldMove: false, shouldRequestHumanReview: false,
+      operation: authority.verificationFailed ? "failed" : "skipped",
       skippedReason: authority.reason,
     };
   }

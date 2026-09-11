@@ -75,7 +75,8 @@ results below. These are separate from installed-host and provider evidence.
   PR #27 at 12:11:45 UTC, at the merge SHAs above; Linear 100-35 and 100-36
   are Done. Fetched `main` and its repository configuration resolve to
   `e7be7a702fd37d6b6251e34e6ae4141508d2b0ec`. Their source is no longer an
-  unmerged prerequisite. No predecessor commits were imported into this task.
+  unmerged prerequisite. Both repairs are on the selected base; no unmerged
+  predecessor work is needed.
 - **R08, deployed original-author handoff:** Jeremy's
   [PR #28 comment 5634194152](https://github.com/1000lines/symphony-example/pull/28#issuecomment-5634194152)
   originally failed with `app-installation-token-required`. After PR #27 landed,

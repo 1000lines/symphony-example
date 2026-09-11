@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const object = (value) =>
@@ -111,7 +111,10 @@ export function inspectConfig(checkout, base) {
   return { status: "configured", revision, config };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   try {
     const [command, ...args] = process.argv.slice(2);
     let result;
