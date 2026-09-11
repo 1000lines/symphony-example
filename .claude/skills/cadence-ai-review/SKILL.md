@@ -302,14 +302,20 @@ Do not expose secrets or private paths in any review.
 
 In a fan-out, the per-PR and cross-PR workers **return their review body**; they
 do not post. The orchestrator submits every review, and before its first post it
-**verifies identity**: run `gh api user` and confirm it equals the configured
-reviewer login (`1000-cadence-bot`, or `CADENCE_REVIEWER_LOGIN`). If it does not
-match — or `gh`/Linear credentials do not resolve — **do not post**;
-abort and report the credential problem as a configuration failure, not a review
-outcome. A mismatched identity means the reviewer token was not picked up (for
-example a fall-back login), and posting would mis-attribute the review. Posting
-from one verified context also keeps fan-out workers from depending on an
-inherited environment they may not have.
+**verifies identity** using the trusted workflow's `CADENCE_REVIEWER_LOGIN`,
+which is derived from `actions/create-github-app-token`'s `app-slug` output and
+ends in `[bot]`. The workflow verifies that its minted installation token is
+scoped to the target repository before starting the reviewer. Use only its
+provided `GH_TOKEN` for publication; never switch to a saved `gh` login or user
+PAT. Confirm `gh api installation/repositories` includes exactly the target
+repository and the expected App login is present. Installation tokens do not
+support the user-token identity check `gh api user`.
+
+If the expected App identity, installation access or Linear credentials are
+missing, **do not post**; abort and report a configuration failure. After posting,
+read back the review author and current-head SHA and confirm they match the
+trusted App login and reviewed PR head. Posting from one verified context keeps
+fan-out workers from depending on an inherited environment they may not have.
 
 ## Re-review And Idempotency
 

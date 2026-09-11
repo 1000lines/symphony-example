@@ -300,11 +300,6 @@ Human feedback routing and the single-PR review trigger require the protected
 Repository secrets:
 
 - `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key for the review.
-- `CADENCE_BOT_GITHUB_TOKEN`: the legacy reviewer/trigger bot's GitHub token (classic, `repo`
-  scope). Used for the legacy review action's `github_token` and its publishing
-  calls. Human feedback acquisition and permission checks use the existing
-  Cadence App installation token instead. The bot account has **Triage**
-  repository access, so its approvals do not count toward required reviews.
 - `CADENCE_LINEAR_API_TOKEN`: Linear API token used by
   `scripts/fetch-linear-issue.mjs` to read issue context, by
   `scripts/cadence-linear-workpad.mjs` to write the Cadence workpad, and by the
@@ -322,8 +317,9 @@ Variables. Identity values must name the accounts behind the supplied tokens:
 
 - `SYMPHONY_BOT_USER`: coding bot GitHub login. Required for live attribution;
   synthetic fallback `example-symphony-bot`.
-- `CADENCE_REVIEWER`: review bot GitHub login. Required for live review;
-  synthetic fallback `example-cadence-bot`.
+- `CADENCE_REVIEWER`: legacy review-request login and actor exclusion;
+  synthetic fallback `example-cadence-bot`. Publishing identity is derived from
+  the minted App, independently of this compatibility setting.
 - `SYMPHONY_REPOSITORY_OWNER`: GitHub organization slug used for team lookup.
   Optional in workflows (default: `github.repository_owner`); export it for
   standalone helpers, whose fallback `example-org` is synthetic.
@@ -343,9 +339,14 @@ Review model variable:
 
 ## Identities
 
-- **Review bot**: the account named by `CADENCE_REVIEWER` authors reviews via
-  `CADENCE_BOT_GITHUB_TOKEN`. `example-cadence-bot` and `cadence@example.invalid`
-  are synthetic login/contact examples.
+- **Review App**: the configured Cadence App authors reviews with a short-lived,
+  single-repository installation token. The trusted token Action's `app-slug`
+  determines `CADENCE_REVIEWER_LOGIN` (`<app-slug>[bot]`) for Claude, verification,
+  advisory results and Linear handoff. Native review requires no
+  `CADENCE_BOT_GITHUB_TOKEN`; manual PR-list reads use `GITHUB_TOKEN`.
+  The review token requests metadata, contents and Actions read plus
+  pull-requests, issues and checks write from the existing App installation.
+  Draft readiness uses the separate repository `GITHUB_TOKEN`.
 - **Google service account**: its own `<service-account>@<project>.iam.gserviceaccount.com` email reads
   design docs. Share each doc, folder, or shared drive with that email as
   Viewer. This is a distinct identity from the GitHub bot.
@@ -435,15 +436,17 @@ and no `human-needed` findings, otherwise `COMMENT`. `REQUEST_CHANGES` is never
 used. Posting output as PR reviews (not plain conversation comments) keeps the
 event surface `pull_request_review`.
 
-The reviewer bot has **Triage** (not Write) repository access, so its `APPROVE`
-shows as an approval signal but does **not** count toward branch-protection
-required reviews; a human approval is still required to merge. (Confirmed: a
-Triage-role classic token can post reviews via the API.)
+Cadence's App approval is advisory; the project still requires human acceptance
+before merge. It does not authorize automatic merge or replace required CI.
 
-Reviews are submitted from one verified context. In a fan-out, workers return
-review bodies and the orchestrator posts after confirming `gh api user` matches
-the reviewer identity. A mismatch, such as a token falling back to another
-login, aborts the review submission.
+Reviews are submitted from one verified context. The trusted workflow verifies
+its installation token is scoped to the target and derives the expected bot
+login from the token Action's App slug. In a fan-out, workers return review bodies
+and the orchestrator publishes using that token. Installation tokens use
+`GET /installation/repositories` for access preflight, not the user-token-only
+`GET /user` endpoint. Missing identity or access aborts publication. The outcome
+verifier accepts only `APPROVED` or `COMMENTED` reviews from that App at the
+current head; advisory publication also requires a new verdict after admission.
 
 ## Human Review And Follow-Up Routing
 

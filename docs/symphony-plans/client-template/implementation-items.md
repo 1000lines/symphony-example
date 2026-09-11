@@ -140,6 +140,17 @@ participant projects or operates the parent rehearsal.
 
 ## CT-R — Make native review reusable with explicit secrets and Codex
 
+[Jeremy's September 11, 15:51 UTC instruction on PR #43](https://github.com/1000lines/symphony-example/pull/43#issuecomment-5637041350)
+authorizes the native App-identity correction now in CT-R, before resolving the
+broader export/initial-proof prerequisites below. Repository admin authority was
+verified. This checkpoint also owns the Claude skill's identity preflight in
+`.claude/skills/cadence-ai-review/SKILL.md`, the legacy-actor exclusion in
+`scripts/cadence-linear-rework.mjs`, and their supporting regression coverage.
+Verify that publication, outcome checks, advisory results and handoff use the
+minted App identity without a legacy PAT. Keep this node/PR and the remaining
+explicit-secret, provider and live-proof requirements open; no dependency edge
+is changed by this limited instruction.
+
 - **Scope:** expose existing native review/handoff as reusable workflows with
   explicit target inputs/secrets, add key-selected Codex execution, and prove
   the early real review in the seed. Retain the working Claude-only path.

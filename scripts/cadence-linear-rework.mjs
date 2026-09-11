@@ -200,6 +200,7 @@ export const classifyCadenceLinearReworkEvent = ({
 
   if (
     !reviewer ||
+    normalize(reviewer) === normalize(DEFAULT_CADENCE_REVIEWER_LOGIN) ||
     isKnownNonHumanReviewer(reviewer) ||
     normalize(review.user?.type) === "bot"
   ) {
@@ -309,7 +310,7 @@ export const requestHumanReview = async ({
 }) => {
   if (!token)
     throw new Error(
-      "CADENCE_BOT_GITHUB_TOKEN is required to request human review."
+      "A GitHub token with pull-request write access is required to request human review."
     );
   if (!/^[^/]+\/[^/]+$/.test(repo || ""))
     throw new Error("GitHub repository is missing.");
