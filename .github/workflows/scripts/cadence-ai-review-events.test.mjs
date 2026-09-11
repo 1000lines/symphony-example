@@ -36,13 +36,21 @@ test("request-review failure path does not dispatch workflow and names manual re
   assert.doesNotMatch(workflow, /WORKFLOW_REF/);
 });
 
-test("route job serializes duplicate review contexts with workflow concurrency", () => {
+test("route job serializes all receipt checks and mutations for a PR", () => {
   assert.match(workflow, /concurrency:/);
   assert.match(
     workflow,
-    /github\.event\.review\.id \|\| github\.event\.comment\.pull_request_review_id \|\| github\.event\.comment\.id \|\| 'head'/
+    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ github.event.pull_request.number \|\| github.event.issue.number \|\| 'no-pr' \}\}\n/
   );
   assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /queue: max/);
+});
+
+test("receipt writes do not enqueue more event-router jobs", () => {
+  assert.match(
+    workflow,
+    /github.event_name == 'issue_comment' &&\s+github.actor == \(vars.CADENCE_REVIEWER \|\| 'example-cadence-bot'\) &&\s+startsWith\(github.event.comment.body, '<!-- cadence-review-request-receipts:v1'\)/
+  );
 });
 
 test("event route fetches current head and last reviewed SHA for workpad evidence", () => {
@@ -52,7 +60,8 @@ test("event route fetches current head and last reviewed SHA for workpad evidenc
   assert.match(workflow, /printf 'last_reviewed_sha=%s\\n'/);
 });
 
-test("event route relies on workflow concurrency instead of a Linear coalescing lock", () => {
+test("event requests opt into durable receipts without a Linear lock", () => {
+  assert.match(workflow, /COALESCE_REVIEW_EVENT: "true"/);
   assert.doesNotMatch(workflow, /Coalesce duplicate trigger context/);
   assert.doesNotMatch(workflow, /planTriggerCoalescing/);
   assert.match(
@@ -68,6 +77,18 @@ test("event route relies on workflow concurrency instead of a Linear coalescing 
 test("event route records trigger context evidence in the Cadence workpad update", () => {
   assert.match(workflow, /triggerCoalescing:/);
   assert.match(workflow, /coalescingKey: \$coalescingKey/);
-  assert.match(workflow, /mechanism: "github-actions-concurrency"/);
+  assert.match(workflow, /mechanism: "github-receipt-and-pr-concurrency"/);
+  assert.ok(
+    workflow.indexOf("Write Cadence workpad trigger decision") >
+      workflow.indexOf("Request or re-request Cadence review")
+  );
+  assert.match(
+    workflow,
+    /REQUESTED_REVIEW: \$\{\{ steps.request_cadence_review.outputs.requested \}\}/
+  );
+  assert.match(
+    workflow,
+    /SKIP_REASON: \$\{\{ steps.request_cadence_review.outputs.skip_reason \|\| steps.route.outputs.skip_reason \}\}/
+  );
   assert.doesNotMatch(workflow, /eventUpdate:/);
 });
