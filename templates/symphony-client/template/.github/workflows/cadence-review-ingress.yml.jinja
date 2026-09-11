@@ -6,8 +6,8 @@ run-name: >-
       !startsWith(github.event.comment.body, '<!-- cadence-review-request-receipts:v1') &&
       (contains(github.event.pull_request.labels.*.name, 'symphony') ||
        contains(github.event.issue.labels.*.name, 'symphony') ||
-       github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
-       github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot')) }},
+       github.actor == (vars.SYMPHONY_BOT_USER || '[[ (symphony_app_slug ~ '[bot]') | replace("'", "''") ]]') ||
+       github.actor == (vars.CADENCE_REVIEWER || '[[ (cadence_app_slug ~ '[bot]') | replace("'", "''") ]]')) }},
   "event":"${{ github.event_name }}",
   "action":"${{ github.event.action }}",
   "number":${{ github.event.pull_request.number || github.event.issue.number || 0 }},
@@ -35,8 +35,8 @@ jobs:
       !startsWith(github.event.comment.body, '<!-- cadence-review-request-receipts:v1') &&
       (contains(github.event.pull_request.labels.*.name, 'symphony') ||
        contains(github.event.issue.labels.*.name, 'symphony') ||
-       github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
-       github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot'))
+       github.actor == (vars.SYMPHONY_BOT_USER || '[[ (symphony_app_slug ~ '[bot]') | replace("'", "''") ]]') ||
+       github.actor == (vars.CADENCE_REVIEWER || '[[ (cadence_app_slug ~ '[bot]') | replace("'", "''") ]]'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
