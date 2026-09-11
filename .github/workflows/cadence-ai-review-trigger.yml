@@ -5,7 +5,7 @@ name: Cadence AI Review Trigger
 
 on:
   pull_request_target:
-    types: [review_requested]
+    types: [review_requested, closed]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -23,6 +23,13 @@ on:
         default: ""
         type: string
   workflow_call:
+    secrets:
+      CADENCE_BOT_GITHUB_TOKEN:
+        required: true
+      CADENCE_AI_REVIEW_ANTHROPIC_API_KEY:
+        required: true
+      CADENCE_LINEAR_API_TOKEN:
+        required: false
     inputs:
       pr_number:
         required: true
@@ -48,6 +55,18 @@ env:
   SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
 
 jobs:
+  cancel-closed:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions: {}
+    concurrency:
+      group: cadence-ai-review-${{ github.repository }}-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+      queue: single # Closing the PR replaces pending review work.
+    steps:
+      - run: echo "PR closed; cancelling its Cadence review."
+
   review:
     name: "Review PR #${{ inputs.pr_number || github.event.pull_request.number }}"
     if: >-
@@ -79,6 +98,7 @@ jobs:
     concurrency:
       group: cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
+      queue: max # Preserve distinct feedback while another review runs.
     steps:
       - name: Validate PR number
         env:
@@ -154,7 +174,7 @@ jobs:
           pr_file="${RUNNER_TEMP}/cadence-pr.json"
           gh pr view "${PR_NUMBER}" \
             --repo "${GH_REPO}" \
-            --json title,body,headRefName,headRefOid,labels,assignees \
+            --json state,title,body,headRefName,headRefOid,labels,assignees \
             > "${pr_file}"
 
           issue_identifier="$(
@@ -164,6 +184,7 @@ jobs:
           )"
 
           printf 'issue_identifier=%s\n' "${issue_identifier}" >> "${GITHUB_OUTPUT}"
+          printf 'state=%s\n' "$(jq -r '.state' "${pr_file}")" >> "${GITHUB_OUTPUT}"
           printf 'head_sha=%s\n' "$(jq -r '.headRefOid' "${pr_file}")" >> "${GITHUB_OUTPUT}"
           printf 'has_symphony_label=%s\n' "$(jq -r 'any(.labels[].name; . == "symphony")' "${pr_file}")" >> "${GITHUB_OUTPUT}"
           printf 'current_cadence_run=%s\n' "$(
@@ -182,6 +203,7 @@ jobs:
       # PR assignee for review, update the workpad when Linear credentials
       # exist, and skip the Claude review step.
       - name: Plan visible Cadence review decision
+        if: steps.pr.outputs.state == 'OPEN'
         id: plan
         env:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
@@ -564,9 +586,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.CADENCE_AI_REVIEW_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
-          # The main-branch event caller has already verified the original author.
-          # Its actor is a notification source, not the identity used to publish.
-          allowed_bots: ${{ github.event_name == 'workflow_run' && github.actor || steps.app-token.outputs.app-slug }}
+          # Allow only GitHub-identified bot initiators; humans retain the Action's write check.
+          allowed_bots: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.actor.type == 'Bot' && github.event.workflow_run.actor.login || steps.app-token.outputs.app-slug }}
           prompt: |
             /cadence-ai-review
 

@@ -14,6 +14,7 @@ on:
         required: false
         type: string
 
+# The reusable reviewer needs these permissions; routing narrows its own token.
 permissions:
   contents: read
   issues: write
@@ -97,4 +98,7 @@ jobs:
     with:
       pr_number: ${{ matrix.pr_number }}
       trigger_source: workflow_dispatch.group
-    secrets: inherit
+    secrets:
+      CADENCE_BOT_GITHUB_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+      CADENCE_AI_REVIEW_ANTHROPIC_API_KEY: ${{ secrets.CADENCE_AI_REVIEW_ANTHROPIC_API_KEY }}
+      CADENCE_LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}

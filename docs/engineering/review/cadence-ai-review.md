@@ -99,14 +99,18 @@ trusted `main`, read current PR/feedback through `actions/github-script`, and
 verify the original author's write permission. A failed or denied router cannot
 start the dependent review job. Keep `cadence-controller` restricted to `main`.
 
-The reusable call retains the caller's event and actor. After the event router's
-permission check, the provider may accept that trigger actor; it still posts with
-the configured review credential. Trigger identity does not confer publishing
-permission. Manual calls and legacy review requests retain their existing actor
-checks. All review execution requires `refs/heads/main`.
+The reusable call retains the caller's event and actor. GitHub-identified bot
+initiators may enter the provider's bot allowlist; humans still pass the provider's
+independent write-permission check. Reviews use the configured publishing
+credential. Only three named repository secrets are passed; the signing key comes
+from the reviewer's protected environment. Manual calls and legacy review requests
+retain their existing actor checks. All review execution requires `refs/heads/main`.
 
-GitHub's repository/PR concurrency group keeps one active and one latest pending
-review. This coalesces bursts, not every duplicate event. The reviewer reacquires
+GitHub's repository/PR concurrency group keeps one active review and queues up to
+100 pending reviews (`queue: max`), preserving distinct feedback during review.
+Closing or merging a PR cancels that group. Review planning also checks that the
+PR is still open, so delayed events cannot restart it. Unchanged
+duplicate events may still cause another review. The reviewer reacquires
 current state; its outcome verifier rejects missing or stale-head reviews.
 
 Manual `cadence-ai-review.yml` accepts `pr_numbers` (comma/space separated),

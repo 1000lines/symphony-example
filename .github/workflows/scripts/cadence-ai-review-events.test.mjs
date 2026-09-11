@@ -22,7 +22,7 @@ test("trusted event calls allow their verified trigger actor without changing pu
   const steps = triggerWorkflow.jobs.review.steps;
   const review = steps.find((step) => step.id === "cadence_review");
   assert.equal(review.uses, "anthropics/claude-code-action@30544b674398ee15c84819bd87caf8a87e8c7b55");
-  assert.equal(review.with.allowed_bots, "${{ github.event_name == 'workflow_run' && github.actor || steps.app-token.outputs.app-slug }}");
+
   assert.match(triggerWorkflow.jobs.review.if, /github.ref == 'refs\/heads\/main'/);
   assert.equal(review.with.github_token, '${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}');
   assert.equal(review.with.allowed_non_write_users, undefined);
@@ -121,7 +121,7 @@ test("events call review only after the existing author-permission router succee
   assert.equal(review.needs, 'route');
   assert.equal(review.if, "needs.route.outputs.should_request_review == 'true'");
   assert.equal(review.uses, './.github/workflows/cadence-ai-review-trigger.yml');
-  assert.equal(review.secrets, 'inherit');
+  assert.deepEqual(Object.keys(review.secrets).sort(), Object.keys(triggerWorkflow.on.workflow_call.secrets).sort());
   assert.equal(review.with.pr_number, '${{ needs.route.outputs.pr_number }}');
   assert.equal(route.outputs.should_request_review, '${{ steps.route.outputs.should_request_review }}');
   assert.equal(route.steps.find(step => step.id === 'route').run,
@@ -135,9 +135,49 @@ test("manual matrix and events reuse the same reviewer with sufficient inherited
   const events = yaml.load(workflow);
   assert.equal(manual.jobs.review.uses, events.jobs.review.uses);
   assert.equal(manual.jobs.review.with.pr_number, '${{ matrix.pr_number }}');
-  assert.equal(manual.jobs.review.secrets, 'inherit');
+  assert.deepEqual(manual.jobs.review.secrets, events.jobs.review.secrets);
+  assert.equal(Object.keys(manual.jobs.review.secrets).length, 3);
+  assert.equal(manual.jobs.review.secrets.CADENCE_APP_PRIVATE_KEY, undefined);
+  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'max');
+  assert.equal(triggerWorkflow.jobs.review.concurrency['cancel-in-progress'], false);
   assert.equal(manual.jobs.resolve.if, "github.ref == 'refs/heads/main'");
   for (const caller of [manual, events]) assert.deepEqual(caller.permissions, triggerWorkflow.permissions);
   assert.equal(triggerWorkflow.jobs.review.concurrency.group,
     'cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}');
+});
+
+test("closing a PR cancels only its review group; late arrivals skip review planning", () => {
+  const { review, 'cancel-closed': cancel } = triggerWorkflow.jobs;
+  assert.ok(triggerWorkflow.on.pull_request_target.types.includes('closed'));
+  assert.equal(cancel.if, "github.event_name == 'pull_request_target' && github.event.action == 'closed'");
+  assert.equal(cancel.concurrency['cancel-in-progress'], true);
+  assert.equal(cancel.concurrency.queue, 'single');
+  assert.deepEqual(cancel.permissions, {});
+  assert.equal(cancel.environment, undefined);
+  const group = (job, number, inputs = {}) => job.concurrency.group.replace(/\$\{\{(.*?)\}\}/g,
+    (_, expression) => new Function('github', 'inputs', `return ${expression}`)(
+      { repository: 'owner/repo', event: { pull_request: { number } } }, inputs));
+  assert.equal(group(cancel, 18), group(review, 18));
+  assert.equal(group(cancel, 18), group(review, undefined, { pr_number: '18' }));
+  assert.notEqual(group(cancel, 18), group(review, 20));
+  const metadata = review.steps.find(step => step.id === 'pr');
+  assert.match(metadata.run, /--json state,/);
+  assert.match(metadata.run, /printf 'state=%s/);
+  assert.equal(review.steps.find(step => step.id === 'plan').if, "steps.pr.outputs.state == 'OPEN'");
+  assert.equal(review.steps.find(step => step.id === 'cadence_review').if, "steps.plan.outputs.run_claude == 'true'");
+});
+
+test("bot allowance never substitutes a human initiator for the Action's write check", () => {
+  const expression = triggerWorkflow.jobs.review.steps.find(step => step.id === 'cadence_review')
+    .with.allowed_bots.slice(3, -2).replace('steps.app-token.outputs.app-slug', "steps['app-token'].outputs['app-slug']");
+  const evaluate = new Function('github', 'steps', `return ${expression}`);
+  const steps = { 'app-token': { outputs: { 'app-slug': 'configured-app' } } };
+  // Both low-permission and writer accounts follow the provider's normal user check.
+  for (const login of ['stranger', 'writer', 'custom-developer']) {
+    assert.equal(evaluate({ event_name: 'workflow_run', actor: login,
+      event: { workflow_run: { actor: { type: 'User', login } } } }, steps), 'configured-app');
+  }
+  assert.equal(evaluate({ event_name: 'workflow_run', actor: 'different-human',
+    event: { workflow_run: { actor: { type: 'Bot', login: 'installation[bot]' } } } }, steps), 'installation[bot]');
+  assert.equal(evaluate({ event_name: 'workflow_dispatch', actor: 'manual-caller', event: {} }, steps), 'configured-app');
 });
