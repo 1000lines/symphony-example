@@ -1,0 +1,33 @@
+%% symphony-dag/v1
+flowchart LR
+  I["Round 1: CT-I · Review exact client-copy manifest and export lists"]
+  Q["Round 1: CT-Q · Define seven answers and safe delimiters independently"]
+  CHECK["Round 1: 100-43 · Reuse accepted advisory check and ready handoff"]
+  M["Round 2: CT-M · Straight copy of every listed file in its own PR"]
+  C["Round 2: CT-C · Support native Docker remote CI and portable config"]
+  R["Round 2: CT-R · Add reusable explicit-secret Codex and Claude review"]
+  T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
+  L["Round 4: CT-L · Add late CI and Codex parts before release"]
+  O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
+  U["Round 5: CT-U · Publish template alpha and instantiate its root client"]
+  V["Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
+  F["Round 6: CT-F · Move template and root callers to workflow alpha and prove root use"]
+  A["Round 7: CT-A · Adopt published pair in example and prove live paths"]
+  Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
+  I --> M
+  I --> C
+  I --> R
+  CHECK --> R
+  M --> T
+  Q --> T
+  T --> L
+  C --> L
+  R --> L
+  L --> O
+  L --> U
+  L --> V
+  U --> F
+  V --> F
+  O --> A
+  F --> A
+  A --> Z
