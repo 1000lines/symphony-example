@@ -19,7 +19,11 @@ not the copy ref. CT-R must separately verify 100-43's initial live proof.
 requires `.gitattributes` in every generated client and inspection of recent
 merges. This supersedes its earlier publication-only disposition and the old
 copy/source pin. It adds one D1 client artifact for readable planning diffs;
-the seven answers, workflow interfaces and task ownership remain as planned.
+task ownership remains as planned. The later human-merged
+[PR #42](https://github.com/1000lines/symphony-example/pull/42) adds the eighth
+answer, `cadence_reviewer` (`claude` or `codex`, required without a default).
+It supersedes key-presence selection: both keys present still runs the selected
+reviewer; missing selection or its matching key fails before provider execution.
 
 The complete `873f511..d5e9692` diff contains 16 paths, including two new files.
 All eleven changed export paths were already selected. No new runtime helper,
@@ -51,6 +55,8 @@ regular files, 678 lines, with per-row commit, Git mode, Git blob SHA-1, source
 and destination. Hashes describe Git objects, not raw-file SHA-1 digests. CT-M
 copies every byte/mode, including raw GitHub expressions, without substitutions
 or formatting. All eight staging destinations are absent at the selected ref.
+CT-M deliberately copies this recorded snapshot even if main advances; changing
+the pin or any selected blob requires a reviewed inventory revision first.
 
 | Generated path                                         | Existing copy source or planned origin                             | Why local; conversion owner                                                                                                                                                                                                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -59,13 +65,13 @@ or formatting. All eight staging destinations are absent at the selected ref.
 | `.github/workflows/symphony-client-handoff.yml`        | `.github/workflows/cadence-linear-rework.yml`                      | Target native listener for feedback-to-Linear delivery. CT-T deletes the body; CT-L calls CT-R's reusable handoff with App/Linear secrets only.                                                                                                                     |
 | `.github/workflows/symphony-client-review-cleanup.yml` | `.github/workflows/cadence-review-check-cleanup.yml`               | Target native completion listener closes abandoned advisory checks. CT-T deletes the body; CT-L calls CT-R's reusable cleanup with App key only.                                                                                                                    |
 | `.github/workflows/symphony-client-wakeups.yml`        | `.github/workflows/symphony-linear-wakeups.yml`                    | Target check/status/CI/conflict events and configured completion filters. CT-T deletes the body; CT-L calls CT-C's reusable wakeup with Linear token only.                                                                                                          |
-| `.github/workflows/symphony-client-ci.yml`             | `.github/workflows/ci.yml`                                         | Optional target command CI when existing application CI does not cover it. CT-T deletes the tooling-specific body; CT-L calls CT-C's new command runner without reviewer secrets. Omit when existing CI suffices; no eighth answer.                                 |
+| `.github/workflows/symphony-client-ci.yml`             | `.github/workflows/ci.yml`                                         | Optional target command CI when existing application CI does not cover it. CT-T deletes the tooling-specific body; CT-L calls CT-C's new command runner without reviewer secrets. Omit when existing CI suffices; no additional answer.                             |
 | `.symphony.cfg.json`                                   | Same source path                                                   | Target commands, instruction paths, Linear team and observed required-check provenance. CT-T converts immediately, defaults to native by omitting mode, replaces seed npm commands and never invents required checks. CT-L adds the accepted optional mode support. |
 | `.gitattributes`                                       | Same source path                                                   | GitHub reads attributes in the target to collapse per-project AI bookkeeping while keeping Mermaid and top-level plans visible. CT-T retains these generic rules immediately; existing target attributes require a reviewed merge preserving unrelated rules.       |
-| `SYMPHONY.md`                                          | New in CT-T; no suitable short existing client file                | Target worker instructions referenced by config, including commands, review context and usage/source/license links. Preserve existing AGENTS/CLAUDE content; do not copy the hosted runtime instructions.                                                           |
+| `SYMPHONY.md`                                          | New in CT-T; no suitable short existing client file                | Target worker instructions referenced by config, including commands, review context, usage/source/license links and the skill delivery locations below. Preserve existing AGENTS/CLAUDE content; do not copy the hosted runtime instructions.                       |
 | `.github/symphony/REVIEW.md`                           | New in CT-T                                                        | Target review context for both providers. Keep generic reviewer implementation/instructions central.                                                                                                                                                                |
 | `.github/symphony/cadence-app-manifest.json`           | New in CT-T; no App registration manifest exists at the source ref | Inert direct-path registration document: metadata/contents/actions read, pull_requests/issues/checks write; no host or org-admin grant. Forks use the accepted existing App. CT-O verifies actual grants/IDs separately.                                            |
-| `.copier-answers.yml`                                  | New Copier metadata supplied by CT-Q's package, consumed by CT-T/L | Local source/version and the seven nonsecret answers; preserve `_src_path`/`_commit`. No copy row, fabricated source, credential, project key or extra question.                                                                                                    |
+| `.copier-answers.yml`                                  | New Copier metadata supplied by CT-Q's package, consumed by CT-T/L | Local source/version and the eight nonsecret answers; preserve `_src_path`/`_commit`. No copy row, fabricated source, credential, project key or extra question.                                                                                                    |
 
 Ingress, config and `.gitattributes` can be converted from these snapshots immediately.
 The five other copied workflows are inert **only while staged**: CT-T must
@@ -129,6 +135,9 @@ merge. Keep `docs/symphony-plans/**/*.mmd -linguist-generated` after the broader
 bookkeeping rule, leave top-level plans visible, and retain unrelated target
 attributes. CT-T render fixtures cover both a new file and an existing file
 with unrelated rules; no merge hook or application-wide attributes are added.
+These rules cover the factory's `docs/symphony-plans/` convention. CT-T's fixture
+must place a plan there and check the actual attributes; a target choosing another
+planning directory needs corresponding reviewed globs, not assumed coverage.
 
 New targets are not assumed empty. CT-T/L render fixtures preserve unrelated
 application files and existing instructions, config, answers and license. CT-O/U/A
@@ -153,7 +162,76 @@ file and its tests; they do not authorize exporting its unused controller caller
 `cadence-pr-output-cleanup.mjs` and its tests have no retained runtime import or
 instruction reference and are excluded. `design-review/SKILL.md` and the old
 `design-DEMO-247-process-hardening.md` string are exclusion/fixture labels in
-the verifier, not files it reads. Operator onboarding skills remain seed-only.
+the verifier, not files it reads. Operator skills have the explicit delivery
+contract below; exclusion from generated files does not make them optional.
+
+### Skill census and delivery
+
+[Jeremy's September 11, 16:47 UTC Linear comment](https://linear.app/1000lines/issue/100-47/inventory-client-files-and-justify-export-lists#comment-c5ca647d)
+requires accounting for client skills, especially creating another Symphony
+project. The frozen tree contains **eleven** `SKILL.md` files: three under
+`.agents/skills/`, one each under `.claude/skills/` and `.codex/skills/`, and six
+under `scripts/symphony/runtime-bundle/skills/`. Their paths and bytes are also
+unchanged at merged PR #42 (`7fa922639706f3437de8b1c1ccc0b0e383cc8ac1`).
+The table inventories source availability, not installation or live execution.
+
+| Existing skill source                                                       | Purpose and delivery                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.agents/skills/symphony-project-factory/SKILL.md`                          | **Required human-operated project setup**, for the first and later projects using the same client. CT-O uses the reviewed tooling checkout and its resources below; Jeremy/parent onboarding owns making it available and invoking it. It is intentionally absent from the unattended host profile. |
+| `.agents/skills/karpathy-guidelines/SKILL.md`                               | Implementation discipline. The runtime manifest installs this shared skill for workers; the operator tooling checkout also supplies the factory's required read.                                                                                                                                    |
+| `.agents/skills/linear-graphql/SKILL.md`                                    | Generic Linear access guidance and fallback helper. Installed as the other shared worker skill; project creation requires the injected `linear_graphql` tool under the factory's own contract.                                                                                                      |
+| `scripts/symphony/runtime-bundle/skills/symphony-repository/SKILL.md`       | Worker repository discovery, credentials and target config. Installed on the shared host; only its imported `scripts/config.mjs` belongs in the workflow export.                                                                                                                                    |
+| `scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md`           | Worker changes to accepted plans, using the shared replanning guide/templates. Installed on the host.                                                                                                                                                                                               |
+| `scripts/symphony/runtime-bundle/skills/symphony-proof-of-work/SKILL.md`    | Worker evidence and review handoff. Installed on the host.                                                                                                                                                                                                                                          |
+| `scripts/symphony/runtime-bundle/skills/symphony-finalize-project/SKILL.md` | Worker finalization audit after accepted upstream work. Installed on the host; does not create a project.                                                                                                                                                                                           |
+| `scripts/symphony/runtime-bundle/skills/symphony-linear-api/SKILL.md`       | Worker direct Linear/attachment access when authorized and needed. Installed on the host; prefer the injected API.                                                                                                                                                                                  |
+| `scripts/symphony/runtime-bundle/skills/symphony-google-docs/SKILL.md`      | Conditional worker source-document access. Bundled on the host, but usable only with configured document access; no Google credential is a client requirement or copy.                                                                                                                              |
+| `.claude/skills/cadence-ai-review/SKILL.md`                                 | Central reviewer instructions, already selected with references in review-export. CT-R preserves the shared review contract across both providers; target-specific context is `.github/symphony/REVIEW.md`.                                                                                         |
+| `.codex/skills/symphony-update-hosted-runtime/SKILL.md`                     | Human-only shared-host maintenance. Excluded from clients, workflow publication and the unattended profile; onboarding does not authorize host updates.                                                                                                                                             |
+
+CT-O's planned `.agents/skills/symphony-onboard/SKILL.md` and
+`references/fork.md`, `references/direct.md`, `references/walkthrough.md` beneath
+that directory are **absent**, not missed existing skills. They provide the
+human-operated `onboard <repo-url>` entry point in the seed. The operator may
+create another project through the existing factory without onboarding or
+regenerating the repository again. Per-project metadata stays in Linear.
+
+The project-factory resource closure is the existing
+`.agents/skills/symphony-project-factory/` directory: `SKILL.md`,
+`templates/project-description.md`, and `templates/tickets/` containing
+`requirements-and-design.md`, `plan-project.md`, `trigger-fan-out.md`,
+`broaden-fanout-integration.md` and `standup.md`. The first three ticket templates
+are the default seed set; the last two require a specific human request. Retain
+them in the tooling checkout; their presence never authorizes extra tickets.
+Its required reads also include the runtime `workflow/WORKFLOW.md`, Karpathy
+skill, actual project/source documents and verified color-helper output from
+`scripts/symphony/project-colors.ts`. Seed templates refer to the shared
+proof-of-work, project-workflow and review guides under `docs/engineering/`.
+Accepted fan-out uses the existing `tools/symphony-dag/` later. CT-O resolves
+these through the reviewed tooling checkout, including its dependencies, instead
+of assuming they exist in an adopter's application or copying that tooling tree.
+
+**CT-O acceptance:** its existing initial/repeat/additional-project dry runs must
+show the factory's complete seven-file directory is available in the human
+operator's session, record the tooling ref/location and injected Linear access,
+and verify the color/helper and shared-document references resolve. The initial
+case plans exactly three seeds/two relations; repeat reuses existing resources;
+an additional project uses the same repo config without a repository project
+key. Missing factory/resources/access must identify the operator's setup action
+before dependent project creation. A link to the source alone is not this proof.
+CT-A records the actual invocation/readback in its live walkthrough;
+Jeremy/parent retains installation and participant operation ownership.
+
+This makes D1/D7's existing skill delivery explicit without adding Copier output
+or a new implementation node. CT-T links these locations from `SYMPHONY.md`;
+CT-U preserves them in its root instance. The eight copy rows and twelve
+generated paths remain sufficient: workers use installed generic skills and
+humans initiate project setup through the operator tooling. Neither review nor
+CI export executes project creation. Do not install the factory in the default
+unattended profile, generate a second copy of it, or claim a source census proves
+the host's installed/loaded ref. The runtime bundle manifest/README document the
+eight worker skills (six bundled plus two shared); installation readback remains
+an operational proof obligation.
 
 ### Root dotfile census
 
@@ -237,7 +315,8 @@ any actually needed provider dependency in its final list; none is assumed now.
 - CT-R creates `scripts/cadence-provider-result.mjs`, its `.test.mjs`, and
   `.github/symphony/cadence-provider-review.md`; all are absent at this ref.
   It converts the existing events/manual/trigger/handoff/cleanup entry points,
-  keeps Claude fallback and adds Codex with the accepted shared verdict/ledger.
+  keeps Claude and adds Codex with explicit `cadence_reviewer` selection and
+  the accepted shared verdict/ledger; no automatic provider fallback.
   `early-review-evidence.md` stays a seed evidence document, linked by provenance.
 
 ## Publication assets and source attribution
