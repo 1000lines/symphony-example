@@ -6,6 +6,9 @@ A clear instruction from a human with repository write access changes the plan.
 Record the decision and what it supersedes; no special review verdict or second
 approval of the same decision is needed. Ask only about unresolved choices.
 List material technical objections in the PR being merged, then proceed.
+Before substantive work, reply on the originating PR in one or two lines:
+state the interpretation, chosen path and its basis, and what it supersedes.
+Update that same reply as needed; proceed without waiting for a second approval.
 
 ## Small Changes: Do Them Directly
 
@@ -15,6 +18,8 @@ that keeps the same node also stays in the existing ticket and PR.
 Update affected acceptance criteria, ownership, and dependencies; coordinate
 with any worker doing the affected work, then implement and validate.
 No separate replanning or fan-out tickets are needed.
+Use this path only with concrete evidence that the remaining boundaries hold.
+If ownership, interfaces, or dependencies remain in doubt, use the larger path.
 
 ## Larger Changes: Create Two Tickets
 
@@ -29,7 +34,6 @@ For a broader revision, create two Linear tickets in the existing project:
    updating existing tickets and creating only the additional tickets needed.
 
 Adapt the templates to the existing project; do not create another design seed.
-Keep unaffected work moving. Record the decision and ticket links in the current
-Codex workpad, and reuse those tickets if the same feedback is processed again.
-Carry unresolved feedback forward; refresh affected PRs and validation when
-implementation changes. Honor explicit constraints on the replacement's scope.
+Keep unaffected work moving. Record the decision and ticket links in the Codex
+workpad; reuse tickets on retries and preserve unresolved feedback. Refresh PRs
+and validation after implementation changes, honoring explicit scope limits.
