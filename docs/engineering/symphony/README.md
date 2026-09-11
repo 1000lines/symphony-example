@@ -22,6 +22,8 @@ handoffs, validation evidence, and finalization.
   finalizer cleanup.
 - [`proof-of-work.md`](./proof-of-work.md) - evidence fields and proof types
   for UI, API, workflow, deploy, and integration work.
+- [`pull-requests.md`](./pull-requests.md) - concise PR descriptions, linked
+  progress diagrams, CLI/API publishing, and GitHub rendering evidence.
 - [`project-finalization.md`](./project-finalization.md) - finalizer issue
   responsibilities, TODO scanning, cleanup.
 
