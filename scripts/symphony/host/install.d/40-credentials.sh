@@ -257,7 +257,17 @@ write_runtime_credentials() {
   export SYMPHONY_GITHUB_AUTH_MODE="$auth_mode"
 
   keys_json="$(require_secret "$keys_secret")"
-  # HACKATHON_LEGACY_AUTH: keep the working deployment selected until DEPLOY.
+  # HACKATHON_LEGACY_AUTH: Retain symphony/keys:GITHUB_TOKEN for these live consumers:
+  # HACKATHON_LEGACY_AUTH: legacy runtime materialization and installed Git askpass;
+  # HACKATHON_LEGACY_AUTH: scripts/symphony/host/bootstrap.sh on boot/reconcile (its
+  # HACKATHON_LEGACY_AUTH: askpass has no App branch); and first boot/replacement via
+  # HACKATHON_LEGACY_AUTH: infra/static/modules/symphony-host/files/user-data.sh.
+  # HACKATHON_LEGACY_AUTH: App-credential boot/checkout is untested and deferred;
+  # HACKATHON_LEGACY_AUTH: Revisit with Jeremy after 2026-09-15, independently of DEPLOY.
+  # HACKATHON_LEGACY_AUTH: Decision: https://github.com/1000lines/symphony-example/pull/28#issuecomment-5634194152
+  # HACKATHON_LEGACY_AUTH: 100-20 retirement requires replacement proof for every live
+  # HACKATHON_LEGACY_AUTH: consumer and Jeremy's secret-removal action; preserve
+  # HACKATHON_LEGACY_AUTH: OPENAI_API_KEY, LINEAR_API_TOKEN and all other JSON fields.
   case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
     legacy) github_token="$(json_value "$keys_json" GITHUB_TOKEN)" || die "$keys_secret is missing GITHUB_TOKEN" ;;
     app) write_runtime_app_auth ;;

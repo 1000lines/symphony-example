@@ -109,6 +109,10 @@ symphony_json_field() {
 
 symphony_set_identity_defaults() {
   # HACKATHON_LEGACY_AUTH: App opt-in is durable; RETIRE removes legacy defaults.
+  # HACKATHON_LEGACY_AUTH: Legacy identity checks and Git askpass require GITHUB_TOKEN.
+  # HACKATHON_LEGACY_AUTH: Retire all legacy auth-mode fallbacks and identity defaults
+  # HACKATHON_LEGACY_AUTH: here only after deployed App clone/push/PR and current-head
+  # HACKATHON_LEGACY_AUTH: CI/review proof; local App preflight alone is insufficient.
   case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
     app)
       export SYMPHONY_GITHUB_AUTH_MODE=app
