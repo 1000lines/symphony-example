@@ -166,8 +166,9 @@ check, including feedback on the same head; the workflow run, attempt and PR
 identify it. Retrying the same admission does not reset a completed check.
 
 Publication requires a new Cadence verdict after this request started, at its
-accepted head. A clean approval yields `success`; findings or a review-loop
-stop yield `action_required`. Failed execution or a missing new verdict yields
+accepted head. A clean approval with a successful handoff (or an already-ready
+PR) yields `success`; findings or a review-loop stop yield `action_required`.
+Failed execution or a missing new verdict yields
 `failure`. Closed PRs, changed heads and requests superseded by newer accepted
 work are cancelled. Check summaries link the workflow and, when available, the
 review. Older requests cannot overwrite a newer request's pending check.
@@ -188,8 +189,12 @@ It does not execute PR code, write contents, change workflows, or merge.
 The shared Cadence App does not need an additional grant or credential.
 
 A denied or unconfirmed ready mutation completes the advisory check as
-`failure`, retains the clean review link, and fails publication with a diagnostic
-in the check and Actions summary. It never falls back to a different actor or
+`failure`, retains the clean review link, and fails publication with “Review
+approved; marking ready failed” in the check and Actions summary. The diagnostic
+links the failed operation's workflow attempt and includes the API error.
+Completion recovery preserves that summary; it does not infer an approval from
+older reviews when no verified verdict was recorded.
+It never falls back to a different actor or
 claims a ready handoff without GitHub confirming `isDraft: false`. The operator
 should check the finish job and caller permission blocks, then the job log's
 effective `GITHUB_TOKEN Permissions`. After correcting access, rerun **all** jobs

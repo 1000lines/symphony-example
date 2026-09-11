@@ -180,6 +180,9 @@ test("findings, cap, missing/stale verdicts and execution failures never ready d
     ["APPROVED", head, { result: "cancelled" }, "cancelled"],
     ["APPROVED", head, { ranReview: "false" }, "action_required"],
     ["APPROVED", "b".repeat(40), {}, "failure"],
+    ["APPROVED", head, { reviewer: "another-bot" }, "failure"],
+    ["APPROVED", head, { baseline: 1 }, "failure"],
+    ["APPROVED", head, { baseline: undefined }, "failure"],
     ["CHANGES_REQUESTED", head, {}, "failure"],
     [null, head, {}, "failure"],
   ]) {
@@ -188,6 +191,7 @@ test("findings, cap, missing/stale verdicts and execution failures never ready d
     if (state) f.verdict(state, sha);
     await f.finish(request(), options);
     assert.equal(f.checks[0].conclusion, conclusion);
+    assert.doesNotMatch(f.checks[0].output.summary, /Review approved/);
     assert.equal(f.ready.length, 0);
   }
 });
@@ -210,7 +214,12 @@ test("a push/closure during review or immediately before ready cancels publicati
 
 test("denied readiness completes a failed advisory check and reports the exact operator handoff", async () => {
   // GraphQL permission errors can use HTTP 200; REST-style status alone is insufficient.
-  for (const error of [{ errors: [{ type: "FORBIDDEN" }] }, { status: 403 }]) {
+  for (const error of [
+    Object.assign(new Error("Resource not accessible by integration"), {
+      errors: [{ type: "FORBIDDEN" }],
+    }),
+    { status: 403, message: "readiness denied" },
+  ]) {
     const f = fixture();
     await queueCheck(f.github, request(), appId);
     f.verdict();
@@ -222,6 +231,21 @@ test("denied readiness completes a failed advisory check and reports the exact o
     assert.equal(f.checks[0].status, "completed");
     assert.equal(f.checks[0].conclusion, "failure");
     assert.equal(f.checks[0].details_url, f.reviews[0].html_url);
+    const check = f.checks[0];
+    assert.match(check.output.summary, /Review approved; marking ready failed/);
+    assert.ok(check.output.summary.includes(error.message));
+    assert.ok(
+      check.output.summary.includes(`[Review](${f.reviews[0].html_url})`)
+    );
+    assert.ok(
+      check.output.summary.includes(
+        `[Failed operation: markPullRequestReadyForReview](${request().runUrl})`
+      )
+    );
+    assert.doesNotMatch(
+      check.output.summary,
+      /No clean verdict|Ready for human review/
+    );
     assert.match(
       outcome.handoffError,
       /markPullRequestReadyForReview was denied for owner\/repo#3 using repository GITHUB_TOKEN/
@@ -236,13 +260,32 @@ test("denied readiness completes a failed advisory check and reports the exact o
       /shared Cadence App grants unchanged/
     );
     assert.equal(f.pr.draft, true);
+    const published = structuredClone(check);
     await recoverCheck(f.github, context, request(), appId, {
       id: 10,
       run_attempt: 1,
       conclusion: "failure",
     });
+    assert.deepEqual(check, published);
     assert.equal(f.checks[0].conclusion, "failure");
     assert.match(f.checks[0].output.summary, /was denied/);
+  }
+});
+
+test("non-Error readiness failures preserve a readable diagnostic", async () => {
+  for (const error of ["readiness denied", null]) {
+    const f = fixture();
+    await queueCheck(f.github, request(), appId);
+    f.verdict();
+    const outcome = await f.finish(request(), {
+      readyGraphql: async () => {
+        throw error;
+      },
+    });
+    assert.ok(outcome.handoffError);
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.ok(f.checks[0].output.summary.includes(`\n\n${String(error)}\n\n`));
+    assert.equal(f.pr.draft, true);
   }
 });
 
@@ -265,6 +308,26 @@ test("missing readiness identity or an unconfirmed mutation never claims success
     assert.equal(outcome.conclusion, "failure");
     assert.match(outcome.handoffError, /was not confirmed/);
     assert.equal(f.pr.draft, true);
+    assert.equal(f.ready.length, 0);
+  }
+});
+
+test("recovery without verified publication never infers approval from reviews", async () => {
+  for (const state of [null, "APPROVED"]) {
+    const f = fixture();
+    if (state) f.verdict(state);
+    await queueCheck(f.github, request(), appId);
+    await recoverCheck(f.github, context, request(), appId, {
+      id: 10,
+      run_attempt: 1,
+      conclusion: "failure",
+    });
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.match(f.checks[0].output.summary, /No clean verdict is claimed/);
+    assert.doesNotMatch(
+      f.checks[0].output.summary,
+      /Review approved|\[Review\]/
+    );
     assert.equal(f.ready.length, 0);
   }
 });

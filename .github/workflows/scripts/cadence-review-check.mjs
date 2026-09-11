@@ -217,8 +217,8 @@ export async function finishCheck(
           "Cadence found no outstanding findings. GitHub confirmed the draft is ready for human review.";
       } catch (error) {
         const denied =
-          [401, 403].includes(error.status) ||
-          error.errors?.some((item) =>
+          [401, 403].includes(error?.status) ||
+          error?.errors?.some((item) =>
             ["FORBIDDEN", "UNAUTHORIZED"].includes(item.type)
           );
         handoffError =
@@ -230,7 +230,9 @@ export async function finishCheck(
           "Repository operator: verify contents:write and pull-requests:write on the finish job and reusable-workflow callers, and the effective token permissions in the job log. " +
           "Keep the shared Cadence App grants unchanged. After fixing access, rerun all jobs for a fresh guarded verdict; do not merge automatically.";
         conclusion = "failure";
-        summary = handoffError;
+        summary = `Review approved; marking ready failed.\n\n[Failed operation: markPullRequestReadyForReview](${
+          request.runUrl
+        })\n\n${error?.message || String(error)}\n\n${handoffError}`;
       }
     }
   }
