@@ -38,7 +38,7 @@ jobs:
       - name: Resolve manual review inputs
         id: resolve
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBERS: ${{ inputs.pr_numbers }}
           REVIEW_LABEL: ${{ inputs.review_label }}
@@ -66,7 +66,7 @@ jobs:
 
           if [ -n "${REVIEW_LABEL}" ]; then
             if [ -z "${GH_TOKEN}" ]; then
-              echo "::error::CADENCE_BOT_GITHUB_TOKEN is required when review_label is set."
+              echo "::error::GITHUB_TOKEN is required when review_label is set."
               exit 1
             fi
             gh pr list \

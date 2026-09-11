@@ -1,10 +1,49 @@
 # CT-R early review evidence
 
-Status: prerequisite checkpoint, September 11, 2026. The reusable provider
+Status: App-identity correction checkpoint, September 11, 2026. The reusable provider
 implementation and real Codex review are pending. This document records the
 starting evidence for [100-49](https://linear.app/1000lines/issue/100-49), under
 the [accepted CT-R item](https://github.com/1000lines/symphony-example/blob/873f511aea3e1d858e216d1a890ed1cd9a709d61/docs/symphony-plans/client-template/implementation-items.md#ct-r--make-native-review-reusable-with-explicit-secrets-and-codex).
 It does not satisfy CT-A's later proof through the published workflow repository.
+
+## Immediate App-identity correction
+
+[Jeremy's PR #43 comment at 15:51 UTC](https://github.com/1000lines/symphony-example/pull/43#issuecomment-5637041350)
+requires fixing native review publication in this ticket now. GitHub readback
+confirmed Jeremy has repository admin access. This authorizes the independent
+identity correction ahead of the broader prerequisites below; it does not close
+the reusable-workflow or Codex criteria. The correction consumes selected `main`
+at `4511d079a621fefe297aa56f250e894711140f32`, including merged PRs #40 and #38.
+
+The observed wrong-identity review is [5180509923 on PR #43](https://github.com/1000lines/symphony-example/pull/43#pullrequestreview-5180509923),
+authored by user `1000-cadence-bot` at head
+`c95018bb266b0467edb582b29328c8ce96d7ae7f`. The corrected native source passes the
+existing repository-scoped App token to Claude and derives the expected reviewer
+login from the token Action's App slug. Verification, advisory results and Linear
+handoff consume that identity. Native review no longer needs the legacy user PAT.
+The main-only environment policy and existing same-repository secret delivery
+remain; explicit cross-repository delivery and Codex selection are separate
+outstanding CT-R work.
+
+After human review and merge, Jeremy can verify the identity correction using the
+existing trusted manual workflow on one task-linked open proof PR:
+
+```sh
+gh workflow run cadence-ai-review-trigger.yml \
+  --repo 1000lines/symphony-example --ref main \
+  -f pr_number=43 -f trigger_source=workflow_dispatch
+```
+
+Use PR #43 only while it remains open; if it has been merged, use the next open
+100-49 proof PR and record its actual number. No dispatch from this unreviewed
+branch is authorized by the main-only environment policy. Existing
+`CADENCE_APP_PRIVATE_KEY` and `CADENCE_APP_ID` must reach the `cadence-controller`
+job, with repository `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`,
+`CADENCE_LINEAR_API_TOKEN` and `CADENCE_CLAUDE_MODEL` for the current Claude path.
+No new secret name or App grant is required. This is a prepared operator action,
+not an executed proof. Read back review author `1000lines-cadence[bot]`, current
+head, workflow/helper commits, run/attempt, workpad and App `4866513` advisory
+check. A pre-merge run still uses trusted main's old publishing code.
 
 ## Prerequisites
 
