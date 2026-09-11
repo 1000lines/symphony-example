@@ -29,7 +29,7 @@ Small PRs can use the human guide directly.
   Cadence uses the linked Linear issue's single `## Cadence Workpad` for raw
   findings and action briefs; Symphony records responses in `## Codex Workpad`.
 - Raw review detail goes to the applicable ledger. Cadence publishes a concise
-  PR review with its reviewed SHA and workpad link; the general workflow's final
+  assessment with its reviewed SHA and workpad link; the general workflow's final
   verify pass may post one concise PR-facing outcome comment.
 - Every agent finding gets a stable finding ID so follow-up agents can respond
   without relying on private context.
@@ -69,8 +69,15 @@ PR, inspect functionality, performance, scalability, reliability, and security
 where the diff affects them, load relevant area guidance, and prioritize
 findings with concrete examples. It uses the current PR head and verifies fixes
 in code or artifacts. Agent-only Cadence loops stop at the configured cap of
-three; human feedback resets the loop. Review readiness requires current-head
-checks and review evidence, not an approval attached to an older commit.
+three; verified human feedback can reset the loop. Generated workpad bookkeeping
+cannot reset the agent-only cap. Readiness requires passing required CI and a
+fresh Cadence review of the current PR head with matching workpad evidence.
+Inspect CI workflow/App/run-attempt/child-job provenance, the actual reviewed
+SHA and all incoming mandatory feedback. Close mandatory feedback, keep the
+branch clean and mark the PR ready before blocker-side `mature`; remove maturity
+for request-changes, rejected/stale evidence or severe regression, not ordinary
+edits alone. Human approval/merge owns final acceptance. See the
+[Cadence contract](./cadence-ai-review.md#acceptance-contract).
 
 ## Axis Prompt Pack
 

@@ -43,12 +43,12 @@ Every proof item in a Linear workpad or PR body must name:
 | Field                             | Requirement                                                                                                                     |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Target ref                        | Branch, commit SHA, PR head SHA, workflow run ref, composed validation ref, or deployed ref.                                    |
-| Command or environment            | Exact local command, API request, workflow name/run, URL, or manual walkthrough context.                          |
+| Command or environment            | Exact local command, API request, workflow name/run, URL, or manual walkthrough context.                                        |
 | Acceptance criterion demonstrated | The ticket requirement, review request, or handoff condition the proof covers.                                                  |
 | Artifact location                 | PR section, Linear comment, screenshot path, recording link, workflow run URL, uploaded report, log excerpt, or command output. |
 | Result                            | Pass, fail, blocked, skipped with reason, or human-verified.                                                                    |
-| Known limitation                  | Missing credential, skipped browser, partial fixture data, unrun suite, or `none`.                       |
-| Next handoff                      | None, reviewer action, human deploy, credential request, product decision, or named ticket.      |
+| Known limitation                  | Missing credential, skipped browser, partial fixture data, unrun suite, or `none`.                                              |
+| Next handoff                      | None, reviewer action, human deploy, credential request, product decision, or named ticket.                                     |
 
 Do not summarize validation as "tested locally" without the command or
 environment. Do not claim a proof item for validation that was not actually run.
@@ -60,7 +60,7 @@ proof types may be needed for one ticket.
 
 | Change type                     | Acceptable first-pass proof                                                                                                                                                                                 |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UI work                         | Component test output, manual walkthrough notes, screenshots, screen recordings, browser console/network notes, tested user role, viewport, URL, and relevant state setup.                      |
+| UI work                         | Component test output, manual walkthrough notes, screenshots, screen recordings, browser console/network notes, tested user role, viewport, URL, and relevant state setup.                                  |
 | Backend/API work                | Unit or integration test output, `curl`/GraphQL request and response summary, API logs, job logs, migration dry-run output, permission checks, compatibility checks, or contract test output.               |
 | Workflow changes                | Workflow syntax review, `gh workflow` or `gh run` evidence, dry-run output, dispatch inputs, check-run URL, artifact upload URL, expected failure evidence for missing secrets, and state-transition notes. |
 | Multi-ticket project validation | Target ref, included task refs, conflict notes, validation commands, affected sibling issues, and remaining finalizer TODOs or markers.                                                                     |
@@ -170,10 +170,24 @@ handoff.
 ## Current-Head Review And Bridge Evidence
 
 For PR readiness, record the selected base SHA, current PR head SHA, required
-check results for that head, Cadence's reviewed SHA and verdict, and draft/ready
-status. Set blocker-side `mature` only when current-head checks and review pass
-and the PR is ready for human review. An old approval or another task's green
-check does not satisfy that gate.
+check results for that head, Cadence's reviewed SHA and verdict, matching
+workpad evidence and draft/ready status. Capture run/attempt, workflow/event/ref,
+emitting App and required child-job IDs for CI; a rollup name alone is
+insufficient. Inspect review summaries, conversation comments, inline threads
+and Linear comments for mandatory feedback since the review. A changed head or
+new review-relevant activity makes a prior approval stale.
+
+Keep mandatory feedback closed, the task branch clean and the PR ready before
+applying blocker-side `mature`. Remove maturity for request-changes,
+rejected/stale acceptance or a similarly severe regression; ordinary edits alone
+do not revoke it. Human acceptance owns Done. See the
+[shared contract](../review/cadence-ai-review.md#acceptance-contract).
+
+For deployment, record accepted controller/target/runtime refs, installed bundle
+provenance, actual service reload/polling, workflow enablement readback and real
+current-head runs. A source-only helper, successful fixture, or intended future
+command does not prove deployment. Missing-admin handoffs name the repository,
+App, denied operation/error, required grant, operator, exact action and readback.
 
 For GitHub-to-Linear events, retain the actor, issue, identity source, PR when
 present, head SHA, previous state, confirmed next state or skip, reason,

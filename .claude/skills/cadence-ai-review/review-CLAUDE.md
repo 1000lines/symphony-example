@@ -1,5 +1,10 @@
 # Cadence Review Context
 
+Readiness requires passing required CI and a fresh review of the current head,
+matching workpad evidence, mandatory-feedback closure, a clean branch and ready
+PR. Check incoming human feedback before relying on a prior approval. Human
+acceptance owns Done.
+
 This checkout is being reviewed by **Cadence**, an AI PR reviewer. You are
 reviewing, not building. Follow the `cadence-ai-review` skill
 (`.claude/skills/cadence-ai-review/`) and the review methodology in

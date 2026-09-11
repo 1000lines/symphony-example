@@ -30,6 +30,27 @@ and known setup gaps. They are preparation guidance, not a tested installation
 procedure. **nothing in this extraction has been verified by execution; no
 extraction round trip was performed.**
 
+## Worker workflow and acceptance
+
+One [authoritative workflow](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
+serves local and hosted execution. The installed repository skill selects the
+target from Linear, binds its App credentials, and reads its selected-base
+`.symphony.cfg.json`; hooks are no-ops. Pending CI uses the ticket's
+`Unhappy`/`wake:15m` → `Evaluating` timer with one evaluation slot. Review waits
+use `Inactive`. Read each target's README, applicable AGENTS/CLAUDE instructions,
+toolchain files and `.github` workflows. Validate locally, use Docker only for
+environment gaps, and always inspect required CI at the published head.
+
+Human readiness requires passing required CI and a fresh Cadence review of the
+current head, closed mandatory feedback, a clean task branch and a ready PR.
+The native workflow hooks run the Claude reviewer, which records detailed
+findings in the Cadence workpad and publishes an `APPROVE` or `COMMENT` PR review.
+Apply blocker-side `mature` at readiness, and remove it for rejected/stale
+acceptance or severe regression, not ordinary edits alone. Human acceptance
+owns Done. The [review reference](docs/engineering/review/cadence-ai-review.md#acceptance-contract)
+describes review freshness, routing, credentials and human handoff.
+Deployment evidence identifies the installed refs, service reload and live runs.
+
 ## Hidden files
 
 Disable GitHub Actions before your first push (Settings → Actions → General →
@@ -67,26 +88,20 @@ Use Node `20.20.0` from `.nvmrc` and select npm `11.13.0` from `package.json`:
 npm install --global npm@11.13.0
 ```
 
-The dependency lock to supply is **one `package-lock.json` at the tooling root**,
-alongside `package.json`; it covers both tooling workspaces. No resolved lockfile
-is supplied in this snapshot. During later setup, from that root, generate the
-lock from the tooling manifests and then install from it:
+The committed **`package-lock.json` at the tooling root**, alongside
+`package.json`, covers both workspaces. Install that dependency tree:
 
 ```sh
-npm install --package-lock-only
 npm ci
 ```
 
-The first command resolves dependency versions and writes the lock without
-installing `node_modules`; the second installs that locked dependency tree.
-Review and commit `package-lock.json` in your repository before enabling the
-CI caller below. Keep it beside the tooling manifest even when the tooling is
+Keep the lock beside the tooling manifest even when the tooling is
 nested, rather than using your product's lock or separate workspace locks.
 On subsequent checkouts use `npm ci`; regenerate and review the lock when
 intentionally changing dependencies. `npm ci` fails if the manifests and lock
 disagree instead of updating the lock. `.npmrc` enables lockfile generation,
-engine checks and a minimum release age. The initial resolution and these setup
-commands remain unverified; dependency compatibility may need later correction.
+engine checks and a minimum release age. Controller CI uses this lock for
+build, lint, tests and changed Markdown, with `CI Required` aggregating them.
 
 The separate validation targets are `npm run build`, `npm test` and
 `npm run lint`. Build compiles the two tooling workspaces and checks TypeScript
@@ -153,7 +168,11 @@ in; export the corresponding inputs separately for standalone helpers or the
 host. Actions settings do not populate a local shell, Terraform or host secret
 store automatically.
 
-Choose the coding and review bot accounts, their commit identities, repository
+For App installation, use the [broker and target-binding recipe](scripts/symphony/runtime-bundle/README.md#repository-discovery-and-onboarding).
+The bot-account credentials below describe legacy authentication;
+they are not an App-installation prerequisite.
+
+Choose the legacy coding and review bot accounts, their commit identities, repository
 owner and human lead. Grant the accounts the repository and issue access used by
 their workflows. Supply your Linear team and workspace in live profiles, links
 and project metadata. The [project schema](docs/symphony-plans/fan-out-plan-schema.md)

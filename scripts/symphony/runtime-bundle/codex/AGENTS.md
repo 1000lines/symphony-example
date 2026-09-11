@@ -57,7 +57,8 @@ or resolution of an unsafe state transition.
 - After pinning the workpad, use the installed `symphony-repository` skill for
   target discovery and repo-owned configuration. Missing config becomes a PR,
   GitHub issue, or Linear workpad proposal according to available write access.
-  Read the target's applicable `AGENTS.md`; use `SYMPHONY_TOOLING_ROOT` for shared
+  Read the target's README, applicable `AGENTS.md`/`CLAUDE.md`, toolchain and
+  `.github` workflow guidance; use `SYMPHONY_TOOLING_ROOT` for shared
   Symphony tools and docs that are not part of the target repository.
 - Use the injected `linear_graphql` tool for Linear reads and writes when it is
   available. If Linear write access is missing before the Codex workpad is
@@ -94,6 +95,15 @@ blocker handling, or state classification:
 
 ## Review And Evidence
 
+Normal human handoff and blocker-side `mature` require passing required CI and
+a fresh Cadence review of the current PR head, closed mandatory feedback, a
+clean task branch and a ready PR. Record the configured reviewer, reviewed SHA,
+verdict and matching workpad evidence. Check incoming human feedback before
+handoff; a prior approval cannot cover new review-relevant activity. Remove
+maturity for request-changes, rejected/stale acceptance evidence or similarly
+severe regression; ordinary edits alone do not revoke it. Human acceptance owns
+Done. Use the shared Cadence acceptance contract for freshness and provenance.
+
 Validate repository changes in order: **local → Docker if needed → mandatory CI**.
 Run relevant checks locally first. If they pass, skip Docker. Use Docker only
 when required tests cannot run in the local environment, such as missing tools
@@ -120,3 +130,9 @@ Before returning a PR to review, collect the required local validation and recor
 proof with target ref, command or environment, acceptance criterion, artifact
 location, result, known limitation, and next handoff. Do not claim deploy,
 workflow, screenshot, approval, or check evidence unless it exists.
+
+For an unavailable admin operation, prepare the reviewable change first and
+record the exact repository/App, operation/error, required permission, named
+operator action and readback needed. App installation grants cannot be expanded
+by minting another token. Source availability and local bundle fixtures do not
+prove host reload, workflow enablement, provider execution or timer recovery.

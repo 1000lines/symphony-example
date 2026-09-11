@@ -6,8 +6,21 @@ finds that comment and updates it, or creates it when it is absent. Symphony pin
 and updates its own `## Codex Workpad`; `## Symphony Workpad` is engine-owned.
 Neither is a fallback destination for Cadence writes.
 
-Cadence review workflows and the non-review GitHub-to-Linear bridge share this
-workpad using the Example Review Bot credential. The bridge reserves
+Cadence records the reviewed head, findings and verdict in its workpad before
+publishing the concise GitHub PR review. Preserve stable finding IDs and
+mandatory classifications across reviews. Missing or denied persistence is an
+operational failure, not acceptance; an unrelated workpad is not a substitute.
+See the [acceptance contract](./cadence-ai-review.md#acceptance-contract).
+
+Normal human handoff requires passing required CI and a fresh Cadence review of
+the current head, closed mandatory feedback, a clean branch and a ready PR.
+Recheck the head and incoming human feedback before publication. The timeline
+helper detects stale approvals and selects incremental or full review; generated
+bookkeeping cannot reset the agent-only review cap. Keep ordinary review history
+and bridge coordination intact when updating the snapshot.
+
+Cadence review and the retained standalone non-review bridge share this
+workpad using the configured Linear credential. The standalone bridge reserves
 `coordination.nonReviewWakeups` for ten recent deduplication records and
 `coordination.lastNonReviewWakeup` for the latest event's full evidence.
 Full snapshot and incremental review writes preserve these fields. Terminal
@@ -26,6 +39,8 @@ replacement snapshots. The bridge's own evidence writes retain the complete
 review snapshot they read. Callers that need stored review fields must use
 `reviewUpdate` or supply a complete snapshot.
 
+The current CI YAML writes conflict instructions and records state results in
+its run log; it does not use the standalone bridge's deduplication ledger.
 The review handoff bridge records `coordination.reviewHandoff`; the event router
 records trigger context and coalescing evidence. Review and non-review bridges use the shared
 [wakeup helper](../../../scripts/linear-issue-wakeup.mjs): `Active` first,

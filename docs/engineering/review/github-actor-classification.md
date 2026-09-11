@@ -9,6 +9,12 @@ The actor classifier owns classification only; its `humanFacing` flag does not
 authorize work. The same module also provides the permission verifier below. It does not trigger workflows, update
 Linear, post PR reviews, or decide Cadence review behavior.
 
+An actor classification or review request does not prove acceptance. Normal
+handoff also needs required CI and a fresh review of the current head, matching
+workpad evidence, mandatory-feedback closure, a clean branch and a ready PR.
+See the [acceptance contract](./cadence-ai-review.md#acceptance-contract) for the
+reviewer's output and freshness requirements.
+
 ## Inputs
 
 The pure classifier accepts a GitHub actor login and optional local context:
@@ -152,8 +158,8 @@ other text in the PR.
 
 ### App Installation And Rollout
 
-The two event workflows and the single-PR review trigger check out the trusted
-default branch and mint a repository-scoped token for the existing Cadence App using
+The secret-free ingress forwards event selectors; the event consumers and
+single-PR reviewer execute trusted `main` and mint a repository-scoped token for the existing Cadence App using
 `cadence-controller` Environment values `CADENCE_APP_ID` and
 `CADENCE_APP_PRIVATE_KEY`. Feedback permission reads do not use the legacy
 bot-token secret or a PAT fallback. Tokens request `Metadata: read` and

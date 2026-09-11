@@ -23,10 +23,18 @@ Symphony PRs that carry the `symphony` label, but it is not yet a general
 review service for non-Symphony work. Human reviewers should not need that
 automation contract to review an ordinary PR.
 
+Normal Symphony handoff requires passing required CI and a fresh Cadence review
+of the current PR head, closed mandatory feedback, a clean task branch and ready
+PR. The [Cadence contract](./cadence-ai-review.md#acceptance-contract) describes
+the Claude runner's PR-review output and persisted workpad. Human approval and
+merge own final acceptance. Apply blocker-side `mature` at readiness and remove
+it for request-changes, rejected/stale evidence or severe regression, not
+ordinary edits alone.
+
 Cadence keeps detailed run state, trigger decisions, skipped events, and
 AI-to-AI coordination in the Linear
 [`## Cadence Workpad`](./cadence-linear-workpad.md). GitHub-visible Cadence
-output is a concise PR review assessment for humans. Symphony reads the
+output is a concise assessment for humans. Symphony reads the
 Cadence workpad to understand the current review state before acting on
 Cadence-driven rework; Cadence may read the `## Codex Workpad` during a
 re-review to understand what Symphony changed, validated, or deferred. Actor
@@ -97,7 +105,8 @@ Expected evidence:
 
 - automated tests for changed behavior, regressions, edge cases, and fallback
   paths where relevant
-- local command output or CI check names
+- local validation, Docker only for environment gaps, and mandatory CI at the
+  current head, including required workflow/App/run-attempt/child-job evidence
 - manual scenarios for UI, integration, AI workflow, or operational behavior
 - explicit rationale when tests are intentionally not added
 
@@ -192,8 +201,8 @@ Expected evidence:
   versions.
 - **Security-sensitive changes:** provide auth, tenant isolation, validation,
   logging, and secret-handling evidence.
-- **Docs-only changes:** provide formatting/link validation and a docs-only diff
-  review.
+- **Docs-only changes:** provide formatting/link validation, a docs-only diff
+  review, and current-head CI. Source availability does not prove deployment.
 
 ## Review Findings
 

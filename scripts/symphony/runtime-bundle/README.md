@@ -7,9 +7,10 @@ discovery and are installed into the runtime user's personal Codex home.
 
 ## Source and installed files
 
-`manifest.json` lists every file shipped here, the install destinations and
-owner/mode policy. Its variable names describe the installer inputs; the loader
-does not expand these strings as configuration. The skill bodies under `skills/` are canonical; no
+`manifest.json` identifies the bundle and shared skill links. The loader copies
+the bundle tree, discovers private skills under `skills/`, and records installed
+files separately; the source manifest is not a file-by-file install recipe.
+The skill bodies under `skills/` are canonical; no
 matching common `.codex/skills` copies are required. The installer also stages
 `karpathy-guidelines` and `linear-graphql` from the repository's `.agents/skills`.
 The human-only `symphony-project-factory` skill is excluded from the unattended
@@ -93,6 +94,19 @@ PR first, GitHub issue if branch/PR writes are denied, then the pinned Linear
 workpad if GitHub publication is unavailable. Proposed rules are not active
 until merged into the selected base. `AGENTS.md` remains working guidance.
 
+Read the target's README, applicable AGENTS/CLAUDE guidance, toolchain files and
+`.github` workflows. Repository selection has no hardcoded clone target;
+commands and required CI come from each target's selected base. The installed
+config helper and App broker provide this interface without executable hooks.
+
+In App mode, `40-credentials` installs `github-app-auth.mjs`, the `gh` adapter
+and Git askpass outside the checkout. Follow the repository skill's `bind` and
+resume-preflight steps before Git/CLI access, using a private task config under
+`SYMPHONY_GITHUB_APP_CACHE`. Never overwrite the shared signing configuration,
+reuse another task's binding or borrow a PAT after denial. Credential installation
+also requires explicit App bot author email, human login, Cadence App ID/slug and
+the real `gh` binary; the adapter clears inherited legacy token variables.
+
 The freshness wrapper exports `SYMPHONY_TOOLING_ROOT` for shared tools and docs
 outside the target checkout. Label repair runs as part of the worker's publish
 steps with the actual target and its bound credentials, using
@@ -104,6 +118,14 @@ running host this requires the accepted checkout's `40-credentials` (in App
 mode), `45-runtime-bundle` and `80-config` installation steps, plus the normal
 service reload. Merging the source does not activate it on an existing host.
 Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
+
+Normal acceptance requires passing required CI and a fresh Cadence review of
+the current head, closed mandatory feedback, a clean branch and ready PR. The
+[native review contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract)
+describes the Claude reviewer's PR-review output and workpad. Run local tests
+first, Docker only for an environment gap, then mandatory CI on the published
+head. Source/staged/rendered fixtures prove installation behavior; they do not
+prove host reload, App grants, provider execution, or a timer wake.
 
 ## Human feedback and replanning
 

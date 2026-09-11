@@ -5,6 +5,14 @@ description: Review a group of opt-in Symphony PRs against their Linear acceptan
 
 # Cadence AI Review
 
+Normal human handoff requires passing required CI and a fresh review of the
+current head, closed mandatory feedback, a clean task branch and ready PR.
+Record the reviewed SHA, verdict and matching workpad, and inspect incoming
+human feedback before publication. Blocker-side `mature` follows those
+conditions; remove it for request-changes, rejected/stale evidence or severe
+regression, not ordinary edits alone. Human acceptance owns Done. See the
+[shared contract](../../../docs/engineering/review/cadence-ai-review.md#acceptance-contract).
+
 Use this skill to review a group of opt-in Symphony PRs before human review. The
 review reads evidence, records detailed state in the Linear `## Cadence Workpad`,
 and posts one concise GitHub PR review per PR — APPROVE when the PR has no
@@ -83,7 +91,7 @@ Read these before producing review output. Acquisition mechanics are in
 Per PR:
 
 - PR title, body, base branch, head SHA, changed files, diff, labels, CI status.
-- The associated Linear issue. Infer the `DEMO-NNN` identifier from the PR title
+- The associated Linear issue. Use the target config's `linear.teamKey` in the PR title
   prefix, then fall back to the branch or body. Read its description, acceptance
   criteria, and comments through the acquisition helper. **Read-only during
   acquisition.**
@@ -192,7 +200,7 @@ Cadence has two output surfaces with different audiences:
   Cadence runs.
 - **GitHub PR review** — concise human-readable assessment for PR reviewers.
 
-Write the workpad first when possible. If the helper or credentials are missing,
+Write and read back the workpad before publishing. If the helper or credentials are missing,
 do not bypass it with a separate Linear writer; abort before posting and report
 the configuration failure.
 
@@ -245,6 +253,7 @@ Why this is acceptable:
 for human review.>
 
 Non-blocking notes:
+
 - <optional concise should-fix or suggestion, explicitly labeled non-blocking>
 ```
 
@@ -252,12 +261,14 @@ Non-blocking notes:
 Assessment: Blocked
 
 Required follow-up:
+
 - `<finding-id>`: <concise blocker and smallest safe action>
 
 Why this matters:
 <one or two sentences with the human-readable risk or requirement gap.>
 
 Non-blocking notes:
+
 - <optional concise note, explicitly labeled non-blocking>
 ```
 
@@ -265,12 +276,14 @@ Non-blocking notes:
 Assessment: Human input needed
 
 Decision needed:
+
 - `<finding-id>`: <specific product, technical, credential, or scope question>
 
 Why Cadence cannot decide:
 <one or two sentences naming the missing authority or evidence.>
 
 Non-blocking notes:
+
 - <optional concise note, explicitly labeled non-blocking>
 ```
 
@@ -320,8 +333,11 @@ When invoked on a PR you have reviewed before, do not blindly review again. Run
 
 `since` items are typed (commit / comment / review / force-push / draft
 transitions), carry actor and timestamp, and exclude the bot's own activity.
-Inline review-thread replies are not yet surfaced (TODO); rely on commits and
-top-level comments/reviews for now. Put review-state detail such as skipped,
+Do not infer complete feedback from this helper alone. Acquire submitted review
+summaries, top-level comments, inline threads/replies and Linear comments with
+full pagination and current author permission evidence. Missing history requires
+full review and prevents a fresh acceptance claim. Generated workpad bookkeeping
+does not reset the agent-only three-pass cap. Put review-state detail such as skipped,
 ignored, non-human, and pending follow-up events in the Cadence workpad unless a
 concise GitHub-visible assessment needs to mention them.
 

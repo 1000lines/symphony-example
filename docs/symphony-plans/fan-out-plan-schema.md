@@ -217,13 +217,17 @@ cleanly.
 - The label belongs on the blocker issue, not on the dependent and not on an
   edge.
 - Generated coding tickets should instruct the blocker agent to set the label
-  only when required checks for the current PR head pass, Cadence or the
-  configured reviewer approves that current head, the task branch is clean of
-  committed predecessor work that is not on the selected base branch, and the PR
-  is marked ready for human review from its draft state.
+  only when required CI passes and Cadence or the configured reviewer approves
+  the current PR head, mandatory feedback is closed, the task branch is clean
+  of committed predecessor work absent from the selected base, and the PR is
+  marked ready for human review from draft. Record the reviewed SHA, verdict
+  and matching workpad. A prior approval cannot cover new review-relevant
+  activity.
 - Generated coding tickets should instruct the blocker agent to remove `mature`
-  only for request-changes review, rejected acceptance evidence, or a similarly
-  severe downstream-invalidating regression.
+  only for request-changes review, rejected or stale acceptance evidence, or a
+  similarly severe downstream-invalidating regression.
+- Source availability is not deployment evidence; record installed refs and
+  actual execution separately when deployment is required.
 
 `decisions`
 

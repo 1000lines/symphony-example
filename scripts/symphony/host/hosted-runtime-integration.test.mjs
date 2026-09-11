@@ -1,3 +1,4 @@
+import yaml from "js-yaml";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -184,6 +185,167 @@ test("hosted private skills install from the personal bundle and not common path
       ),
       false
     );
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("installed repository helper reads each target's selected base, not a task proposal", async () => {
+  const fixture = await makeInstallFixture();
+  const helper = join(
+    fixture.codexHome,
+    "skills/symphony-repository/scripts/config.mjs"
+  );
+  const targets = [
+    {
+      repository: "1000lines/symphony-example",
+      commands: { setup: [["npm", "ci"]], test: [["npm", "test"]] },
+      checks: ["CI Required"],
+    },
+    {
+      repository: "jeremycarroll/venn-search-rs",
+      commands: { test: [["cargo", "test", "--release"]] },
+      checks: [3, 4, 5, 6]
+        .map((n) => `Test Suite (NCOLORS=${n})`)
+        .concat("Clippy (Linting)", "Format Check"),
+    },
+  ];
+  try {
+    for (const [index, target] of targets.entries()) {
+      const checkout = join(fixture.root, `target-${index}`);
+      await mkdir(checkout);
+      const git = (...args) => {
+        const result = spawnSync("git", ["-C", checkout, ...args], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GIT_CONFIG_GLOBAL: "/dev/null",
+            GIT_CONFIG_SYSTEM: "/dev/null",
+          },
+        });
+        assert.equal(result.status, 0, result.stderr);
+        return result.stdout.trim();
+      };
+      git("init", "--initial-branch=main");
+      git(
+        "remote",
+        "add",
+        "origin",
+        `https://github.com/${target.repository}.git`
+      );
+      // Repository names/checks identify the two scenarios; no network or live grants.
+      const config = {
+        schemaVersion: "symphony-repository/v1",
+        linear: { teamKey: "100" },
+        workingDirectory: ".",
+        instructions: [],
+        commands: target.commands,
+        ci: {
+          requiredChecks: target.checks.map((name) => ({
+            name,
+            workflow: ".github/workflows/ci.yml",
+            appId: 15368,
+          })),
+        },
+      };
+      const configPath = join(checkout, ".symphony.cfg.json");
+      await writeFile(configPath, JSON.stringify(config));
+      git("add", ".symphony.cfg.json");
+      git(
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-m",
+        "Base configuration"
+      );
+      const revision = git("rev-parse", "HEAD");
+      git("update-ref", "refs/remotes/origin/main", revision);
+      await writeFile(
+        configPath,
+        JSON.stringify({ ...config, commands: {}, ci: { requiredChecks: [] } })
+      );
+      const inspect = (base) =>
+        spawnSync(process.execPath, [helper, "inspect", checkout, base], {
+          encoding: "utf8",
+        });
+      const selected = inspect("main");
+      assert.equal(selected.status, 0, selected.stderr);
+      assert.deepEqual(JSON.parse(selected.stdout), {
+        status: "configured",
+        revision,
+        config,
+      });
+      assert.notEqual(inspect("unavailable-base").status, 0);
+
+      git("rm", "-f", ".symphony.cfg.json");
+      git(
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-m",
+        "Unconfigured target"
+      );
+      const missingRevision = git("rev-parse", "HEAD");
+      git("update-ref", "refs/remotes/origin/main", missingRevision);
+      const missing = inspect("main");
+      assert.equal(missing.status, 0, missing.stderr);
+      assert.deepEqual(JSON.parse(missing.stdout), {
+        status: "missing",
+        revision: missingRevision,
+      });
+    }
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("staged workflow renders the same per-ticket timer and skill entry point for both auth modes", async () => {
+  const fixture = await makeInstallFixture();
+  try {
+    for (const mode of ["app", "legacy"]) {
+      const configDir = join(fixture.root, mode);
+      await mkdir(configDir);
+      const result = runBash(
+        `source ${quote(
+          join(hostDir, "install.d/80-config.sh")
+        )}; worker_slots=5; render_workflow_config`,
+        {
+          ...fixture.env,
+          SYMPHONY_CONFIG_DIR: configDir,
+          SYMPHONY_GITHUB_AUTH_MODE: mode,
+          SYMPHONY_WORKFLOW_SOURCE: "",
+        }
+      );
+      assert.equal(result.status, 0, result.stderr);
+      const workflow = await readFile(join(configDir, "WORKFLOW.md"), "utf8");
+      const profile = yaml.load(workflow.split("---")[1]);
+      assert.deepEqual(profile.tracker.active_states, ["Active", "Evaluating"]);
+      assert.deepEqual(profile.tracker.daemon_states, ["Unhappy"]);
+      assert.deepEqual(profile.tracker.daemon_dispatch_states, ["Evaluating"]);
+      assert.equal(profile.tracker.daemon_default_wake, "15m");
+      assert.equal(profile.agent.max_concurrent_agents, 5);
+      assert.equal(profile.agent.max_concurrent_agents_by_state.Evaluating, 1);
+      assert.ok(
+        profile.codex.command.startsWith(
+          join(fixture.codexHome, "runtime/bin/codex-with-runtime-bundle.sh")
+        )
+      );
+      assert.ok(
+        Object.values(profile.hooks).every(
+          (command) => command.trim() === "true"
+        )
+      );
+      assert.match(workflow, /installed `symphony-repository` skill/);
+      assert.match(workflow, /reviewer through `workflow_call`/);
+      assert.doesNotMatch(
+        workflow,
+        /ci_passes|ai_accepts|cadence-codex-review/
+      );
+    }
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }

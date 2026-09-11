@@ -8,8 +8,15 @@ Use `gh` for PR data:
 
 - `gh pr view <n> --json title,body,baseRefName,headRefName,labels,url`
 - `gh pr diff <n>` and `gh pr diff <n> --name-only` for the file list.
-- `gh pr checks <n>` for CI status. Only review when required checks have
-  reported; the dispatching workflow may already enforce this gate.
+- `gh pr checks <n>` for a CI summary, then complete run/attempt, job and check
+  evidence at the current head. Verify workflow/event/ref, emitting App and
+  required child jobs; a rollup or dispatched run alone is
+  insufficient. Pending/missing/failed/skipped/stale checks cannot pass.
+- Fully paginated submitted reviews, conversation comments, inline threads and
+  replies, plus current Linear comments and verified author permissions. Bind
+  feedback IDs/update times to the reviewed head and retained workpad.
+  Incomplete history requires full review; generated workpad bookkeeping cannot
+  reset the agent-only three-pass cap.
 
 To expand a label into a group:
 
@@ -18,7 +25,7 @@ To expand a label into a group:
 
 ## Find the Linear issue for acquisition (read-only)
 
-- Take the `DEMO-NNN` identifier from the start of the PR title. Fall back to the
+- Use the target config's `linear.teamKey` in the PR title prefix. Fall back to the
   branch name, then the PR body.
 - Read the issue with `node scripts/fetch-linear-issue.mjs <identifier>`, which
   returns the description, acceptance criteria, comments, and project as Markdown

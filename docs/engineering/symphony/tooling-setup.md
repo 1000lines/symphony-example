@@ -9,22 +9,32 @@ commands in your own repository configuration.
 
 From the repository root, use Node `20.20.0` from `.nvmrc` and npm `11.13.0`
 from `package.json`. The root and two tooling workspace manifests declare the
-dependencies; a derived `package-lock.json` is not included. The `.npmrc` enforces
+dependencies; the committed `package-lock.json` locks both workspaces. The `.npmrc` enforces
 engine compatibility and a minimum release age. Package-manager preparation is
 separate from the tooling commands:
 
 ```sh
 npm install --global npm@11.13.0
-npm install
+npm ci
 npm run build
 npm test
 npm run lint
 ```
 
-`npm install` resolves the declared ranges and generates a local lockfile under
-the retained `.npmrc` defaults. Dependency resolution can change between installs.
-An adopter can maintain that generated lock in their own repository and use
-`npm ci` once it exists.
+Use `npm ci` for the committed dependency tree. Regenerate and review the lock
+only when intentionally changing dependencies. The controller's `ci.yml` runs
+build, lint, tests and changed Markdown with locked Prettier, then `CI Required`.
+Verify the aggregate and its child jobs at the exact PR head; the expected
+Actions App is `15368`. Reusable workflows alone are not CI evidence.
+
+Read each target's README, applicable AGENTS/CLAUDE instructions, toolchain
+files and `.github` workflows before selecting commands. Validate locally,
+use Docker only for missing tools/services, and always inspect current-head CI,
+including documentation changes. Passing local checks skip Docker. For a
+fallback, use a documented container or compatible pinned image, record its
+digest, mount only the issue workspace and run as its UID/GID. A failing
+assertion requires a fix; unavailable tooling needs a precise environment/CI
+handoff. See the [proof standard](./proof-of-work.md#validation-order).
 
 `build` compiles `tools/symphony-dag` and `tools/symphony-host`, then checks the
 TypeScript helpers in `scripts/` without emitting them. `test` selects the two
@@ -151,7 +161,8 @@ the palette listed in `scripts/symphony/project-colors.ts`.
 
 ## PR labels and non-review wakeups
 
-PR label repair is an optional hosted safety net. Its existing process inputs
+Explicit PR label verification is required; an operator hook is an optional
+hosted safety net. Its existing process inputs
 are documented in the [bundle guide](../../../scripts/symphony/runtime-bundle/README.md#pr-label-repair).
 Set `project-color: teal`, for example, in the owning Linear project's content
 or description and create that GitHub label plus `symphony`. The color is a
@@ -166,7 +177,9 @@ required checks/statuses. It selects one open PR with the `symphony` label at
 the event's current head and resolves the configured team's issue from the PR
 title prefix, then the branch. It reads trusted helpers from the default branch.
 Its `workflow_run` subscription names `CI`; it does not subscribe to arbitrary
-dispatched workflows or run a scheduled conflict sweep.
+dispatched workflows or run a scheduled conflict sweep. The outcome step reads
+the target's `ci.yml` pull-request runs. Workers must still collect complete
+acceptance evidence.
 
 An Active worker gets up to one minute to finish; if still Active, it is left
 alone. For waiting tickets, pending CI means `Unhappy` with `wake:15m`, successful
@@ -220,8 +233,11 @@ tooling CI requires none of this optional event or credential setup.
 
 ## Review and local environment
 
-The Cadence workflows require GitHub, Linear, Google Docs, and Claude Code
-access. Set the six credential names documented in the generated reference in
+The native workflow hooks invoke the Claude runner using the credentials below.
+The [review contract](../review/cadence-ai-review.md#acceptance-contract) describes
+its PR-review output and workpad evidence.
+Required Google Docs need source access only when actually linked.
+Set the applicable credential names documented in the generated reference in
 GitHub Settings → Secrets and variables → Actions → Secrets. Workflow identity
 and model variables belong in the Variables tab. The review runner requires
 `CADENCE_CLAUDE_MODEL` with no default. Its retained preflight in

@@ -12,6 +12,13 @@ comments as a substitute for review-state workpad updates, edit
 `## Codex Workpad`, or mutate issue state, labels, assignees, relations, or
 project metadata.
 
+Preserve the reviewed SHA, stable finding IDs, mandatory classifications and
+ordinary review history across workpad writes. A denied write or mismatched
+readback is an operational failure, not acceptance. Do not substitute a PR
+approval or another workpad for persisted evidence. Normal handoff needs
+passing required CI, a fresh current-head review, closed mandatory feedback,
+a clean branch and a ready PR.
+
 ## Happy Path
 
 1. Read the Linear issue during acquisition:
@@ -40,7 +47,8 @@ project metadata.
 
    Use `-` instead of a file path to read JSON from stdin.
 
-4. Post the concise GitHub PR review assessment. The GitHub body should not
+4. Read back the saved head and review state, then post Cadence's
+   concise GitHub PR review assessment. The GitHub body should not
    duplicate the full workpad detail.
 
 If the helper or Linear credentials fail, do not bypass this by writing the

@@ -15,10 +15,43 @@ review state to one Linear comment headed `## Cadence Workpad`, then posts one
 concise GitHub PR review per completed pass (`APPROVE` when clean, otherwise `COMMENT`;
 never `REQUEST_CHANGES`).
 
+## Acceptance contract
+
+Normal human handoff requires passing required CI and a fresh Cadence review of
+the current PR head, a closed mandatory-feedback ledger, a clean task branch,
+and a PR marked ready from draft. The Claude runner publishes `APPROVE` when
+there are no blocker or human-needed findings, otherwise `COMMENT`. Record the
+reviewer, reviewed SHA, verdict and matching Cadence workpad. Human approval and
+merge own final acceptance; Cadence approval does not replace required human
+branch-protection approval.
+
+Read the required CI checks from the target's selected-base `.symphony.cfg.json`
+and branch rules. Verify the current head, workflow/event/ref, emitting App,
+applicable run attempts and required child jobs. Missing, ambiguous, pending,
+stale, failed, canceled, timed-out or skipped results do not pass. Routing and
+review jobs do not implicitly become required product CI.
+
+The timeline helper reports `fresh-approval` or `stale-approval`; a changed head
+or review-relevant activity after approval requires another review. Read human
+feedback across submitted reviews, conversation comments, inline threads/replies
+and Linear comments. Incomplete timeline history requires a full review.
+Preserve stable finding IDs and workpad history, and close mandatory feedback
+before handoff. Agent-only review loops stop after three passes; verified
+human-grounded activity can reset the loop, while generated bookkeeping cannot.
+A cap or human-needed finding requires a concrete human handoff, not a clean
+acceptance claim.
+
+Apply `mature` to the blocker only at normal readiness. Remove it for
+request-changes, rejected or stale acceptance evidence, or a similarly severe
+regression that makes dependent work unsafe. Ordinary edits alone do not revoke
+maturity. Source availability does not prove installation or live execution;
+record those refs and results separately.
+
 ## PR Actor Flow
 
-Symphony implements and reworks issues in `Active`. CI, Cadence review, human
-review, and missing input are external waits in `Inactive`. The diagram names
+Symphony implements and reworks issues in `Active`. Pending CI waits in
+`Unhappy` with `wake:15m`; Cadence review, human review and missing input wait
+in `Inactive`. The diagram names
 actor phases; those phases are not additional required Linear states.
 
 ```mermaid
@@ -116,21 +149,18 @@ current state; its outcome verifier rejects missing or stale-head reviews.
 Manual `cadence-ai-review.yml` accepts `pr_numbers` (comma/space separated),
 `review_label`, or both, then calls the reviewer once per selected PR. Direct
 single-PR dispatch and `review_requested` remain compatibility entry points.
-The existing stale-approval fallback also remains inside the reviewer; migrating
-publication to an App is separate work.
+The stale-approval fallback runs inside the reviewer.
 
 CI wakeups and `cadence-linear-rework.yml` keep their existing responsibilities.
 There is no second CI evaluator, Linear state machine or human-invitation engine.
-This routing change retains Claude; it does not enable the experimental Codex
-producer or its acceptance-check contract.
-
-After merge, verify an authorized feedback event, an unauthorized author, and a
-manual selection. Record their Actions links and actual handoff. Local tests do
-not prove live environment admission or provider execution.
+Review execution uses Claude. Deployment evidence includes an authorized
+feedback event, an unauthorized author, and a manual selection, with Actions
+links and actual handoff results. Local tests do not prove live environment
+admission or provider execution.
 
 ## Automated Triggers And Manual Fallbacks
 
-For this project, automated Cadence review is label-gated and actor-gated:
+Automated Cadence review is label-gated and actor-gated:
 
 - A human-facing PR comment, PR review, inline review comment, or
   ready-for-review event can call Cadence when the PR has the
