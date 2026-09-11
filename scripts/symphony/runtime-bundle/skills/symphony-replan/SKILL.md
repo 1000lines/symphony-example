@@ -20,3 +20,7 @@ special syntax the human must submit or a new controller API. A clear human
 correction takes precedence over stale generated criteria. Preserve unresolved
 feedback across turns and rewrites. Do not treat every design objection as a
 reason to discard the PR or cancel the project.
+
+A human with repository write access may change the design. Record their clear
+decision, amend the affected artifacts, and implement it; do not send it to a
+separate design owner for ratification. AI disagreement alone is not a blocker.

@@ -298,6 +298,19 @@ Review model variable:
 
 ## Actor Authority
 
+For design decisions, a human with verified repository write access is
+authorized to amend accepted designs and execution contracts. No separate
+design-owner, project-lead, or team ratification is required. Record the decision
+and superseded criteria in the workpad; Symphony updates the affected artifacts
+and implements and commits. A stale design document or contrary AI preference
+is not a missing human decision. See the
+[replanning guide](../symphony/replanning.md#human-design-authority).
+
+Actor classification below identifies humans and bots for event routing; it
+does not reserve design authority to a named human or team. If event delivery
+excludes a verified human writer, report that as a routing configuration gap,
+not a requirement for a design owner to decide again.
+
 Cadence and Symphony use the
 [GitHub Actor Classification](./github-actor-classification.md) contract to
 decide whether GitHub activity is authoritative human review input, AI

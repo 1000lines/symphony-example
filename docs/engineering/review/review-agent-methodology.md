@@ -299,6 +299,13 @@ source of authority for the coding agent. AI reviewers may add same-class
 follow-up only when it is directly grounded in the human comment and remains
 inside the issue's scope.
 
+A human with repository write access may also change the design or that scope.
+Their clear instruction is the decision: record its source and superseded
+criteria, then have the coding agent amend the plan/tickets and implement and
+commit. Do not require a separate design owner's ratification or classify AI
+disagreement with the decision as `human-needed`. Review implementation defects
+against the revised intent. Ask only for decisions or access still missing.
+
 Classify follow-up as mandatory only when it is needed to resolve the same issue
 class, reviewer clarity gap, or in-scope requirement gap. Mandatory follow-up
 belongs in `blocker` or `human-needed` findings and in the lead brief's required

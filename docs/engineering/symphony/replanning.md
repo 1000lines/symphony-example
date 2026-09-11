@@ -6,11 +6,34 @@ bridge wakes eligible work for nonempty human `COMMENTED` reviews; the worker
 interprets the feedback in context. Cadence is advisory. Its approval does not
 override a later human objection or establish final merge readiness.
 
+## Human Design Authority
+
+A human with write access to the target repository can change its design,
+including accepted decisions, execution contracts, ticket boundaries and
+implementation choices. They do not need to be the original design author,
+named design owner, project lead, or a member of a special review team. Use
+established permission evidence, or verify the human's effective repository
+write permission through GitHub if it is not known. A bot with write access
+does not acquire human decision authority.
+
+A clear instruction from that human **is the decision**, not a request to find
+someone else to decide. Minute it: record the source, the superseded decision
+and the replacement, update the affected plan/tickets, then implement and
+commit within the instructed scope. Do not wait for the human to edit the
+design document or separately approve the same decision. The AI owns that
+bookkeeping. A contrary AI preference is not ambiguity or a `human-needed`
+finding; list material technical objections and accepted tradeoffs briefly in
+the PR body being merged, linked to the human decision, and proceed. That PR is
+the findable record; an objection does not create another approval gate. Ask only
+about a genuinely unresolved choice, conflicting human directions, missing
+access, or an action outside the granted scope. Repository write access does
+not by itself grant cloud deployment or other unrelated operational authority.
+
 ## Choose The Smallest Coherent Revision
 
 Read the complete review, current issue, accepted plan and decisions, related
 PRs, and fresh human replies. Distinguish an instruction from a question or
-tentative suggestion. Use the project's human authority and existing task
+tentative suggestion. Use the repository writer's authority and existing task
 authorization; ask only about material choices the available context cannot
 settle. A clear replacement approach is actionable even if it contradicts
 generated acceptance criteria. Record which criteria it supersedes.
@@ -89,9 +112,10 @@ unchanged design: include the decision/criteria diff even when no edge moves.
 Task branches and PRs keep the selected base; dependencies do not change branch
 ancestry. Follow the [fan-out schema](../../symphony-plans/fan-out-plan-schema.md).
 
-Apply changes already covered by clear human direction or accepted project
-authority. Do not demand a second approval for a fully specified in-scope
-replacement. For an unresolved cross-ticket or project decision, prepare the
+Apply changes already covered by a human repository writer's direction or
+accepted project authority, including the necessary plan/ticket amendments.
+Do not demand a second approval for the same decision, including a cross-ticket
+design change. For an actually unresolved cross-ticket or project decision, prepare the
 concrete revision and ask the smallest decision question. Keep proposed new
 work parked until the applicable plan/activation authority is satisfied. A
 proposal is not an accepted plan, and it grants no deployment or access rights.
@@ -134,5 +158,8 @@ whether the existing WAIT node can deliver that outcome; preserve the PR if it
 can. Inspect consumers and existing state/wake behavior before promising that
 the change is local. Amend conflicting decisions and downstream assumptions;
 do not make minor fixes to the rejected monitor merely because its old criteria
-are satisfied. This example is a feedback-handling case, not a global change to
+are satisfied. Once the reviewer's repository write authority is established,
+asking a separate design owner whether D07 or the execution contract may change
+repeats a decision already supplied: record the amendment and implement it.
+This example is a feedback-handling case, not a global change to
 every project's CI state policy or proof that the server has been deployed.

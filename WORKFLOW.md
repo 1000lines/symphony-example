@@ -347,6 +347,10 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   otherwise amend ownership and dependencies, account for merged work, and
   create only the authorized follow-up work. Carry unresolved comments forward
   even when they predate the latest workpad update.
+- A clear design instruction from a human with repository write access is an
+  authorized decision. Minute it, amend affected plan/ticket text, and implement
+  and commit. Do not wait for a named design owner, the original author, or
+  Cadence to ratify it; AI disagreement alone is not missing human input.
 - On rework, take the smallest appropriate action:
   - if review feedback or failed checks are mechanical or clearly actionable,
     implement the fix or update the PR/workpad, push if code changed, and move

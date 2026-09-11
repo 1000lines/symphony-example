@@ -22,6 +22,15 @@ When fresh human input asks for an in-scope change, do it. If it conflicts with
 generated ticket text, bot workpads, or earlier automation notes, treat the
 human input as the newer requirement and make the smallest coherent update.
 
+A human with verified repository write access can revise the design. Their
+clear instruction is the decision: minute its source and what it supersedes,
+update the affected plan/tickets, and implement and commit. No separate design
+owner or project-lead ratification is needed. Do not treat AI disagreement or
+conflict with an older accepted design as missing human authority.
+Put material technical objections and accepted tradeoffs in the PR body being
+merged, alongside the human decision. Record them and proceed; they do not
+require a separate approval round.
+
 When feedback changes the approach or plan boundaries, use the installed
 `symphony-replan` skill before implementing against the old criteria. It may
 keep the current ticket/PR, amend related tickets, or prepare a replacement
