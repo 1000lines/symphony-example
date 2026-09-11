@@ -175,6 +175,9 @@ test("findings, cap, missing/stale verdicts and execution failures never ready d
     ["APPROVED", head, { result: "cancelled" }, "cancelled"],
     ["APPROVED", head, { ranReview: "false" }, "action_required"],
     ["APPROVED", "b".repeat(40), {}, "failure"],
+    ["APPROVED", head, { reviewer: "another-bot" }, "failure"],
+    ["APPROVED", head, { baseline: 1 }, "failure"],
+    ["APPROVED", head, { baseline: undefined }, "failure"],
     ["CHANGES_REQUESTED", head, {}, "failure"],
     [null, head, {}, "failure"],
   ]) {
@@ -183,6 +186,7 @@ test("findings, cap, missing/stale verdicts and execution failures never ready d
     if (state) f.verdict(state, sha);
     await f.finish(request(), options);
     assert.equal(f.checks[0].conclusion, conclusion);
+    assert.doesNotMatch(f.checks[0].output.summary, /Review approved/);
     assert.equal(f.ready.length, 0);
   }
 });
@@ -203,22 +207,61 @@ test("a push/closure during review or immediately before ready cancels publicati
   }
 });
 
-test("failed draft readiness cannot leave a green check", async () => {
+test("denied readiness preserves the fresh approval and failure through recovery", async () => {
   const f = fixture();
   await queueCheck(f.github, request(), appId);
   f.verdict();
+  const denied = new Error("Resource not accessible by integration");
   f.github.graphql = async () => {
-    throw new Error("readiness denied");
+    throw denied;
   };
-  await assert.rejects(f.finish(), /readiness denied/);
-  assert.notEqual(f.checks[0].conclusion, "success");
+  await assert.rejects(f.finish(), (error) => error === denied);
+  const check = f.checks[0];
+  assert.equal(check.status, "completed");
+  assert.equal(check.conclusion, "failure");
+  assert.equal(check.details_url, f.reviews[0].html_url);
+  assert.match(check.output.summary, /Review approved; marking ready failed/);
+  assert.match(check.output.summary, /Resource not accessible by integration/);
+  assert.ok(
+    check.output.summary.includes(`[Review](${f.reviews[0].html_url})`)
+  );
+  assert.ok(
+    check.output.summary.includes(
+      `[Failed operation: markPullRequestReadyForReview](${request().runUrl})`
+    )
+  );
+  assert.doesNotMatch(
+    check.output.summary,
+    /No clean verdict|Ready for human review/
+  );
+  const published = structuredClone(check);
   await recoverCheck(f.github, context, request(), appId, {
     id: 10,
     run_attempt: 1,
     conclusion: "failure",
   });
-  assert.equal(f.checks[0].conclusion, "failure");
+  assert.deepEqual(check, published);
   assert.equal(f.pr.draft, true);
+});
+
+test("recovery without verified publication never infers approval from reviews", async () => {
+  for (const state of [null, "APPROVED"]) {
+    const f = fixture();
+    if (state) f.verdict(state);
+    await queueCheck(f.github, request(), appId);
+    await recoverCheck(f.github, context, request(), appId, {
+      id: 10,
+      run_attempt: 1,
+      conclusion: "failure",
+    });
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.match(f.checks[0].output.summary, /No clean verdict is claimed/);
+    assert.doesNotMatch(
+      f.checks[0].output.summary,
+      /Review approved|\[Review\]/
+    );
+    assert.equal(f.ready.length, 0);
+  }
 });
 
 test("completion recovery handles queued cancellation, timeout and lost finalization on force-pushed heads", async () => {

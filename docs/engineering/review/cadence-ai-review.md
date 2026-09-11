@@ -166,8 +166,9 @@ check, including feedback on the same head; the workflow run, attempt and PR
 identify it. Retrying the same admission does not reset a completed check.
 
 Publication requires a new Cadence verdict after this request started, at its
-accepted head. A clean approval yields `success`; findings or a review-loop
-stop yield `action_required`. Failed execution or a missing new verdict yields
+accepted head. A clean approval with a successful handoff (or an already-ready
+PR) yields `success`; findings or a review-loop stop yield `action_required`.
+Failed execution or a missing new verdict yields
 `failure`. Closed PRs, changed heads and requests superseded by newer accepted
 work are cancelled. Check summaries link the workflow and, when available, the
 review. Older requests cannot overwrite a newer request's pending check.
@@ -180,6 +181,12 @@ The final job mints a fresh App token and rechecks the head before readying a
 draft. GitHub does not offer a head-conditional draft-to-ready mutation, so a
 push concurrent with that last API call remains a platform race; its own check
 and review still belong to the new head.
+
+If marking ready fails after a verified approval, the check reports “Review
+approved; marking ready failed”, links the review and failed operation's workflow
+attempt, and includes the API error. The check concludes `failure` and the job
+still fails. Completion recovery preserves that summary; it does not infer an
+approval from older reviews when no verified verdict was recorded.
 
 Admission uploads a small recovery pointer **before** creating the check. The
 `cadence-review-check-cleanup.yml` completion listener uses it to terminate any

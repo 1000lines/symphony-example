@@ -188,6 +188,7 @@ export async function finishCheck(
     summary =
       "Cadence stopped without another review (for example, the review-loop cap). Inspect the workflow handoff.";
   }
+  let handoffError;
   if (conclusion === "success" && pr.draft) {
     // Recheck immediately before publication; a changed head is never readied.
     const { data: current } = await github.rest.pulls.get({
@@ -199,10 +200,16 @@ export async function finishCheck(
       conclusion = "cancelled";
       summary = "PR closed or head changed before the human handoff.";
     } else if (current.draft) {
-      await github.graphql(
-        `mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }`,
-        { id: current.node_id }
-      );
+      try {
+        await github.graphql(
+          `mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }`,
+          { id: current.node_id }
+        );
+      } catch (error) {
+        handoffError = error;
+        conclusion = "failure";
+        summary = `Review approved; marking ready failed.\n\n[Failed operation: markPullRequestReadyForReview](${request.runUrl})\n\n${error.message}`;
+      }
     }
   }
   await update(
@@ -214,6 +221,9 @@ export async function finishCheck(
     summary,
     review?.html_url
   );
+  // Preserve the verified review in the completed check before failing the job.
+  // Completion recovery leaves this diagnostic intact.
+  if (handoffError) throw handoffError;
 }
 
 // workflow_run completion also runs when cancellation prevented any final job.
