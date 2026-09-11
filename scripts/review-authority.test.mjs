@@ -304,7 +304,9 @@ test("feedback routing jobs use trusted checkout and the existing App without a 
     assert.match(workflow, /app-id: \$\{\{ vars.CADENCE_APP_ID \}\}/);
     assert.match(workflow, /permission-metadata: read/);
     const routeJob = yaml.load(workflow).jobs[name === 'cadence-ai-review-events' ? 'route' : 'review-handoff'];
-    assert.doesNotMatch(JSON.stringify(routeJob), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members|permission-issues/);
+    assert.doesNotMatch(JSON.stringify(routeJob), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members/);
+    const app = routeJob.steps.find(step => step.id === 'app-token');
+    assert.equal(app.with['permission-issues'], name === 'cadence-ai-review-events' ? 'write' : undefined);
     assert.match(workflow, /GH_TOKEN: \$\{\{ steps.app-token.outputs.token \}\}/);
   }
 });

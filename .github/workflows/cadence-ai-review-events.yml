@@ -64,13 +64,42 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-metadata: read
-          permission-pull-requests: read
+          permission-issues: write
+          permission-pull-requests: write
 
       - name: Classify and gate event
         id: route
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node .github/workflows/scripts/cadence-ai-review-route-event.mjs
+
+      - name: Acknowledge accepted feedback
+        if: >-
+          steps.route.outputs.should_request_review == 'true' &&
+          (env.CADENCE_EVENT_NAME == 'issue_comment' ||
+           env.CADENCE_EVENT_NAME == 'pull_request_review' ||
+           env.CADENCE_EVENT_NAME == 'pull_request_review_comment')
+        continue-on-error: true
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            try {
+              const payload = JSON.parse(require('node:fs').readFileSync(process.env.CADENCE_EVENT_PATH, 'utf8'));
+              const item = process.env.CADENCE_EVENT_NAME === 'pull_request_review' ? payload.review : payload.comment;
+              if (!item?.node_id) throw new Error('Accepted feedback is missing its GitHub node ID');
+              // Review bodies are Reactable nodes, distinct from inline review comments.
+              // addReaction is additive and reuses the actor's existing EYES reaction.
+              const result = await github.graphql(`mutation($subject: ID!) {
+                addReaction(input: {subjectId: $subject, content: EYES}) { reaction { id } }
+              }`, { subject: item.node_id });
+              const reaction = result.addReaction?.reaction?.id;
+              if (!reaction) throw new Error('GitHub returned no acknowledgement reaction');
+              await core.summary.addRaw(`👀 Accepted ${process.env.CADENCE_EVENT_NAME} #${item.id}; reaction ${reaction}.\n`).write();
+            } catch (error) {
+              core.warning(`Cadence acknowledgement failed; review will continue: ${error.message}`);
+              await core.summary.addRaw('⚠️ Cadence acknowledgement failed; review will continue. See the step warning.\n').write();
+            }
 
   review:
     needs: route

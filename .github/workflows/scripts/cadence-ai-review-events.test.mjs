@@ -130,6 +130,85 @@ test("events call review only after the existing author-permission router succee
   assert.doesNotMatch(workflow, /request-pr-reviewer|cadence-linear-workpad|fetch-pr-review-state/);
 });
 
+const eventsWorkflow = yaml.load(workflow);
+const acknowledgement = eventsWorkflow.jobs.route.steps.find(step => step.name === 'Acknowledge accepted feedback');
+
+test("acknowledgement uses the Cadence App after routing, outside the review queue", () => {
+  const { route, review } = eventsWorkflow.jobs;
+  const token = route.steps.find(step => step.id === 'app-token');
+  assert.equal(token.with['permission-issues'], 'write');
+  assert.equal(token.with['permission-pull-requests'], 'write');
+  assert.equal(acknowledgement.with['github-token'], '${{ steps.app-token.outputs.token }}');
+  assert.equal(acknowledgement['continue-on-error'], true);
+  assert.ok(route.steps.indexOf(acknowledgement) > route.steps.findIndex(step => step.id === 'route'));
+  assert.equal(eventsWorkflow.concurrency, undefined);
+  assert.equal(route.concurrency, undefined);
+  assert.equal(review.needs, 'route');
+  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'max');
+
+  const eligible = new Function('steps', 'env', `return ${acknowledgement.if}`);
+  for (const event of ['issue_comment', 'pull_request_review', 'pull_request_review_comment', 'pull_request_target']) {
+    for (const accepted of ['true', 'false', '']) {
+      assert.equal(eligible({ route: { outputs: { should_request_review: accepted } } }, { CADENCE_EVENT_NAME: event }),
+        accepted === 'true' && event !== 'pull_request_target');
+    }
+  }
+});
+
+test("acknowledgement targets the actual feedback node and repeats the additive mutation", async () => {
+  const AsyncFunction = Object.getPrototypeOf(async function () { return undefined; }).constructor;
+  const run = new AsyncFunction('require', 'github', 'core', 'process', acknowledgement.with.script);
+  for (const event of ['issue_comment', 'pull_request_review', 'pull_request_review_comment']) {
+    const calls = [], summaries = [];
+    const payload = {
+      review: { id: 1, node_id: 'PRR_review' },
+      comment: { id: 2, node_id: event === 'issue_comment' ? 'IC_conversation' : 'PRRC_inline' },
+    };
+    const subject = event === 'pull_request_review' ? payload.review : payload.comment;
+    const github = { graphql: async (query, variables) => {
+      calls.push({ query, variables });
+      return { addReaction: { reaction: { id: 'existing-or-new-reaction' } } };
+    } };
+    const core = {
+      warning: message => assert.fail(message),
+      summary: { addRaw: text => ({ write: async () => summaries.push(text) }) },
+    };
+    const read = module => {
+      assert.equal(module, 'node:fs');
+      return { readFileSync: path => {
+        assert.equal(path, '/verified-event.json');
+        return JSON.stringify(payload);
+      } };
+    };
+    const env = { CADENCE_EVENT_PATH: '/verified-event.json', CADENCE_EVENT_NAME: event };
+    await run(read, github, core, { env });
+    await run(read, github, core, { env });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0], calls[1]);
+    assert.deepEqual(calls[0].variables, { subject: subject.node_id });
+    assert.match(calls[0].query, /addReaction\(input: \{subjectId: \$subject, content: EYES\}\)/);
+    assert.match(summaries[0], new RegExp(`Accepted ${event} #${subject.id}; reaction existing-or-new-reaction`));
+  }
+});
+
+test("acknowledgement failures warn and summarize without rejecting review routing", async () => {
+  const AsyncFunction = Object.getPrototypeOf(async function () { return undefined; }).constructor;
+  const run = new AsyncFunction('require', 'github', 'core', 'process', acknowledgement.with.script);
+  for (const failure of ['403', 'GraphQL error', 'no reaction', 'missing node']) {
+    const warnings = [], summaries = [];
+    await run(() => ({ readFileSync: () => JSON.stringify({ review: { node_id: failure === 'missing node' ? null : 'PRR_review' } }) }),
+      { graphql: async () => {
+        if (failure === 'no reaction') return { addReaction: null };
+        throw new Error(failure);
+      } },
+      { warning: message => warnings.push(message), summary: { addRaw: text => ({ write: async () => summaries.push(text) }) } },
+      { env: { CADENCE_EVENT_NAME: 'pull_request_review' } });
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /acknowledgement failed; review will continue/);
+    assert.match(summaries[0], /acknowledgement failed; review will continue/);
+  }
+});
+
 test("manual matrix and events reuse the same reviewer with sufficient inherited permissions", () => {
   const manual = yaml.load(readFileSync(new URL('../cadence-ai-review.yml', import.meta.url), 'utf8'));
   const events = yaml.load(workflow);
