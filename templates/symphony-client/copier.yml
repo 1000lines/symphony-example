@@ -27,6 +27,13 @@ cadence_app_slug:
   type: str
   help: GitHub App slug for the Cadence reviewer.
 
+cadence_reviewer:
+  type: str
+  choices:
+    - claude
+    - codex
+  help: Reviewer to use; provision its matching API key separately.
+
 build_command:
   type: str
   multiline: true

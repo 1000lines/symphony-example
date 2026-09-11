@@ -36,7 +36,7 @@ in its explicitly named target repository. No predecessor branch is a PR base.
 | 100-43 | Existing PR #31; advisory lifecycle and readiness          | Existing work; no new estimate or ticket                      | hard       |
 | CT-C   | Existing config reader, CI/wakeup workflow and tests       | +450 / -220                                                   | hard       |
 | CT-R   | Native review workflows, provider result and tests         | +650 / -350                                                   | hard       |
-| CT-Q   | Seven answers, fixed delimiters and isolated render checks | +230 / -0                                                     | easy       |
+| CT-Q   | Eight answers, fixed delimiters and isolated render checks | +230 / -0                                                     | easy       |
 | CT-M   | Exact copy of every reviewed client-list path              | +500–1,500 / -0, entirely copy                                | easy       |
 | CT-T   | Convert copied files and test the initial template         | +300 / -400–1,300                                             | hard       |
 | CT-L   | Add final CI/review callers and register render CI         | +170 / -50                                                    | hard       |
@@ -78,8 +78,8 @@ changes must be distinguished from that copy and reviewed before publication.
   its merged source and initial live proof are actually consumed.
 - [Jeremy's PR #34 decomposition decision](https://github.com/1000lines/symphony-example/pull/34#issuecomment-5635719306),
   September 11 at 14:12 UTC, supersedes the combined CT-T and its CT-C/R gate.
-  Make list → straight copy → template conversion separate PRs, run the seven
-  answers independently and integrate late Docker/Codex additions afterward.
+  Make list → straight copy → template conversion separate PRs, run the question
+  package independently and integrate late Docker/Codex additions afterward.
   Verified GitHub admin authority; this revises the existing unaccepted plan,
   with no new planning seed or live downstream ticket.
 - [Jeremy's parallel publication and alpha decision](https://github.com/1000lines/symphony-example/pull/34#pullrequestreview-5179855445),
@@ -139,7 +139,7 @@ CT-L would omit the integrated caller/export readback. The large copy diff
 contains no hidden changes.
 
 The explicit preparation path is I → M → T. Q → T joins the independently
-implemented seven-answer package only for the actual conversion/render tests.
+implemented eight-answer package only for the actual conversion/render tests.
 Neither Q, M nor T waits on C/R; their later additions join at L. I/Q/M/C/R own
 disjoint writable paths and isolated fixtures when unordered: copied source is
 pinned and read-only even while C/R edit their own workflow sources. T takes M's
@@ -174,7 +174,7 @@ integration, real adoption and consumer-aware retirement.
 %% symphony-dag/v1
 flowchart LR
   I["100-47 · Round 1: CT-I · Review exact client-copy manifest and export lists"]
-  Q["100-50 · Round 1: CT-Q · Define seven answers and safe delimiters independently"]
+  Q["100-50 · Round 1: CT-Q · Define eight answers and safe delimiters independently"]
   CHECK["100-43 · Round 1: Reuse accepted advisory check and ready handoff"]
   M["100-51 · Round 2: CT-M · Straight copy of every listed file in its own PR"]
   C["100-48 · Round 2: CT-C · Support native Docker remote CI and portable config"]
@@ -303,7 +303,7 @@ nodes:
       labels: [pink, symphony]
   - id: Q
     payload_key: CT-Q
-    title: Define seven Copier answers and safe delimiters
+    title: Define eight Copier answers and safe delimiters
     type: task
     difficulty: easy
     labels: [pink]
@@ -518,9 +518,18 @@ do not submit a placeholder or reverse an endpoint.
 
 ## Decisions
 
+The [September 11, 16:30 reviewer-choice decision on PR #42](https://github.com/1000lines/symphony-example/pull/42#discussion_r3991277811)
+amends D4/D6 and decisions 2/4 below with verified repository admin authority.
+It adds `cadence_reviewer` as the eighth answer and supersedes key-presence
+selection. This is a small interface revision within existing nodes: CT-Q asks
+and tests, CT-R implements provider selection, CT-T/L integrate callers, and
+CT-O/U/F/A consume/prove it. Node IDs, hard edges, branches and implementation
+file ownership are unchanged. CT-L still requires the complete provider artifact;
+the accepted App-identity-only checkpoint in PR #43 does not supply it.
+
 1. **List, copy, conversion are separate PRs.** Jeremy's PR #34 decision is
    enforced by CT-I's fixed copy manifest, CT-M's byte/mode-identical copy and
-   CT-T's template conversion. CT-Q owns the independent seven-answer package;
+   CT-T's template conversion. CT-Q owns the independent eight-answer package;
    CT-L integrates late CT-C/R additions before publication. CT-C/R update only
    their own export lists; CT-U/V compare against the final accepted lists.
 2. **Keep native review and the existing ledger contract.** CT-R maps both
@@ -528,7 +537,8 @@ do not submit a placeholder or reverse an endpoint.
    requirement coverage, mandatory findings/human feedback, author checks,
    freshness and 100-43. D6's small provider result is an adapter input, not a
    replacement acceptance schema.
-   OpenAI wins when present; Anthropic alone selects Claude; neither fails early.
+   `cadence_reviewer` explicitly selects Claude or Codex even with both keys
+   present. Missing/invalid selection or a missing matching key fails early;
    API failures do not switch providers. No dormant controller is revived.
 3. **Explicit least-secret boundaries.** CT-R/L/V/F map App, Linear and optional
    provider secrets at every review call; handoff has App/Linear; wakeups have
@@ -536,9 +546,10 @@ do not submit a placeholder or reverse an endpoint.
    IDs/slugs are named config inputs. CT-R makes cleanup reusable; CT-I/L keep
    its native `workflow_run` listener local to each client and match actual
    caller workflow names. CT-C owns exposing the wakeup as `workflow_call`.
-4. **Seven answers and many projects per repo.** CT-Q/T/L/O keep only repo slug,
-   default branch, Linear team, two App slugs, build and test commands. Optional
-   `ci.mode` belongs to existing config, not an eighth question; project metadata
+4. **Eight answers and many projects per repo.** CT-Q/T/L/O keep only repo slug,
+   default branch, Linear team, two App slugs, `cadence_reviewer` (`claude`/`codex`,
+   required with no default), build and test commands. Optional
+   `ci.mode` belongs to existing config, not an additional question; project metadata
    comes from the issue. Preserve actual required-check name/workflow/App values.
 5. **Native, client Dockerfile, remote.** CT-C implements the accepted existing
    reader/wakeup compatibility; CT-A proves real mode behavior and failure/recovery.
@@ -628,7 +639,7 @@ tag collision and report a real collision rather than silently deleting it.
 Generated final callers use literal
 `1000lines/symphony-client-workflows/.github/workflows/<file>@alpha`.
 Onboarding/rendering uses `copier copy --vcs-ref=alpha <template-git-url> <target>`;
-this is an operator argument, not an eighth answer or a `copier.yml` setting.
+this is an operator argument, not an additional answer or a `copier.yml` setting.
 Preserve ordinary `_src_path`/`_commit`; separately record the actual template
 commit, workflow source commits and trusted helper checkout commits used by a
 run. Same-repository nested calls may use native same-commit references. Helper

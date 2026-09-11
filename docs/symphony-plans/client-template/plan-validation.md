@@ -75,6 +75,16 @@ provider/advisory checks are requirements in the delivery items, not passed test
 
 ## Payload completeness and fan-out handoff
 
+September 11 PR #42's human-authorized amendment adds the eighth answer,
+`cadence_reviewer` (`claude`/`codex`), without changing the fourteen nodes or
+seventeen edges. CT-Q validates both values and rejects omitted/invalid choices
+with real Copier copies. D6 and the existing CT-R/T/L/O/U/F/A acceptance criteria
+carry explicit selection through provider integration and consumer proof.
+CT-L must check the actual provider artifact; the App-identity checkpoint in
+merged PR #43 does not establish the full CT-R interface. Existing terminal
+issue states remain untouched. These are revised acceptance criteria, not a
+claim that provider integration or live execution has passed.
+
 The current shared renderer emits identity, branch, labels, assignee and source
 links. It **does not carry item scope, files, resources, acceptance or validation
 content** into issue descriptions. Its JSON alone is not ready for live writes.

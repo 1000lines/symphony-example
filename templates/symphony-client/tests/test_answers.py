@@ -18,6 +18,7 @@ QUESTIONS = {
     "linear_team_key",
     "symphony_app_slug",
     "cadence_app_slug",
+    "cadence_reviewer",
     "build_command",
     "test_command",
 }
@@ -55,6 +56,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CADENCE_APP_PRIVATE_KEY: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
+      SELECTED_REVIEWER: [[ cadence_reviewer | to_json ]]
     steps:
       - run: [[ build_command | to_json ]]
       - run: [[ test_command | to_json ]]
@@ -97,7 +99,7 @@ jobs:
             ["git", "-C", str(self.source), *args], text=True, stderr=subprocess.STDOUT
         )
 
-    def render(self, answers, name="output", ref="HEAD"):
+    def render(self, answers, name="output", ref="HEAD", expect_error=False):
         data_file = self.root / f"{name}-answers.yml"
         data_file.write_text(yaml.safe_dump(answers), encoding="utf-8")
         output = self.root / name
@@ -107,14 +109,19 @@ jobs:
              str(self.source), str(output)],
             stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30,
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.git("status", "--porcelain"), "")
+        if expect_error:
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("cadence_reviewer", result.stdout + result.stderr)
+            self.assertFalse((output / ".copier-answers.yml").exists())
+        else:
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return output
 
-    def test_seven_answers_round_trip_without_root_assets(self):
-        for index, (slug, branch, team) in enumerate([
-            ("example/widget", "develop", "ENG"),
-            ("another-owner/second-repo", "release/next", "OPS"),
+    def test_eight_answers_round_trip_without_root_assets(self):
+        for index, (slug, branch, team, reviewer) in enumerate([
+            ("example/widget", "develop", "ENG", "claude"),
+            ("another-owner/second-repo", "release/next", "OPS", "codex"),
         ]):
             with self.subTest(repo=slug):
                 answers = {
@@ -123,6 +130,7 @@ jobs:
                     "linear_team_key": team,
                     "symphony_app_slug": f"author-{index}",
                     "cadence_app_slug": f"reviewer-{index}",
+                    "cadence_reviewer": reviewer,
                     "build_command": f"printf '%s\\n' \"{slug}: build\"\nmake build\n",
                     "test_command": "printf '%s' 'quoted: \"test\"'\nmake test --flag='yes'\n",
                 }
@@ -143,6 +151,7 @@ jobs:
                 self.assertEqual(workflow["on"]["push"]["branches"], [branch])
                 job = workflow["jobs"]["fixture"]
                 self.assertEqual(job["env"]["CADENCE_APP_PRIVATE_KEY"], GITHUB_SECRET)
+                self.assertEqual(job["env"]["SELECTED_REVIEWER"], reviewer)
                 self.assertEqual(job["steps"], [
                     {"run": answers["build_command"]}, {"run": answers["test_command"]}
                 ])
@@ -172,12 +181,26 @@ jobs:
         answers = {
             "repo_slug": "example/defaults", "linear_team_key": "100",
             "symphony_app_slug": "author", "cadence_app_slug": "reviewer",
+            "cadence_reviewer": "codex",
             "build_command": "make build", "test_command": "make test",
         }
         output = self.render(answers)
         saved = yaml.safe_load((output / ".copier-answers.yml").read_text())
         self.assertEqual(saved["default_branch"], "main")
         self.assertEqual({k: saved[k] for k in answers}, answers)
+
+    def test_reviewer_must_be_supplied_as_a_supported_choice(self):
+        answers = {
+            "repo_slug": "example/reviewer", "linear_team_key": "100",
+            "symphony_app_slug": "author", "cadence_app_slug": "reviewer",
+            "build_command": "make build", "test_command": "make test",
+        }
+        for index, reviewer in enumerate([None, "unknown", True]):
+            with self.subTest(reviewer=reviewer):
+                data = dict(answers)
+                if reviewer is not None:
+                    data["cadence_reviewer"] = reviewer
+                self.render(data, f"invalid-{index}", expect_error=True)
 
 
 if __name__ == "__main__":

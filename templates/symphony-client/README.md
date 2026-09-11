@@ -1,6 +1,6 @@
 # Symphony client template package
 
-This interim package defines the seven nonsecret Copier answers and their render
+This interim package defines the eight nonsecret Copier answers and their render
 syntax. It is not yet an installable Symphony client. CT-M supplies the reviewed
 file copy, CT-T converts it into `template/`, and CT-L integrates the CI/reviewer
 interfaces and registers the completed render check before release.
@@ -16,10 +16,18 @@ into participants' repositories.
 | `linear_team_key`   | string | Required team key; no repository project binding |
 | `symphony_app_slug` | string | Required author App slug                         |
 | `cadence_app_slug`  | string | Required reviewer App slug                       |
+| `cadence_reviewer`  | string | Required choice: `claude` or `codex`; no default |
 | `build_command`     | string | Required build command, including multiline      |
 | `test_command`      | string | Required test command, including multiline       |
 
-There is no mode, provider, model, project, credential, App ID or ref question.
+`cadence_reviewer` records the selected reviewer explicitly. `codex` requires
+`CADENCE_OPENAI_API_KEY`; `claude` requires `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`.
+CT-T/L must carry this choice into the generated review caller. The selected
+reviewer must run even when both keys are present; a missing matching key must
+fail clearly instead of selecting another reviewer. These tests verify answer
+selection and rendering; provider execution remains a later integration gate.
+
+There is no mode, model, project, credential, App ID or ref question.
 Supply repository-specific values explicitly; a build command need not use
 Docker. Configure execution modes and discovered IDs during onboarding, outside
 these answers. Provision credentials separately as named Actions secrets; never
@@ -40,7 +48,7 @@ CT-T must include `template/[[ _copier_conf.answers_file ]].jinja` containing:
 [[ _copier_answers | to_nice_yaml ]]
 ```
 
-This preserves the seven answers and ordinary `_src_path` / `_commit` metadata.
+This preserves the eight answers and ordinary `_src_path` / `_commit` metadata.
 Use Copier's serializers such as `to_json` for config values and shell-command
 arguments; do not hand-quote user strings. The tests exercise this contract in
 temporary Git repositories without creating or modifying committed `template/`
