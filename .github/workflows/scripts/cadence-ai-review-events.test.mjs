@@ -136,8 +136,14 @@ test("manual matrix and events reuse the same reviewer with sufficient inherited
   assert.equal(manual.jobs.review.uses, events.jobs.review.uses);
   assert.equal(manual.jobs.review.with.pr_number, '${{ matrix.pr_number }}');
   assert.deepEqual(manual.jobs.review.secrets, events.jobs.review.secrets);
-  assert.equal(Object.keys(manual.jobs.review.secrets).length, 3);
-  assert.equal(manual.jobs.review.secrets.CADENCE_APP_PRIVATE_KEY, undefined);
+  assert.equal(Object.keys(manual.jobs.review.secrets).length, 4);
+  // Explicit naming admits the environment secret without forwarding a key or
+  // inheriting unrelated repository secrets. Only the protected job supplies it.
+  assert.equal(manual.jobs.review.secrets.CADENCE_APP_PRIVATE_KEY, "");
+  assert.equal(triggerWorkflow.on.workflow_call.secrets.CADENCE_APP_PRIVATE_KEY.required, false);
+  assert.equal(triggerWorkflow.jobs.review.environment, "cadence-controller");
+  assert.equal(triggerWorkflow.jobs.review.steps.find(step => step.id === "app-token").with["private-key"],
+    "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
   assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'max');
   assert.equal(triggerWorkflow.jobs.review.concurrency['cancel-in-progress'], false);
   assert.equal(manual.jobs.resolve.if, "github.ref == 'refs/heads/main'");
