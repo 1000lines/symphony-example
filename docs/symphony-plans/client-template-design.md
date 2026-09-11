@@ -13,8 +13,10 @@ plan-issue: 100-39
 Status: proposed for Jeremy's review, September 11, 2026. This document is the
 canonical design input to [100-39](https://linear.app/1000lines/issue/100-39) after
 human approval and merge. It defines outcomes and interfaces, not a fan-out plan
-or authorization to implement them. Planning PRs remain draft; no merge, admin
-override or planning-seed `mature` before human approval and merge.
+or authorization to implement them. Open planning PRs as drafts; a fresh clean
+Cadence review marks them ready for human review under D9. Readiness does not
+authorize merge, admin override or planning-seed `mature`; human approval and
+merge remain prerequisites to planning-seed maturity and downstream planning.
 
 ## Goal and scope
 
@@ -53,6 +55,9 @@ source is unavailable. `orc-app` and Jeremy's Downloads are not prerequisites.
 | [Jeremy's workflow-repository decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5634828727)                                       | September 11, 2026, 13:03 UTC; GitHub permission API confirms `jeremycarroll` has `admin` access                                                                                                               | Start in `symphony-example`, then extract workflows into a separate repository near project end; supersedes permanent seed-repository ownership.                                    |
 | [Jeremy's configuration, onboarding and CI decisions](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5634926972)                         | September 11, 2026, 13:11 UTC; repository admin access verified                                                                                                                                                | Repositories support many Linear projects; remove the project-key answer/field. Deliver onboarding skills initially in `symphony-example` and support native, Docker and remote CI. |
 | [Jeremy's public-fork credential decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5634958976)                                    | September 11, 2026, 13:14 UTC; admin authority verified. Public App API confirms App `4866513` permissions; org listing returns three public repos. Comment records installation `160764288` across all repos. | Use the existing Cadence App for public MVP forks; remove OD1 and its gate. Accept the stated review/issue/check write authority; retain explicit secret provisioning.              |
+| [Jeremy's advisory-check decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5635132545)                                            | September 11, 2026, 13:28 UTC; repository admin access verified                                                                                                                                                | Inherit the advisory PR-head check implemented by existing 100-43; never make it required or duplicate its implementation in the client plan.                                       |
+| [Jeremy's ready-for-review decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5635138859)                                          | September 11, 2026, 13:28 UTC; repository admin access verified                                                                                                                                                | A clean current-head review with no newer accepted feedback awaiting review marks a draft ready; supersedes blanket draft-until-merge wording, not human acceptance.                |
+| [100-43: advisory Cadence check](https://linear.app/1000lines/issue/100-43)                                                                                  | Issue and direct blocker relation read through Linear; Active on September 11, not yet completed                                                                                                               | Separate shared-workflow implementation prerequisite for 100-39; consume its merged change and evidence through extraction/adoption.                                                |
 | [Required repository baseline](https://github.com/1000lines/symphony-example/tree/3de96c9f739d732cc7efd498225b4444b547cc57)                                  | Workflow guidance, native review/ingress/handoff/wakeup workflows, config and runtime `WORKFLOW.md` read; also inspected selected `main` at `0487f8d17586e2c21492b0e78bf4fefdd3d51986`                         | Current native workflows are the starting point. Later accepted changes concern host credential installation/setup.                                                                 |
 | [PR #29](https://github.com/1000lines/symphony-example/pull/29), [PR #24](https://github.com/1000lines/symphony-example/pull/24)                             | #29 merged; #24 closed, unmerged                                                                                                                                                                               | Internal inheritance workaround is not the client interface; obsolete controller work is not a dependency.                                                                          |
 | Repository README, `.github/README.md`, `.github/workflows/AGENTS.md`, `.symphony.cfg.json`, package files, runtime workflow and existing config/review code | Selected `main` above                                                                                                                                                                                          | Preserve native authorization, feedback, CI and human acceptance; use existing tooling.                                                                                             |
@@ -69,7 +74,9 @@ files alone do not prove a live Codex review. The source's project-key question,
 Docker-only prerequisite and the earlier design's onboarding-documentation-only
 boundary are superseded by Jeremy's 13:11 decision. His 13:14 decision also
 supersedes the source's public-fork signing-key restriction and OD1. The other
-source requirements remain in force.
+source requirements remain in force. The 13:28 decisions add the advisory check
+and fresh-review readiness behavior in D9; their implementation belongs to 100-43,
+not this design ticket.
 
 ## Locked requirements and decisions
 
@@ -151,6 +158,8 @@ Repoint helper checkouts and nested calls to the reviewed new source, publish a
 template ref with those pins, then run final self-adoption and real review proof
 against that pair of published refs. Earlier Codex proof in `symphony-example`
 reduces risk but does not prove the extracted workflow path.
+Carry the merged D9 advisory check and human-handoff behavior with its required
+helpers, and verify both again through the final generated callers.
 
 Keep the original workflow paths usable until current callers have migrated and
 replacement runs pass. Remove duplicate bodies only after checking those consumers;
@@ -261,7 +270,8 @@ Preserve current external review semantics: clean `approve` publishes `APPROVE`;
 routes the existing human/replanning handoff. Neither branch submits GitHub
 `REQUEST_CHANGES` or treats an AI verdict as human acceptance. Missing source/access
 is an explicit human-needed finding, never an approval. Preserve the existing
-review gate and feedback ledger across both providers.
+review freshness checks and feedback ledger across both providers; D9 governs
+the advisory check and ready-for-review handoff.
 
 ### D7 — Onboarding skills and public-fork credentials
 
@@ -275,13 +285,15 @@ operator skills into the client template. Later relocation of these skills is
 not required by the workflow-repository extraction.
 
 The skill supplies the seven answers, records the D8 mode/commands, discovers IDs,
-enables Actions, sets explicit workflow permissions and required checks, and
+enables Actions, sets explicit workflow permissions and required CI checks, and
 provisions target secrets outside answers. It creates or selects the initial
 Linear project and starts the existing planning/host flow using that operation's
 context; it never binds the repository to that one project. A later project reuses
 the same client. Repeated invocation inspects existing repositories, installations,
 config and projects before creating anything; preserve existing settings and report
 only unavailable operations with their owner/resumption event.
+The D9 Cadence check is automatic shared behavior, excluded from required checks;
+it adds no onboarding question or repository setting.
 
 The project owns these skill artifacts and an owner-controlled onboarding
 walkthrough; Jeremy/parent onboarding owns installation/invocation, participant
@@ -293,8 +305,9 @@ Fork is the default parent-MVP path: fork into `1000lines`, grant the participan
 admin, use the existing Cadence installation, and let that owner approve PRs.
 Direct is for private repos or CI requiring secrets: the owner creates and installs
 their own repo-scoped Cadence App using the manifest. The manifest needs metadata
-and contents reads, PR review/feedback permissions and any issues/Actions access
-actually exercised by the retained helpers; verify this with real App operations.
+and contents reads, PR review/feedback permissions, checks write for D9, and any
+issues/Actions access exercised by the retained helpers; verify this with real
+App operations.
 It must not request organization administration or host credentials.
 
 **Public MVP forks use the existing Cadence App; OD1 is removed.**
@@ -346,8 +359,45 @@ GitHub status bridge wakes the linked nonterminal ticket to `Active` on a failed
 current-head required check; the worker fixes it and publishes again. All required
 checks passing moves it to `Inactive` for review. Preserve terminal-state guards,
 issue/team resolution, stale-head rejection and the existing timer fallback.
+The advisory `Cadence review` result is separate from this required-CI path; its
+findings continue through the existing review-feedback handoff.
 No second CI status controller is needed. A native/container pass never substitutes
 for GitHub CI, and a missing/skipped/stale remote run never proves success.
+
+### D9 — Advisory Cadence check and human handoff
+
+[100-43](https://linear.app/1000lines/issue/100-43) owns this change in the existing
+shared route/review workflow, using the configured Cadence App's existing
+credentials and checks-write permission. It is already a hard prerequisite of
+100-39. The detailed plan consumes its human-reviewed, merged implementation and
+evidence; it does not commission a duplicate. Preserve the behavior for both
+providers through workflow extraction, template publication and self-adoption.
+No new controller, Copier answer, secret or repository opt-in is required.
+
+Publish `Cadence review` on the actual PR head promptly after accepting an
+eligible event, before the review queue wait. Show queued/in-progress (yellow),
+then a useful result linked to the review/run: success for clean review,
+`action_required` for findings, and failure, timeout or cancellation as appropriate
+for incomplete execution. New heads and new accepted feedback on the same head
+need fresh coverage. Duplicate delivery, overlapping runs and late results must
+not overwrite newer pending work with stale success; failure/cancellation/closure
+must not strand a running check. Use the existing publication path and native
+[GitHub Checks API](https://docs.github.com/en/rest/checks/runs).
+
+This check is **advisory only**. Exclude it from branch protection, repository
+required-check configuration, `CI Required` and automatic merge gates. It reports
+review status for human judgment and does not change D8's required CI handling.
+
+A clean/approve verdict is the handoff to the human: mark a draft PR ready for
+review only when the verdict covers its current head and no newer accepted
+feedback is still awaiting review. Recheck that freshness before the transition;
+unresolved findings stay draft and an already-ready PR needs no repeated change.
+A successful check must accompany a visibly ready PR; a failed readiness
+operation needs an explicit diagnostic and recovery, not a claim of completed
+handoff. This is a small addition to the existing successful-review publication
+path, following Jeremy's 13:28 decisions. It supersedes earlier instructions to
+keep planning PRs draft until merge. Neither a ready PR nor a green advisory
+check is human acceptance, merge permission or planning-seed maturity.
 
 ## Acceptance criteria and evidence
 
@@ -366,9 +416,10 @@ proof using existing tooling; it must preserve the stated boundaries.
 | AC7  | Adoption PR renders from the published template pinned to the new workflow repository, preserves application files and working CI/review/manual paths, retains Copier metadata, and removes the staging folder after extraction succeeds.                | Adoption owner: small reviewed diff, exact template/workflow refs, required current-head CI and AC5 proof; obsolete bodies are removed only under D3's consumer checks. Jeremy owns merge.                                                                         |
 | AC8  | Generated config has no project key; two Linear projects can use the same repo client. Existing target/host readers accept `ci.mode` and old configs without it retain native-first behavior.                                                            | Compatibility owner: existing-reader tests, two-project context/routing coverage, and installed-reader/version readback before activation. No parallel validator or host rebuild.                                                                                  |
 | AC9  | Onboarding skill exists in symphony-example and covers fork/direct setup, repeat invocation and additional projects. Public MVP forks use the existing Cadence App and explicit secrets; private/direct guidance remains separate.                       | Onboarding skill owner/Jeremy: skill/resource paths, owner-controlled walkthrough and operation readbacks without secrets; record invocation/installed ref, actual App permissions and explicit secret delivery. No participant rehearsal claim from source alone. |
-| AC10 | Required source reads, current-head CI and review evidence are recorded; every target's owner approves merges.                                                                                                                                           | Delivery owners: draft PRs with business purpose/linked progress diagram, labels `pink` and `symphony`, configured-mode local/container or remote best-effort evidence, then mandatory exact-head CI under D8; human acceptance remains separate.                  |
+| AC10 | Required source reads, current-head CI and review evidence are recorded; every target's owner approves merges.                                                                                                                                           | Delivery owners: initially draft PRs with business purpose/linked progress diagram, labels `pink` and `symphony`, D8 validation evidence, and D9's fresh-review readiness transition; human acceptance remains separate.                                           |
 | AC11 | Reusable workflows and their minimum dependencies are published in a separate public workflow repository; final template callers, nested calls and helper checkouts use reviewed refs there.                                                             | Workflow publication owner: source-to-destination mapping, license/provenance, repository/ref/access readback, relevant existing tests and real consumer runs. No second maintained implementation in the template; retain old entry points only as needed by D3.  |
 | AC12 | Native and Docker modes run the supplied commands in their intended environments; remote mode reaches GitHub CI despite a missing local toolchain, and a failing current-head check wakes its ticket to Active. Passing CI returns it to review waiting. | Validation/wakeup owner: native command output, client Dockerfile/image digest/container results, and real remote failing-then-passing CI runs with exact heads and Linear state readbacks. Retain stale-head and terminal-state tests in the existing bridge.     |
+| AC13 | Generated callers inherit D9: a real PR-head advisory check shows queued/running then a linked result; fresh clean review marks a draft ready. The check is never required, and human acceptance remains separate.                                       | 100-43: initial live proof and D9 freshness/overlap/failure/close/draft tests. Publication/adoption owners: merged ref, final caller check/review/readiness evidence, App/head identity and unchanged required-CI readback.                                        |
 
 ## Execution inputs and planning handoff
 
@@ -380,6 +431,7 @@ proof using existing tooling; it must preserve the stated boundaries.
 | Required CI check names, workflow/App provenance, Actions enablement and branch rules               | Target owner with delivery implementer                     | Exact-target acceptance/activation; seed's `CI Required` is not a universal adopter check. |
 | Selected CI mode, client Dockerfile/commands, host reader version and bounded compatibility rollout | Client owner / Jeremy / host operator                      | Activation of `ci.mode` and the chosen validation environment; no wider host rebuild.      |
 | Provider keys, rate limits for three simultaneous targets and event-time revocation                 | Jeremy and each key owner; parent-MVP coordination         | Live provider runs/concurrency readiness; no dependence on sponsor credits arriving.       |
+| Merged 100-43 implementation and advisory-check/readiness evidence                                  | 100-43 implementer and Jeremy for review/merge             | 100-39 consumes merged behavior; independent design/source reads can continue.             |
 
 Onboarding skill installation/invocation belongs to Jeremy; missing installation
 evidence gates its live walkthrough only. Required mode behavior is fixed by D8;
@@ -398,6 +450,10 @@ ticket list or DAG.
 file/resource ownership and dependency graph; [100-40](https://linear.app/1000lines/issue/100-40)
 owns fan-out. Both consume this merged document and the required sources. Use the
 shared Symphony DAG tooling; do not add a schema or validator for this design.
+100-39 also waits for the existing 100-43 prerequisite, records its merged ref and
+evidence, and carries D9/AC13 into extraction/adoption ownership. 100-40 must not
+create another advisory-check or ready-transition implementation ticket. Preserve
+the verified 100-43 → 100-39 relation alongside 100-38 → 100-39 → 100-40.
 Task branches and PRs use `main`; never commit unmerged predecessor work into a
 task branch. Published-template and workflow PRs need their own repository access
 and human review, not permission inferred from a seed-repository merge.
