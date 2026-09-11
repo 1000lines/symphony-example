@@ -4,22 +4,45 @@ We are manually adapting the extracted example on `main` for
 `https://symphony.1000lines.dev`. This log records top-level decisions and actual
 deployment progress. Configuration changes are not proof of a working deployment.
 
+## Deployment preflight — 2026-09-11
+
+100-19 inspected accepted `main@a3b7428a9e0298592e119a57923854b75a9b61a0` and
+the existing host. The host still runs the September 9 bundle at
+`f670040be4e524fbaf7c360dcf0e62945ca8e50b`, dispatching Active only. The accepted
+per-ticket Unhappy/15m/Evaluating profile has not been deployed. The accepted
+bundle's repository CLI fails its installation check; root installation is
+unavailable to the worker under `no new privileges`.
+
+GitHub CI/review/wakeup workflows now read back active. A real CI completion
+moved 100-18 from Unhappy to Inactive. Native Claude routing succeeds, but the
+called reviewer fails to receive its App key. Symphony's installation still
+denies Actions write. App-only implementation, successful current-head review,
+host reload and dropped-event recovery remain incomplete.
+
+The [deployment evidence and operator handoff](docs/symphony-plans/hackathon-ready/deployment-evidence.md)
+records exact observations, run links, a read-only smoke command and remaining
+rehearsal cases. Current accepted source uses target-owned configuration and
+per-ticket timers; central mapping and scanning monitors were superseded.
+The 100-34 amendment preserves Claude review and leaves Codex migration and
+App-owned acceptance checks as unimplemented outcomes. Existing credentials
+remain in place; no deployment or retirement is claimed by this checkpoint.
+
 ## Decisions — 2026-09-09
 
-| Change | Decision | Status |
-| --- | --- | --- |
-| No dashboard authentication | Remove Google OIDC; anyone can view the dashboard and its operational data. No replacement sign-in service. | Deployed and verified. |
-| No public refresh | Public ingress accepts GET/HEAD only. `POST /api/v1/refresh` stays inaccessible through the public load balancer; automatic polling continues. The runtime endpoint itself is unchanged. | Deployed and verified. |
-| Route 53 instead of GoDaddy | Use the existing `1000lines.dev` public hosted zone and an alias record to the load balancer. Remove the GoDaddy provider. | Deployed and verified. |
-| Dedicated VPC | Add the missing VPC, two public ALB subnets, a private host subnet, and outbound NAT. Reuse the extracted host, disk, IAM and ALB module. | Deployed. |
-| Personal AWS account | Deploy to account `350353785278`, region `us-west-2`, using operator `arn:aws:iam::350353785278:user/jeremy`. The host uses its own instance role. | CLI identity verified. |
-| Work directly on main | Manually migrate this repository on `main`. Keep the original README content below the current status note and point readers to Orchestra-Bio's Symphony fork. | Committed and pushed to main. |
-| Runtime credentials | Use AWS Secrets Manager `symphony/keys`, a JSON object of environment-variable names and values. Reuse the local Orchestra OpenAI API key temporarily; replace it with the event key before Saturday, 2026-09-12. | Secret populated and verified with GitHub, 1000lines Linear and the temporary OpenAI key. |
-| Markdown plans | Keep plans and designs in repository Markdown. No Google service account or Google Docs integration for this deployment. | Deployed without Google credentials. |
-| Choose the simplest working path | Get the planned tickets running. Defer all optional features, integrations and automation until after the hackathon. | Applies throughout setup. |
-| Numeric Linear team | Accept the existing `100-…` ticket identifiers in branch, DAG and PR-label helpers. | Committed and pushed. |
-| No daemon tickets (Linear only) | Drop daemon-ticket support from the hackathon Linear workflow. Do not configure Happy, Unhappy or Evaluating states; dispatch Active tickets only. Handle monitoring and follow-up manually on the day. Daemons are optional and deferred until after the hackathon. | Deployed; upstream runtime unchanged. |
-| Two GitHub bot users | Use `1000-symphony-bot` for implementation and `1000-cadence-bot` for review. Replacing both with GitHub Apps is the first Symphony project. | Both bots joined the ai team. Symphony has write, Cadence triage. Distinct tokens installed and host restarted. |
+| Change                           | Decision                                                                                                                                                                                                                                                             | Status                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| No dashboard authentication      | Remove Google OIDC; anyone can view the dashboard and its operational data. No replacement sign-in service.                                                                                                                                                          | Deployed and verified.                                                                                          |
+| No public refresh                | Public ingress accepts GET/HEAD only. `POST /api/v1/refresh` stays inaccessible through the public load balancer; automatic polling continues. The runtime endpoint itself is unchanged.                                                                             | Deployed and verified.                                                                                          |
+| Route 53 instead of GoDaddy      | Use the existing `1000lines.dev` public hosted zone and an alias record to the load balancer. Remove the GoDaddy provider.                                                                                                                                           | Deployed and verified.                                                                                          |
+| Dedicated VPC                    | Add the missing VPC, two public ALB subnets, a private host subnet, and outbound NAT. Reuse the extracted host, disk, IAM and ALB module.                                                                                                                            | Deployed.                                                                                                       |
+| Personal AWS account             | Deploy to account `350353785278`, region `us-west-2`, using operator `arn:aws:iam::350353785278:user/jeremy`. The host uses its own instance role.                                                                                                                   | CLI identity verified.                                                                                          |
+| Work directly on main            | Manually migrate this repository on `main`. Keep the original README content below the current status note and point readers to Orchestra-Bio's Symphony fork.                                                                                                       | Committed and pushed to main.                                                                                   |
+| Runtime credentials              | Use AWS Secrets Manager `symphony/keys`, a JSON object of environment-variable names and values. Reuse the local Orchestra OpenAI API key temporarily; replace it with the event key before Saturday, 2026-09-12.                                                    | Secret populated and verified with GitHub, 1000lines Linear and the temporary OpenAI key.                       |
+| Markdown plans                   | Keep plans and designs in repository Markdown. No Google service account or Google Docs integration for this deployment.                                                                                                                                             | Deployed without Google credentials.                                                                            |
+| Choose the simplest working path | Get the planned tickets running. Defer all optional features, integrations and automation until after the hackathon.                                                                                                                                                 | Applies throughout setup.                                                                                       |
+| Numeric Linear team              | Accept the existing `100-…` ticket identifiers in branch, DAG and PR-label helpers.                                                                                                                                                                                  | Committed and pushed.                                                                                           |
+| No daemon tickets (Linear only)  | Drop daemon-ticket support from the hackathon Linear workflow. Do not configure Happy, Unhappy or Evaluating states; dispatch Active tickets only. Handle monitoring and follow-up manually on the day. Daemons are optional and deferred until after the hackathon. | Deployed; upstream runtime unchanged.                                                                           |
+| Two GitHub bot users             | Use `1000-symphony-bot` for implementation and `1000-cadence-bot` for review. Replacing both with GitHub Apps is the first Symphony project.                                                                                                                         | Both bots joined the ai team. Symphony has write, Cadence triage. Distinct tokens installed and host restarted. |
 
 ## Deployment progress
 
@@ -68,14 +91,14 @@ deployment progress. Configuration changes are not proof of a working deployment
 
 ## Credential inventory
 
-| Location | Name | Status |
-| --- | --- | --- |
-| AWS `symphony/keys` | `GITHUB_TOKEN` | Installed and verified as `1000-symphony-bot`; repository write access confirmed. |
-| AWS `symphony/keys` | `LINEAR_API_TOKEN` | Populated for the 1000lines workspace. |
-| AWS `symphony/keys` | `OPENAI_API_KEY` | Temporary Orchestra key; replace before Saturday. |
-| GitHub Actions | `CADENCE_BOT_GITHUB_TOKEN` | Installed after verifying `1000-cadence-bot`; repository role is triage. |
-| GitHub Actions | `CADENCE_LINEAR_API_TOKEN` | Populated and verified using the dedicated 1000lines Linear token. |
-| GitHub Actions | `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Jeremy replaced the placeholder on September 9. Temporary Orchestra key; replace before Saturday. Actual Cadence review passed. |
+| Location            | Name                                  | Status                                                                                                                          |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| AWS `symphony/keys` | `GITHUB_TOKEN`                        | Installed and verified as `1000-symphony-bot`; repository write access confirmed.                                               |
+| AWS `symphony/keys` | `LINEAR_API_TOKEN`                    | Populated for the 1000lines workspace.                                                                                          |
+| AWS `symphony/keys` | `OPENAI_API_KEY`                      | Temporary Orchestra key; replace before Saturday.                                                                               |
+| GitHub Actions      | `CADENCE_BOT_GITHUB_TOKEN`            | Installed after verifying `1000-cadence-bot`; repository role is triage.                                                        |
+| GitHub Actions      | `CADENCE_LINEAR_API_TOKEN`            | Populated and verified using the dedicated 1000lines Linear token.                                                              |
+| GitHub Actions      | `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY` | Jeremy replaced the placeholder on September 9. Temporary Orchestra key; replace before Saturday. Actual Cadence review passed. |
 
 Repository variables now name `1000-symphony-bot` and `1000-cadence-bot`.
 Cadence event parsing accepts the numeric `100-…` ticket identifiers.
