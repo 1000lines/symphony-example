@@ -59,7 +59,9 @@ unavailable, label the state unknown and record the gap rather than guessing.
 
 Keep the template's fill classes and text labels. Apply the current-node outline
 with a separate `style NODE stroke:#8250df,stroke-width:4px` and include “Current
-PR” in its label, so both completed and in-progress current nodes remain legible.
+PR” in its label, so every status retains its fill and current-node highlight.
+Status classes, including neutral `default`, must not set `stroke` or
+`stroke-width`: class styles can override the separate current-node outline.
 Use a separator such as `#123 — In progress` in labels; Mermaid interprets
 `#123;` as a character escape, hiding the PR number.
 Keep the small legend disconnected from the plan. Label nodes without PRs
@@ -101,15 +103,19 @@ Do not use JavaScript callbacks, HTML links in labels or custom renderer setting
 Follow the [proof standard](proof-of-work.md): local, Docker only if needed,
 then mandatory CI on the published head. Choose commands from the target
 repository's validation guidance and package/build configuration. Run validation
-from the **target issue workspace**, with paths pointing to the target's files.
-For `1000lines/symphony-example`, use its [package.json](../../../package.json):
+from the **target checkout**, with paths pointing to the target's files.
+For `1000lines/symphony-example`, use its `package.json` (the
+[linked copy](../../../package.json) belongs to the shared tooling checkout):
 run locked `node_modules/.bin/prettier --check <changed-markdown-paths>` and
-`git diff --check` for template/docs edits, relevant existing workflow tests for
+`git diff --check "$base_ref" HEAD` for committed template/docs edits, where
+`base_ref` is the fetched selected base (for example `origin/main`). Before
+committing, `git diff --check "$base_ref"` includes staged and unstaged tracked
+changes too. Use relevant existing workflow tests for
 guidance changes, and npm/Node tests for implementation changes. If the locked
 formatter is available only in the shared tooling checkout, invoke
 `"$SYMPHONY_TOOLING_ROOT/node_modules/.bin/prettier" --check <changed-markdown-paths>`
-while staying in the target workspace. `git diff --check` must also inspect the
-target working tree, not the tooling checkout. Other target repositories use
+while staying in the target checkout. The whitespace check must compare the
+target PR's revision range in that checkout. Other target repositories use
 their own commands. Do not copy the
 reference repository's Elixir command. Record commands, outcomes, tested SHA,
 CI run links, material limitations and the next handoff in Test plan and the

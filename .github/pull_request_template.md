@@ -1,4 +1,4 @@
-<!-- Fill this for UI, CLI and API PRs. See docs/engineering/symphony/pull-requests.md.
+<!-- Fill this for UI, CLI and API PRs. See ../docs/engineering/symphony/pull-requests.md.
 Remove instructions and unused optional sections before publishing. -->
 
 ## Context
@@ -37,7 +37,7 @@ flowchart TD
     WIP["In progress"]:::in_progress
     OTHER["Other / unknown"]
   end
-  classDef default fill:#f6f8fa,color:#1f2328,stroke:#656d76
+  classDef default fill:#f6f8fa,color:#1f2328
   classDef completed fill:#dafbe1,color:#1f2328
   classDef in_progress fill:#ddf4ff,color:#1f2328
 ```
