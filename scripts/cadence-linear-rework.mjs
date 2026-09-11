@@ -12,7 +12,7 @@ import {
   parseCadenceWorkpad,
   renderCadenceWorkpadForLinear,
 } from "./cadence-linear-workpad.mjs";
-import { normalize } from "./github-actor-classification.mjs";
+import { normalize, verifyReviewEventAuthority } from "./github-actor-classification.mjs";
 import {
   linearRequest,
   readLinearIssue,
@@ -99,7 +99,7 @@ export const classifyCadenceLinearReworkEvent = ({
   const pullRequest =
     payload.pull_request || (isPrComment ? payload.issue : null) || {};
   const review = (isPrComment ? payload.comment : payload.review) || {};
-  const reviewer = review.user?.login || payload.sender?.login || "";
+  const reviewer = review.user?.login || "";
   const reviewState = normalize(review.state);
   const reviewBody = String(review.body || "");
   const prNumber = pullRequest.number ? String(pullRequest.number) : "";
@@ -119,6 +119,9 @@ export const classifyCadenceLinearReworkEvent = ({
 
   if (!["pull_request_review", "issue_comment"].includes(eventName)) {
     return { ...base, reason: "unsupported-event" };
+  }
+  if (!isPrComment && !["submitted", "edited"].includes(payload.action)) {
+    return { ...base, reason: "unsupported-review-action" };
   }
   if (isPrComment && !["created", "edited"].includes(payload.action)) {
     return { ...base, reason: "unsupported-comment-action" };
@@ -349,6 +352,7 @@ export const routeReviewHandoff = async ({
   eventName = "pull_request_review",
   token,
   githubToken,
+  repository = process.env.GITHUB_REPOSITORY,
   runUrl = "",
   cadenceReviewerLogin = DEFAULT_CADENCE_REVIEWER_LOGIN,
   symphonyAuthorLogin = DEFAULT_SYMPHONY_AUTHOR_LOGIN,
@@ -362,10 +366,7 @@ export const routeReviewHandoff = async ({
   });
   let result = {
     ...decision,
-    actor:
-      eventName === "issue_comment"
-        ? payload.sender?.login || decision.reviewer
-        : decision.reviewer,
+    actor: decision.reviewer,
     issueId: "",
     headSha: payload.pull_request?.head?.sha || "",
     reviewId: String(payload.review?.id || ""),
@@ -378,6 +379,16 @@ export const routeReviewHandoff = async ({
     skippedReason: decision.reason,
   };
   if (!decision.shouldMove && !decision.shouldRequestHumanReview) return result;
+  if (normalize(decision.reviewer) !== normalize(cadenceReviewerLogin)) {
+    const authority = await verifyReviewEventAuthority({
+      payload, eventName, repository, token: githubToken, fetchImpl,
+    });
+    result.authority = authority;
+    if (!authority.allowed) return {
+      ...result, shouldMove: false, shouldRequestHumanReview: false,
+      skippedReason: authority.reason,
+    };
+  }
   const options = { token, fetchImpl };
   let commentId;
   try {

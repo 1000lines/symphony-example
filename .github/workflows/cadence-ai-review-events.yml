@@ -50,6 +50,7 @@ jobs:
         github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot')
         )
       }}
+    environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -78,18 +79,32 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Mint existing Cadence App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        with:
+          app-id: ${{ vars.CADENCE_APP_ID }}
+          private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-metadata: read
+          permission-pull-requests: write
 
       - name: Classify and gate event
         id: route
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node .github/workflows/scripts/cadence-ai-review-route-event.mjs
 
       - name: Fetch current PR review state for event
         id: review_state
         if: always() && steps.route.outputs.pr_number != ''
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.route.outputs.pr_number }}
           ROUTE_CURRENT_HEAD_SHA: ${{ steps.route.outputs.current_head_sha }}
@@ -122,11 +137,12 @@ jobs:
         id: request_cadence_review
         if: steps.route.outputs.should_request_review == 'true'
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           DELETE_GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.route.outputs.pr_number }}
           REVIEWER_LOGIN: ${{ steps.route.outputs.cadence_reviewer }}
+          REVIEW_REQUEST_ACTOR: ${{ format('{0}[bot]', steps.app-token.outputs.app-slug) }}
           TRIGGER_SOURCE: ${{ steps.route.outputs.trigger_source }}
           TRIGGER_ACTOR: ${{ steps.route.outputs.trigger_actor }}
           COALESCE_REVIEW_EVENT: "true"
@@ -136,7 +152,7 @@ jobs:
           set -euo pipefail
 
           if [ -z "${GH_TOKEN}" ]; then
-            echo "::error::CADENCE_BOT_GITHUB_TOKEN is required to request Cadence review."
+            echo "::error::Cadence App installation token is required to request Cadence review."
             exit 1
           fi
 

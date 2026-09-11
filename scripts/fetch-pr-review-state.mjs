@@ -6,7 +6,7 @@
 // changed since — so a re-review can skip untouched PRs and otherwise review
 // only the delta. The PR itself is the ledger; no external state is stored.
 //
-// Auth:  GH_TOKEN (a GitHub token; classic or fine-grained with PR read).
+// Auth:  GH_TOKEN (existing App installation token with Metadata/PR read).
 // Repo:  defaults to example-org/example-repo; override with REPO_SLUG=owner/name.
 // Who:   the reviewer identity defaults to example-cadence-bot; override with
 //        CADENCE_REVIEWER_LOGIN.
@@ -32,6 +32,7 @@ import { createReviewGeneration, evaluateAi, feedbackWatermark } from "./symphon
 import {
   classifyGitHubActor,
   normalize,
+  verifyGitHubHumanWriteAccess,
 } from "./github-actor-classification.mjs";
 
 const QUERY = `query($owner:String!,$repo:String!,$number:Int!){
@@ -44,8 +45,8 @@ const QUERY = `query($owner:String!,$repo:String!,$number:Int!){
         nodes{
           __typename
           ... on PullRequestCommit{ commit{ oid committedDate author{ user{ login } } committer{ user{ login } } } }
-          ... on IssueComment{ author{login} createdAt }
-          ... on PullRequestReview{ author{login} submittedAt state commit{oid} }
+          ... on IssueComment{ author{login __typename ... on User{databaseId}} createdAt }
+          ... on PullRequestReview{ author{login __typename ... on User{databaseId}} submittedAt state commit{oid} }
           ... on HeadRefForcePushedEvent{ actor{login} createdAt afterCommit{oid} }
           ... on ReadyForReviewEvent{ actor{login} createdAt }
           ... on ConvertToDraftEvent{ actor{login} createdAt }
@@ -77,9 +78,11 @@ const classifyActivity = ({ node, reviewer, classifyActor }) => {
   const actorClassification = classifyActor(actor);
   const isSelf = Boolean(actor) && normalize(actor) === normalize(reviewer);
   const isCodeChange = codeChangeTypes.has(node.__typename);
+  const isFeedback = ["IssueComment", "PullRequestReview"].includes(node.__typename);
+  const trustedHuman = isFeedback ? node.authority?.allowed === true : actorClassification.humanFacing;
   const reviewRelevant =
-    !isSelf && (isCodeChange || actorClassification.humanFacing);
-  const humanGrounded = reviewRelevant && actorClassification.humanFacing;
+    !isSelf && (isCodeChange || trustedHuman);
+  const humanGrounded = reviewRelevant && trustedHuman;
 
   return {
     type: node.__typename,
@@ -88,6 +91,7 @@ const classifyActivity = ({ node, reviewer, classifyActor }) => {
     oid: oidOf(node),
     ...(node.state ? { state: node.state } : {}),
     actorClassification,
+    ...(isFeedback ? { authority: node.authority || { allowed: false, contentTrust: "untrusted", reason: "permission-not-verified" } } : {}),
     isSelf,
     humanGrounded,
     reviewRelevant,
@@ -122,6 +126,9 @@ const runQuery = async (variables) => {
       `PR #${variables.number} not found in ${variables.owner}/${variables.repo}.`
     );
   }
+  pr.timelineItems.nodes = await markFeedbackAuthority(pr.timelineItems.nodes, {
+    repository: `${variables.owner}/${variables.repo}`, token,
+  });
   return pr;
 };
 
@@ -258,7 +265,7 @@ export const classifyPrReviewState = (
 
 // Complete feedback acquisition for CODEX/WAIT. Query callbacks are trusted API
 // clients; callers must not pass PR-provided records as proof of completeness.
-const feedbackFields = "id body updatedAt author { login __typename }";
+const feedbackFields = "id body updatedAt author { login __typename ... on User { databaseId } }";
 const pageFields = "pageInfo { hasNextPage endCursor }";
 const prConnectionQuery = (connection, fields) => `query Feedback($owner:String!,$repo:String!,$number:Int!,$after:String) {
   repository(owner:$owner,name:$repo) { pullRequest(number:$number) {
@@ -284,7 +291,20 @@ async function collectPages(read, firstPage) {
   return nodes;
 }
 
-export async function fetchReviewFeedback({ owner, repo, number, issueIdentifier, githubQuery, linearQuery }) {
+export async function markFeedbackAuthority(nodes, { repository, token, fetchImpl } = {}) {
+  // Share duplicate author reads within this acquisition only. The next event
+  // or acquisition gets a new map and observes revoked access.
+  const authors = new Map();
+  return Promise.all(nodes.map(async node => {
+    const author = { login: node.author?.login, type: node.author?.__typename, id: node.author?.databaseId };
+    const key = JSON.stringify([normalize(author.login), author.type, author.id]);
+    if (!authors.has(key)) authors.set(key, verifyGitHubHumanWriteAccess({ author, repository, token, fetchImpl }));
+    return { ...node, authority: await authors.get(key) };
+  }));
+}
+
+export async function fetchReviewFeedback({ owner, repo, number, issueIdentifier, githubQuery, linearQuery,
+  token = process.env.GH_TOKEN, fetchImpl = fetch }) {
   const variables = { owner, repo, number };
   const readPr = async (connection, fields, after) => {
     const result = await githubQuery(prConnectionQuery(connection, fields), { ...variables, after });
@@ -323,7 +343,9 @@ export async function fetchReviewFeedback({ owner, repo, number, issueIdentifier
         }
         nodes = comments;
       }
-      sources[source] = { complete: true, nodes };
+      sources[source] = { complete: true, nodes: await markFeedbackAuthority(nodes, {
+        repository: `${owner}/${repo}`, token, fetchImpl,
+      }) };
     } catch {
       sources[source] = { complete: false, nodes: [], error: `Unavailable ${source} history` };
     }

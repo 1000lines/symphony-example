@@ -243,12 +243,18 @@ Set these values in Settings → Secrets and variables → Actions → Secrets.
 Required when using the workflow that consumes them; there are no credential
 defaults. All values come from adopter-owned accounts. Never commit them.
 
+Human feedback routing and the single-PR review trigger require the protected
+`cadence-controller` Environment's `CADENCE_APP_ID` variable and
+`CADENCE_APP_PRIVATE_KEY` secret. See the
+[App permission requirements](./github-actor-classification.md#app-installation-and-rollout).
+
 Repository secrets:
 
 - `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key for the review.
-- `CADENCE_BOT_GITHUB_TOKEN`: the reviewer bot's GitHub token (classic, `repo`
-  scope). Used both for the action's `github_token` and as `GH_TOKEN` for the
-  bot's `gh` calls and actor/team lookups. The bot account has **Triage**
+- `CADENCE_BOT_GITHUB_TOKEN`: the legacy reviewer/trigger bot's GitHub token (classic, `repo`
+  scope). Used for the legacy review action's `github_token` and its publishing
+  calls. Human feedback acquisition and permission checks use the existing
+  Cadence App installation token instead. The bot account has **Triage**
   repository access, so its approvals do not count toward required reviews.
 - `CADENCE_LINEAR_API_TOKEN`: Linear API token used by
   `scripts/fetch-linear-issue.mjs` to read issue context, by
@@ -313,23 +319,18 @@ not a requirement for a design owner to decide again.
 
 Cadence and Symphony use the
 [GitHub Actor Classification](./github-actor-classification.md) contract to
-decide whether GitHub activity is authoritative human review input, AI
-coordination, dependency-bot activity, or unknown activity.
+identify human-facing, AI, dependency-bot, and unknown activity. Classification
+alone does not authorize work. The event router and review handoff verify the
+current content author and effective repository write access through GitHub's
+permission API before human feedback can request review or wake Symphony.
+Read, triage, missing, malformed, and unavailable permission evidence is denied.
+The check covers summaries, conversation comments, inline comments, and edits;
+no sender, team, allowlist, association, or prose substitutes for permission.
 
-The classifier categories are `human`, `ai_actor`, `dependency_bot`,
-`non_human_bot`, and `unknown`. The GitHub `humans` team is authoritative for
-human review and learning behavior. The GitHub `ai` team and known AI actor
-allowlists identify actors such as `example-symphony-bot`, `example-cadence-bot`, and
-`claude[bot]`. Known dependency bots include `dependabot[bot]`.
-
-Unknown actors are not team-authoritative until the `humans` team, the `ai`
-team, or an explicit allowlist classifies them. Unknown actors ending in
-`[bot]` are not treated as humans. Unknown non-bot actors remain human-facing
-for conservative review routing, but their classification stays `unknown` so
-workflows and workpads can surface the identity gap instead of silently
-promoting them to known humans. If team membership cannot be read when a
-workflow needs authoritative classification, record the credential blocker
-rather than guessing.
+Verified human writers can supply rework and design decisions directly, without
+another design-owner approval. GitHub feedback acquired for later review stays
+marked untrusted unless its author's current access passes the same check.
+Unknown and bot content cannot reset the human review loop.
 
 ## What It Reads
 
@@ -403,7 +404,7 @@ eligible PR assignees only. It does not
 fall back to the Linear issue assignee, project lead, or a broad human team.
 If none is eligible, it records a routing gap in Linear for manual handling.
 
-Human feedback is authoritative Symphony input. Symphony can act on direct human
+Verified human-writer feedback is authoritative Symphony input. Symphony can act on direct human
 GitHub review feedback without waiting for Cadence to restate it. Cadence should
 still receive post-human-review events and re-look unless the state fetch shows
 the current Cadence review is still fresh. Cadence adding no findings is
@@ -462,7 +463,8 @@ The Cadence review skill and event/trigger workflows do not change Linear issue
 labels, assignees, relations, or project metadata. `cadence-linear-rework.yml`
 is the narrow review state-transition companion. It wakes `Active` for
 actionable Cadence output, nonempty human PR conversation comments, non-approved
-human review bodies, and human changes-requested reviews. It requires an open,
+human review bodies, and human changes-requested reviews after verifying human
+writer permission. It requires an open,
 Symphony-authored PR with the `symphony` label. Human approvals do not directly
 wake Linear. Clean Cadence approval and human-needed findings request eligible
 PR assignees without changing Linear state. Symphony owns the `Inactive` wait

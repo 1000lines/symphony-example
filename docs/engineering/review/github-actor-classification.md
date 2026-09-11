@@ -5,7 +5,8 @@ Symphony review and rework workflows. It is a dependency-free bare-node helper
 so local Symphony runs and GitHub runners can use the same contract without an
 install or build step.
 
-This helper owns classification only. It does not trigger workflows, update
+The actor classifier owns classification only; its `humanFacing` flag does not
+authorize work. The same module also provides the permission verifier below. It does not trigger workflows, update
 Linear, post PR reviews, or decide Cadence review behavior.
 
 ## Inputs
@@ -111,3 +112,73 @@ const actor = classifyGitHubActor("new-contributor");
 
 `new-contributor` returns `unknown` and `humanFacing: true` until a team lookup
 or explicit allowlist provides a more authoritative classification.
+
+## Human Feedback Permission Gate
+
+`verifyReviewEventAuthority` guards the existing review event router and Linear
+review handoff before a human comment can request Cadence or wake Symphony.
+It uses the runner's `GITHUB_REPOSITORY`, checks the event repository, reads the
+current review/comment from that repository, and verifies its numeric author ID,
+login, parent PR, body, review state, and supplied edit timestamp. The content
+author is checked even when another user sends the edit event. Missing authors
+never fall back to the sender. Bot-originated edits and superseded content are
+skipped.
+
+`verifyGitHubHumanWriteAccess` then reads
+`GET /repos/{owner}/{repo}/collaborators/{author}/permission` using the existing
+App installation token. The response must identify the same human `User` and
+report effective `write`, `maintain`, or `admin` access. GitHub maps maintain and
+custom roles to base permissions; a custom role qualifies when its effective
+base permission grants write. A role name, association, team classification,
+allowlist, sender permission, or comment text cannot grant authority. Known
+service accounts and GitHub bots cannot qualify as human writers.
+
+Every actionable creation, submission, edit, and replay performs fresh reads.
+There is no stored allow decision. Missing credentials, redirects, mismatched
+responses, malformed data, timeouts, and API failures leave the event untrusted
+and cause no wake or review request. The workflow summary records a fixed reason
+without API error bodies or credentials. No read-only agent is dispatched.
+Verified writers can request design changes directly without another owner
+approval. Existing Cadence review handoffs and bot-loop suppression remain.
+
+Review summaries and conversation comments use the Linear bridge; inline
+comments use the Cadence request route. All three surfaces support edits.
+`fetch-pr-review-state.mjs` rechecks authors when acquiring GitHub feedback and
+attaches `authority.contentTrust` to each record. Unverified content remains
+`untrusted`; it does not count as human activity that resets the review loop.
+Raw comments acquired through other tools are untrusted until their authors'
+current write access is verified; an authorized wake does not authorize all
+other text in the PR.
+
+### App Installation And Rollout
+
+The two event workflows and the single-PR review trigger check out the trusted
+default branch and mint a repository-scoped token for the existing Cadence App using
+`cadence-controller` Environment values `CADENCE_APP_ID` and
+`CADENCE_APP_PRIVATE_KEY`. Feedback permission reads do not use the legacy
+bot-token secret or a PAT fallback. Tokens request `Metadata: read` and
+`Pull requests: write` in the event routes, and `Pull requests: read` in the
+review trigger;
+no organization Members or repository Administration permission is needed.
+The [GitHub endpoint documentation](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user)
+specifies App installation token support and `Metadata: read` for permission
+lookups. [Conversation comment reads](https://docs.github.com/en/rest/issues/comments#get-an-issue-comment)
+also accept Pull requests permission, so no Issues grant is added to the App
+token. The existing workflow token still handles review-request deletion to
+preserve the current event-loop behavior.
+
+The review trigger admits App-originated review requests to a guard that checks
+the requesting bot against the slug returned by token minting. An unrelated App
+stops before feedback acquisition or review mutations. Duplicate-request receipts
+and timeline recovery use this requesting App identity separately from the
+requested review account. Existing human and
+configured service-account requests retain their routing. The legacy review
+publisher still uses its own bot credential; that credential never supplies
+human feedback authority.
+
+The protected Environment must contain the existing App identity and signing
+key, and its installation must grant the requested permissions. A missing
+Environment, key, or installation grant stops routing. Do not move the key into
+an unprotected repository secret or introduce a PAT to bypass a setup gap.
+Fixture/CI success is not live Cadence credential evidence. Workflow changes
+take effect when merged to the trusted default branch.

@@ -87,8 +87,8 @@ fallback and verifies the mutation response.
 | Human accepts the work                                        | Human or accepted merge automation moves to `Done` | Approval, merge or acceptance evidence.                                               |
 
 Before rework, read submitted GitHub reviews, inline comments and thread status,
-top-level PR comments, current checks, and fresh Linear comments. Direct human
-feedback is actionable without Cadence repeating it. Read `## Cadence Workpad`
+top-level PR comments, current checks, and fresh Linear comments. Direct verified
+human-writer feedback is actionable without Cadence repeating it. Read `## Cadence Workpad`
 for the AI handoff and update only the pinned `## Codex Workpad` with execution
 progress and the incoming/addressed/deferred/blocked feedback ledger.
 
@@ -116,6 +116,14 @@ perform these actions:
 | Failed required external check on the current PR head                                              | Move a waiting ticket to `Active`; ignore optional or stale failures.                                                 |
 | Confirmed conflict on an `Inactive` ticket                                                         | Record the fix instruction in the Cadence workpad and move to `Active`.                                               |
 | Current PR CI completes                                                                            | `Inactive` on success, `Active` on failure; remove `wake:15m`.                                                        |
+
+Human review/comment routes first verify the current content author and their
+effective repository write access through GitHub's permission API. Creation,
+submission, and edit events require fresh evidence; sender identity and author
+association do not grant permission. Inline comments pass the same check before
+requesting Cadence. Denied or unavailable evidence causes no wake or request and
+is recorded as untrusted. See the
+[permission gate and App rollout requirements](../review/github-actor-classification.md#human-feedback-permission-gate).
 
 The CI wakeup workflow listens to PR updates, CI workflow completions, external
 check failures, and failing commit statuses. It finds the ticket using the

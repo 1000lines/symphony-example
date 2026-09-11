@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { routeCadenceReviewEvent } from "./cadence-ai-review-route-event.mjs";
 import { requestReviewers } from "./request-pr-reviewer.mjs";
+import { authorityFetch, repository, token } from "../../../scripts/test-fixtures/review-authority.mjs";
 
 const bot = "example-cadence-bot";
 const root = "/repos/example-org/example-repo";
@@ -17,7 +18,7 @@ const json = (payload, headers = {}) => ({
 
 // Model GitHub state across separate, serialized workflow deliveries. Every
 // delivery rereads durable API state and uses the real routing/request helpers.
-const fixture = () => {
+const fixture = (requestActor = bot) => {
   const state = {
     pr: {
       number: 11,
@@ -107,7 +108,7 @@ const fixture = () => {
         (state.failCompletion && body.body.includes('"completed":true'))
       )
         throw new Error("Receipt write failed");
-      const saved = { id: 200, body: body.body, user: { login: bot } };
+      const saved = { id: 200, body: body.body, user: { login: requestActor } };
       const index = state.comments.findIndex((comment) => comment.id === 200);
       if (index >= 0) state.comments[index] = saved;
       else state.comments.push(saved);
@@ -136,7 +137,7 @@ const fixture = () => {
         state.timeline.push({
           id: state.timeline.length + 1,
           event: "review_requested",
-          actor: { login: bot },
+          actor: { login: requestActor },
           requested_reviewer: { login: bot },
         });
         if (state.losePostResponse) throw new Error("Request response lost");
@@ -158,7 +159,7 @@ const fixture = () => {
   };
   state.deliver = async (
     eventName = "pull_request_review",
-    action = "submitted",
+    action = eventName === "pull_request_review" ? "submitted" : "created",
     extra = {}
   ) => {
     const payload = {
@@ -169,10 +170,16 @@ const fixture = () => {
       comment: { id: 92, pull_request_review_id: 5173909707 },
       ...extra,
     };
+    payload.repository = { full_name: repository };
+    const user = { login: "human-reviewer", type: "User", id: 42 };
+    payload.review = { user, body: state.review.body, state: state.review.state, ...payload.review };
+    payload.comment = { user, body: state.comment.body, ...payload.comment };
     const route = await routeCadenceReviewEvent({
       payload,
       eventName,
-      token: "token",
+      repository,
+      token,
+      fetchImpl: authorityFetch(payload, eventName),
       classifyActor: async () => ({
         classification: "human",
         humanFacing: true,
@@ -181,7 +188,7 @@ const fixture = () => {
     assert.equal(route.shouldRequestReview, true);
     return requestReviewers({
       ...options,
-      eventContext: { payload, eventName },
+      eventContext: { payload, eventName, requestActor },
     });
   };
   state.manual = () => requestReviewers(options);
@@ -192,6 +199,24 @@ const fixture = () => {
     );
   return state;
 };
+
+for (const failure of [null, "failCompletion", "losePostResponse"]) {
+  test(`App-authored receipts suppress retries with a separate review account (${failure || "completed"})`, async () => {
+    const state = fixture("existing-cadence[bot]");
+    if (failure) {
+      state[failure] = true;
+      await assert.rejects(state.deliver(), /failed|lost/);
+      state[failure] = false;
+    } else {
+      assert.equal((await state.deliver()).requested, true);
+    }
+    assert.equal((await state.deliver("pull_request_review_comment")).skipReason, "duplicate-review-context");
+    assert.equal(state.comments[0].user.login, "existing-cadence[bot]");
+    assert.equal(state.timeline[0].actor.login, "existing-cadence[bot]");
+    assert.equal(state.timeline[0].requested_reviewer.login, bot);
+    assert.equal(state.timeline.length, 1);
+  });
+}
 
 for (const first of ["pull_request_review", "pull_request_review_comment"]) {
   test(`overlapping review/inline deliveries and retries cause one mutation cycle (${first} first)`, async () => {
