@@ -695,6 +695,13 @@ jobs:
             APPROVE when the PR has no blocker and no human-needed findings,
             otherwise COMMENT.
 
+            Fast review: use one focused pass, without subagents or cross-PR fan-out.
+            This overrides the skill's exhaustive axis and coverage-matrix requirements.
+            Prioritize new human feedback, changed code, open findings and concrete
+            correctness/security risks. Reuse prior evidence for unchanged areas.
+            Keep the workpad concise; preserve source acquisition, authority checks,
+            current-head verification and the existing verdict/publication rules.
+
             Trigger source: ${{ inputs.trigger_source || format('{0}.{1}', github.event_name, github.event.action) }}
             Trigger actor: ${{ inputs.trigger_actor || github.actor }}
             Current PR head SHA: ${{ steps.plan.outputs.head_sha }}
@@ -711,6 +718,7 @@ jobs:
             --allowedTools Bash,Read,Glob,Grep,Task,Write,WebFetch
             --append-system-prompt "Post one GitHub PR review for PR #${{ inputs.pr_number || github.event.pull_request.number }} at current head ${{ steps.plan.outputs.head_sha }} using .claude/skills/cadence-ai-review/SKILL.md plus the standing-docs current-state axis when applicable. Do not use .claude/skills/design-review/SKILL.md for process requirements or design review. APPROVE when the PR has no blocker and no human-needed findings, otherwise COMMENT. Never run 'gh pr review --request-changes' and never call the reviews API with a REQUEST_CHANGES event."
         env:
+          CLAUDE_CODE_EFFORT_LEVEL: low
           CADENCE_CLAUDE_MODEL: ${{ vars.CADENCE_CLAUDE_MODEL }}
           GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
           LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
