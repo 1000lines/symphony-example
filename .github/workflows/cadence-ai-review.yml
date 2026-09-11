@@ -1,10 +1,6 @@
 name: Cadence AI Review
 
-# Manually dispatched review request for a group of opt-in Symphony PRs. This
-# workflow is orchestration only: it resolves the requested PR set, then asks
-# GitHub to request or re-request `example-cadence-bot`. The resulting
-# `review_requested` event starts the single-PR review runner, so manual and
-# event-driven reviews share the same visible queue state.
+# Resolve the PR set, then call the same reviewer used by the event bridge.
 
 on:
   workflow_dispatch:
@@ -20,7 +16,7 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
   pull-requests: write
 
 env:
@@ -30,6 +26,7 @@ env:
 
 jobs:
   resolve:
+    if: github.ref == 'refs/heads/main'
     name: Resolve PR list
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -90,39 +87,14 @@ jobs:
           printf 'pr_numbers=%s\n' "${json}" >> "${GITHUB_OUTPUT}"
           printf 'count=%s\n' "${#resolved[@]}" >> "${GITHUB_OUTPUT}"
 
-  request-review:
-    name: Request Cadence review for PR #${{ matrix.pr_number }}
+  review:
     needs: resolve
     strategy:
       fail-fast: false
       matrix:
         pr_number: ${{ fromJson(needs.resolve.outputs.pr_numbers) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      - name: Request or re-request Cadence review
-        env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
-          DELETE_GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ matrix.pr_number }}
-          REVIEWER_LOGIN: ${{ vars.CADENCE_REVIEWER || 'example-cadence-bot' }}
-          DISMISS_APPROVALS: "true"
-          DISMISS_MESSAGE: "Cadence approval is stale because a manual review request is queued; Cadence will re-review current PR state."
-        run: |
-          set -euo pipefail
-
-          if [ -z "${GH_TOKEN}" ]; then
-            echo "::error::CADENCE_BOT_GITHUB_TOKEN is required to request Cadence review."
-            exit 1
-          fi
-
-          if ! output="$(node .github/workflows/scripts/request-pr-reviewer.mjs 2>&1)"; then
-            echo "::error::Could not guarantee a fresh Cadence review request for PR #${PR_NUMBER}: ${output}"
-            exit 1
-          fi
-
-          printf '%s\n' "${output}"
+    uses: ./.github/workflows/cadence-ai-review-trigger.yml
+    with:
+      pr_number: ${{ matrix.pr_number }}
+      trigger_source: workflow_dispatch.group
+    secrets: inherit

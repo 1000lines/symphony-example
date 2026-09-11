@@ -147,7 +147,8 @@ test("workflow boundaries keep PR ingress secret-free and every privileged job o
     assert.equal(job.steps[0].with["persist-credentials"], false);
     assert.match(job.steps[1].uses, /^actions\/github-script@/);
     assert.match(job.steps[1].with.script, /cadence-forwarded-event.mjs/);
-    assert.match(job.concurrency.group, /fromJSON\(github.event.workflow_run.display_title\).number/);
-    assert.equal(job.concurrency.queue, "max");
   }
+  assert.equal(events.jobs.route.permissions['pull-requests'], 'read');
+  assert.match(handoff.jobs['review-handoff'].concurrency.group, /fromJSON\(github.event.workflow_run.display_title\).number/);
+  assert.equal(handoff.jobs['review-handoff'].concurrency.queue, "max");
 });

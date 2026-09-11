@@ -1,11 +1,7 @@
 name: Cadence AI Review Trigger
 
-# Single-PR Cadence entry point. The normal path is a visible GitHub review
-# request for `example-cadence-bot`; direct dispatch/call remain break-glass
-# fallbacks. GitHub Actions concurrency allows one running and one pending job
-# per group when cancel-in-progress is false; if duplicate triggers arrive for
-# the same PR while one review is active, GitHub keeps the active review and
-# collapses pending duplicates to the latest pending run.
+# Event and manual callers invoke this reusable workflow directly. Keep the
+# review-request entry point for existing integrations until they migrate.
 
 on:
   pull_request_target:
@@ -53,10 +49,11 @@ env:
 
 jobs:
   review:
-    name: Review PR #${{ inputs.pr_number || github.event.pull_request.number }}
+    name: "Review PR #${{ inputs.pr_number || github.event.pull_request.number }}"
     if: >-
       ${{
-        github.event_name != 'pull_request_target' ||
+        github.ref == 'refs/heads/main' &&
+        (github.event_name != 'pull_request_target' ||
         (
           github.event.action == 'review_requested' &&
           github.event.pull_request.state == 'open' &&
@@ -74,7 +71,7 @@ jobs:
             github.event.sender.type == 'Bot' ||
             !endsWith(github.actor, '[bot]')
           )
-        )
+        ))
       }}
     environment: cadence-controller
     runs-on: ubuntu-latest
@@ -95,7 +92,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: main
           persist-credentials: false
 
       - name: Mint existing Cadence App token
@@ -567,9 +564,9 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.CADENCE_AI_REVIEW_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
-          # The pinned Action normalizes the optional [bot] suffix. Trust only
-          # the minted App identity; ordinary users still require write access.
-          allowed_bots: ${{ steps.app-token.outputs.app-slug }}
+          # The main-branch event caller has already verified the original author.
+          # Its actor is a notification source, not the identity used to publish.
+          allowed_bots: ${{ github.event_name == 'workflow_run' && github.actor || steps.app-token.outputs.app-slug }}
           prompt: |
             /cadence-ai-review
 

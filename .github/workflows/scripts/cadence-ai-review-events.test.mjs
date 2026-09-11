@@ -15,14 +15,16 @@ const workflow = readFileSync(
 const trigger = readFileSync(new URL("../cadence-ai-review-trigger.yml", import.meta.url), "utf8");
 const triggerWorkflow = yaml.load(trigger);
 
-test("every trigger path uses the minted App allowlist without a caller permission bypass", () => {
+test("trusted event calls allow their verified trigger actor without changing publishing identity", () => {
   assert.deepEqual(Object.keys(triggerWorkflow.on), [
     "pull_request_target", "workflow_dispatch", "workflow_call",
   ]);
   const steps = triggerWorkflow.jobs.review.steps;
   const review = steps.find((step) => step.id === "cadence_review");
   assert.equal(review.uses, "anthropics/claude-code-action@30544b674398ee15c84819bd87caf8a87e8c7b55");
-  assert.equal(review.with.allowed_bots, "${{ steps.app-token.outputs.app-slug }}");
+  assert.equal(review.with.allowed_bots, "${{ github.event_name == 'workflow_run' && github.actor || steps.app-token.outputs.app-slug }}");
+  assert.match(triggerWorkflow.jobs.review.if, /github.ref == 'refs\/heads\/main'/);
+  assert.equal(review.with.github_token, '${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}');
   assert.equal(review.with.allowed_non_write_users, undefined);
   assert.equal(review["continue-on-error"], undefined);
   assert.equal(triggerWorkflow.jobs.review.environment, "cadence-controller");
@@ -114,83 +116,28 @@ test("App review requests reach the trigger and only the minted App identity pas
   }
 });
 
-test("request-review failure path preserves request-pr-reviewer failure status", () => {
-  assert.match(
-    workflow,
-    /if output="\$\(node \.github\/workflows\/scripts\/request-pr-reviewer\.mjs 2>&1\)"; then[\s\S]*?\n {10}else\n {12}request_status=\$\?\n {10}fi/
-  );
-  assert.doesNotMatch(workflow, /\n {10}fi\n\n {10}request_status=\$\?\n/);
+test("events call review only after the existing author-permission router succeeds", () => {
+  const { route, review } = yaml.load(workflow).jobs;
+  assert.equal(review.needs, 'route');
+  assert.equal(review.if, "needs.route.outputs.should_request_review == 'true'");
+  assert.equal(review.uses, './.github/workflows/cadence-ai-review-trigger.yml');
+  assert.equal(review.secrets, 'inherit');
+  assert.equal(review.with.pr_number, '${{ needs.route.outputs.pr_number }}');
+  assert.equal(route.outputs.should_request_review, '${{ steps.route.outputs.should_request_review }}');
+  assert.equal(route.steps.find(step => step.id === 'route').run,
+    'node .github/workflows/scripts/cadence-ai-review-route-event.mjs');
+  assert.equal(route.permissions['pull-requests'], 'read');
+  assert.doesNotMatch(workflow, /request-pr-reviewer|cadence-linear-workpad|fetch-pr-review-state/);
 });
 
-test("request-review uses workflow token for delete and bot token for post", () => {
-  assert.match(workflow, /pull-requests: write/);
-  assert.match(
-    workflow,
-    /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/
-  );
-  assert.match(workflow, /DELETE_GH_TOKEN: \$\{\{ github\.token \}\}/);
-  assert.match(workflow, /REVIEW_REQUEST_ACTOR: \$\{\{ format\('\{0\}\[bot\]', steps.app-token.outputs.app-slug\) \}\}/);
-});
-
-test("request-review failure path does not dispatch workflow and names manual remedy", () => {
-  assert.match(
-    workflow,
-    /Manual remedy: re-request \$\{REVIEWER_LOGIN\} on PR #\$\{PR_NUMBER\}, or dispatch the Cadence AI Review workflow with pr_number=\$\{PR_NUMBER\}\./
-  );
-  assert.doesNotMatch(
-    workflow,
-    /gh workflow run cadence-ai-review-trigger\.yml/
-  );
-  assert.doesNotMatch(workflow, /WORKFLOW_REF/);
-});
-
-test("route job serializes all receipt checks and mutations for a PR", () => {
-  assert.match(workflow, /concurrency:/);
-  assert.match(
-    workflow,
-    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ fromJSON\(github.event.workflow_run.display_title\).number \}\}\n/
-  );
-  assert.match(workflow, /cancel-in-progress: false/);
-  assert.match(workflow, /queue: max/);
-});
-
-
-test("event route fetches current head and last reviewed SHA for workpad evidence", () => {
-  assert.match(workflow, /Fetch current PR review state for event/);
-  assert.match(workflow, /node scripts\/fetch-pr-review-state\.mjs/);
-  assert.match(workflow, /printf 'current_head_sha=%s\\n'/);
-  assert.match(workflow, /printf 'last_reviewed_sha=%s\\n'/);
-});
-
-test("event requests opt into durable receipts without a Linear lock", () => {
-  assert.match(workflow, /COALESCE_REVIEW_EVENT: "true"/);
-  assert.doesNotMatch(workflow, /Coalesce duplicate trigger context/);
-  assert.doesNotMatch(workflow, /planTriggerCoalescing/);
-  assert.match(
-    workflow,
-    /should_request_review: \$\{\{ steps\.route\.outputs\.should_request_review \}\}/
-  );
-  assert.match(
-    workflow,
-    /if: steps\.route\.outputs\.should_request_review == 'true'/
-  );
-});
-
-test("event route records trigger context evidence in the Cadence workpad update", () => {
-  assert.match(workflow, /triggerCoalescing:/);
-  assert.match(workflow, /coalescingKey: \$coalescingKey/);
-  assert.match(workflow, /mechanism: "github-receipt-and-pr-concurrency"/);
-  assert.ok(
-    workflow.indexOf("Write Cadence workpad trigger decision") >
-      workflow.indexOf("Request or re-request Cadence review")
-  );
-  assert.match(
-    workflow,
-    /REQUESTED_REVIEW: \$\{\{ steps.request_cadence_review.outputs.requested \}\}/
-  );
-  assert.match(
-    workflow,
-    /SKIP_REASON: \$\{\{ steps.request_cadence_review.outputs.skip_reason \|\| steps.route.outputs.skip_reason \}\}/
-  );
-  assert.doesNotMatch(workflow, /eventUpdate:/);
+test("manual matrix and events reuse the same reviewer with sufficient inherited permissions", () => {
+  const manual = yaml.load(readFileSync(new URL('../cadence-ai-review.yml', import.meta.url), 'utf8'));
+  const events = yaml.load(workflow);
+  assert.equal(manual.jobs.review.uses, events.jobs.review.uses);
+  assert.equal(manual.jobs.review.with.pr_number, '${{ matrix.pr_number }}');
+  assert.equal(manual.jobs.review.secrets, 'inherit');
+  assert.equal(manual.jobs.resolve.if, "github.ref == 'refs/heads/main'");
+  for (const caller of [manual, events]) assert.deepEqual(caller.permissions, triggerWorkflow.permissions);
+  assert.equal(triggerWorkflow.jobs.review.concurrency.group,
+    'cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}');
 });
