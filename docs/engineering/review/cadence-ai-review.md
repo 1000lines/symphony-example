@@ -135,11 +135,12 @@ start the dependent review job. Keep `cadence-controller` restricted to `main`.
 The reusable call retains the caller's event and actor. GitHub-identified bot
 initiators may enter the provider's bot allowlist; humans still pass the provider's
 independent write-permission check. Reviews use the configured publishing
-credential. Only three named repository secret values are passed. Both callers
-also name `CADENCE_APP_PRIVATE_KEY` with an empty value, and the reusable workflow
-declares it optional at the call boundary. The review job's protected
-`cadence-controller` environment supplies the signing key, overriding that empty
-value. Do not use `secrets: inherit` or copy the key into repository secrets.
+credential. Both callers use `secrets: inherit`: explicit mappings left the
+protected environment key empty in live reusable runs, matching
+[actions/runner#4453](https://github.com/actions/runner/issues/4453).
+Inheritance exposes repository secrets to the trusted reviewer; its main-only
+`cadence-controller` environment supplies the signing key. Keep the key there,
+not in repository secrets or job outputs.
 See [GitHub's reusable workflow secret rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow).
 Manual calls and legacy review requests
 retain their existing actor checks. All review execution requires `refs/heads/main`.
