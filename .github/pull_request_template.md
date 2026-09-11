@@ -16,13 +16,17 @@ Base: <!-- selected base branch -->
 ## Progress
 
 <!-- Link the current accepted plan and state when PR/issue statuses were checked.
+First remove the separate HTML-comment delimiter lines around the scaffold below.
+Only then add nodes or edges: Mermaid arrows contain the closing-comment sequence.
 For a project DAG, replace CURRENT with its actual nodes/edges and verified PR
 links; preserve the styles and legend. For standalone work, keep one task node.
 Label each node with its issue, short purpose, PR number or "no PR yet", and state.
 After creation, add: click CURRENT href "ACTUAL_PR_URL" "Open current PR" _blank
 Never guess a PR URL. Refresh this graph and the summary on replan/status changes.
-Uncomment and fill the scaffold below before publishing; do not leave placeholders.
+Remove these instructions and fill the scaffold before publishing;
+leave no placeholders. -->
 
+<!--
 ```mermaid
 flowchart TD
   CURRENT["Current PR — no PR yet"]:::in_progress
@@ -34,8 +38,8 @@ flowchart TD
     OTHER["Other / unknown"]
   end
   classDef default fill:#f6f8fa,color:#1f2328,stroke:#656d76
-  classDef completed fill:#dafbe1,color:#1f2328,stroke:#656d76
-  classDef in_progress fill:#ddf4ff,color:#1f2328,stroke:#656d76
+  classDef completed fill:#dafbe1,color:#1f2328
+  classDef in_progress fill:#ddf4ff,color:#1f2328
 ```
 
 Thick purple outline + “Current PR” identifies this PR independently of status.
@@ -52,6 +56,6 @@ Thick purple outline + “Current PR” identifies this PR independently of stat
 ## Test plan
 
 <!-- Report actual commands/results and tested SHA: local → Docker if needed → CI.
-Use this repository's package.json and relevant targeted checks. Link current-head
-CI and GitHub diagram-rendering evidence; distinguish pending work from passes.
+Use the target repository's validation guidance and package/build configuration.
+Link current-head CI and GitHub diagram-rendering evidence; distinguish pending work from passes.
 Name material limitations and the next handoff. Never pre-check unrun tests. -->

@@ -1,7 +1,10 @@
 # Writing a pull request
 
-Use the [PR template](../../../.github/pull_request_template.md) for GitHub UI,
-CLI and API publishing. It follows the concise Context, TL;DR, Summary,
+For GitHub UI, CLI and API publishing, use the target repository's PR template.
+When the target has none, use the shared
+[PR template](../../../.github/pull_request_template.md)
+at `$SYMPHONY_TOOLING_ROOT/.github/pull_request_template.md`.
+It follows the concise Context, TL;DR, Summary,
 Alternatives and Test Plan structure of the
 [Symphony reference](https://github.com/1000lines/symphony/blob/main/.github/pull_request_template.md).
 Remove instructions and unused optional sections; a published PR should have
@@ -72,7 +75,10 @@ Do not use JavaScript callbacks, HTML links in labels or custom renderer setting
 
 ## Publish and refresh
 
-1. Read the target repository's template and write a filled body to a local file.
+1. Read the target repository's template (or the shared fallback above) and write
+   a filled body to a local file. Remove the scaffold's separate HTML-comment
+   delimiters **before** adding nodes or edges: Mermaid arrows contain `-->`,
+   which would end an enclosing comment prematurely. Remove instruction comments.
    For CLI, pass it with `gh pr create --draft --base "$base" --body-file "$body_file"`;
    for API, send its exact contents as the PR `body`. Do not rely on automatic
    UI insertion, `--fill` or commit messages to populate the description.
@@ -94,13 +100,17 @@ Do not use JavaScript callbacks, HTML links in labels or custom renderer setting
 
 Follow the [proof standard](proof-of-work.md): local, Docker only if needed,
 then mandatory CI on the published head. Choose commands from the target
-repository's validation guidance and package/build configuration. For edits in
-`1000lines/symphony-example`, commands come from the tooling checkout's
-[package.json](../../../package.json) (`$SYMPHONY_TOOLING_ROOT/package.json`).
-Run locked `node_modules/.bin/prettier --check <changed-markdown-paths>` and
-`git diff --check` from that checkout for template/docs edits; run relevant
-existing workflow tests for guidance changes and npm/Node tests for implementation
-changes. Other target repositories use their own commands. Do not copy the
+repository's validation guidance and package/build configuration. Run validation
+from the **target issue workspace**, with paths pointing to the target's files.
+For `1000lines/symphony-example`, use its [package.json](../../../package.json):
+run locked `node_modules/.bin/prettier --check <changed-markdown-paths>` and
+`git diff --check` for template/docs edits, relevant existing workflow tests for
+guidance changes, and npm/Node tests for implementation changes. If the locked
+formatter is available only in the shared tooling checkout, invoke
+`"$SYMPHONY_TOOLING_ROOT/node_modules/.bin/prettier" --check <changed-markdown-paths>`
+while staying in the target workspace. `git diff --check` must also inspect the
+target working tree, not the tooling checkout. Other target repositories use
+their own commands. Do not copy the
 reference repository's Elixir command. Record commands, outcomes, tested SHA,
 CI run links, material limitations and the next handoff in Test plan and the
 Codex workpad. Pending or stale checks are not passes.
