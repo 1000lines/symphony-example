@@ -60,10 +60,14 @@ function fixture() {
               item.app.id === input.app_id &&
               item.name === input.check_name
           ),
-    graphql: async (_, input) => {
-      ready.push(input);
-      pr.draft = false;
-    },
+    graphql: async () => assert.fail("The Cadence App cannot ready drafts"),
+  };
+  const readyGraphql = async (_, input) => {
+    ready.push(input);
+    pr.draft = false;
+    return {
+      markPullRequestReadyForReview: { pullRequest: { isDraft: false } },
+    };
   };
   const verdict = (state = "APPROVED", sha = head) =>
     reviews.push({
@@ -79,6 +83,7 @@ function fixture() {
       ranReview: "true",
       baseline: 0,
       reviewer: "cadence",
+      readyGraphql,
       ...options,
     });
   return { github, checks, reviews, pr, ready, verdict, finish };
@@ -207,41 +212,104 @@ test("a push/closure during review or immediately before ready cancels publicati
   }
 });
 
-test("denied readiness preserves the fresh approval and failure through recovery", async () => {
-  const f = fixture();
-  await queueCheck(f.github, request(), appId);
-  f.verdict();
-  const denied = new Error("Resource not accessible by integration");
-  f.github.graphql = async () => {
-    throw denied;
-  };
-  await assert.rejects(f.finish(), (error) => error === denied);
-  const check = f.checks[0];
-  assert.equal(check.status, "completed");
-  assert.equal(check.conclusion, "failure");
-  assert.equal(check.details_url, f.reviews[0].html_url);
-  assert.match(check.output.summary, /Review approved; marking ready failed/);
-  assert.match(check.output.summary, /Resource not accessible by integration/);
-  assert.ok(
-    check.output.summary.includes(`[Review](${f.reviews[0].html_url})`)
-  );
-  assert.ok(
-    check.output.summary.includes(
-      `[Failed operation: markPullRequestReadyForReview](${request().runUrl})`
-    )
-  );
-  assert.doesNotMatch(
-    check.output.summary,
-    /No clean verdict|Ready for human review/
-  );
-  const published = structuredClone(check);
-  await recoverCheck(f.github, context, request(), appId, {
-    id: 10,
-    run_attempt: 1,
-    conclusion: "failure",
-  });
-  assert.deepEqual(check, published);
-  assert.equal(f.pr.draft, true);
+test("denied readiness completes a failed advisory check and reports the exact operator handoff", async () => {
+  // GraphQL permission errors can use HTTP 200; REST-style status alone is insufficient.
+  for (const error of [
+    Object.assign(new Error("Resource not accessible by integration"), {
+      errors: [{ type: "FORBIDDEN" }],
+    }),
+    { status: 403, message: "readiness denied" },
+  ]) {
+    const f = fixture();
+    await queueCheck(f.github, request(), appId);
+    f.verdict();
+    const outcome = await f.finish(request(), {
+      readyGraphql: async () => {
+        throw error;
+      },
+    });
+    assert.equal(f.checks[0].status, "completed");
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.equal(f.checks[0].details_url, f.reviews[0].html_url);
+    const check = f.checks[0];
+    assert.match(check.output.summary, /Review approved; marking ready failed/);
+    assert.ok(check.output.summary.includes(error.message));
+    assert.ok(
+      check.output.summary.includes(`[Review](${f.reviews[0].html_url})`)
+    );
+    assert.ok(
+      check.output.summary.includes(
+        `[Failed operation: markPullRequestReadyForReview](${request().runUrl})`
+      )
+    );
+    assert.doesNotMatch(
+      check.output.summary,
+      /No clean verdict|Ready for human review/
+    );
+    assert.match(
+      outcome.handoffError,
+      /markPullRequestReadyForReview was denied for owner\/repo#3 using repository GITHUB_TOKEN/
+    );
+    assert.match(
+      outcome.handoffError,
+      /contents:write and pull-requests:write/
+    );
+    assert.match(f.checks[0].output.summary, /rerun all jobs/);
+    assert.match(
+      f.checks[0].output.summary,
+      /shared Cadence App grants unchanged/
+    );
+    assert.equal(f.pr.draft, true);
+    const published = structuredClone(check);
+    await recoverCheck(f.github, context, request(), appId, {
+      id: 10,
+      run_attempt: 1,
+      conclusion: "failure",
+    });
+    assert.deepEqual(check, published);
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.match(f.checks[0].output.summary, /was denied/);
+  }
+});
+
+test("non-Error readiness failures preserve a readable diagnostic", async () => {
+  for (const error of ["readiness denied", null]) {
+    const f = fixture();
+    await queueCheck(f.github, request(), appId);
+    f.verdict();
+    const outcome = await f.finish(request(), {
+      readyGraphql: async () => {
+        throw error;
+      },
+    });
+    assert.ok(outcome.handoffError);
+    assert.equal(f.checks[0].conclusion, "failure");
+    assert.ok(f.checks[0].output.summary.includes(`\n\n${String(error)}\n\n`));
+    assert.equal(f.pr.draft, true);
+  }
+});
+
+test("missing readiness identity or an unconfirmed mutation never claims success or uses the App", async () => {
+  for (const readyGraphql of [
+    undefined,
+    async () => undefined,
+    async () => ({
+      markPullRequestReadyForReview: { pullRequest: { isDraft: true } },
+    }),
+    async () => {
+      throw new Error("connection lost");
+    },
+  ]) {
+    const f = fixture();
+    await queueCheck(f.github, request(), appId);
+    f.verdict();
+    const outcome = await f.finish(request(), { readyGraphql });
+    assert.equal(f.checks[0].status, "completed");
+    assert.equal(outcome.conclusion, "failure");
+    assert.match(outcome.handoffError, /was not confirmed/);
+    assert.equal(f.pr.draft, true);
+    assert.equal(f.ready.length, 0);
+  }
 });
 
 test("recovery without verified publication never infers approval from reviews", async () => {
@@ -322,6 +390,37 @@ test("workflow puts recoverable admission before review queue and serializes onl
       "write"
     );
   assert.match(accept.if, /github.ref == 'refs\/heads\/main'/);
+  assert.match(finish.if, /github.ref == 'refs\/heads\/main'/);
+  assert.deepEqual(finish.permissions, {
+    contents: "write",
+    "pull-requests": "write",
+  });
+  const appToken = finish.steps.find((step) => step.id === "app-token").with;
+  assert.equal(appToken["permission-pull-requests"], "read");
+  assert.equal(appToken["permission-contents"], undefined);
+  assert.equal(appToken["permission-workflows"], undefined);
+  const publication = finish.steps.find((step) => step.env?.CHECK_REQUEST);
+  assert.equal(
+    publication.with["github-token"],
+    "${{ steps.app-token.outputs.token }}"
+  );
+  assert.equal(publication.env.HANDOFF_TOKEN, "${{ github.token }}");
+  assert.match(
+    publication.with.script,
+    /new github.constructor\(\{ auth: process.env.HANDOFF_TOKEN/
+  );
+  assert.match(publication.with.script, /readyGraphql: handoffGithub.graphql/);
+  assert.match(
+    publication.with.script,
+    /core.setFailed\(outcome.handoffError\)/
+  );
+  for (const name of ["cadence-ai-review-events", "cadence-ai-review"]) {
+    const caller = load(name);
+    assert.equal(caller.jobs.review.permissions.contents, "write");
+    assert.equal(caller.jobs.review.permissions["pull-requests"], "write");
+    assert.equal(caller.permissions.contents, "read");
+  }
+  assert.equal(load("cadence-ai-review-trigger").permissions.contents, "read");
   const cleanup = load("cadence-review-check-cleanup");
   assert.deepEqual(cleanup.on.workflow_run.types, ["completed"]);
   assert.equal(

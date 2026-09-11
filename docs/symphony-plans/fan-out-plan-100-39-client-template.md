@@ -14,10 +14,13 @@ linear_issue_labels: [pink]
 github_pr_labels: [pink, symphony]
 ```
 
-Proposed September 11, 2026 for human review. This ticket publishes a plan only.
-[100-40](https://linear.app/1000lines/issue/100-40) applies it only after Jeremy
-approves and merges this plan and 100-39 is Done. No downstream issue exists yet
-except the reused 100-43. Payload keys below are placeholders, never Linear IDs.
+Approved by Jeremy and merged September 11, 2026 in [PR #34](https://github.com/1000lines/symphony-example/pull/34)
+at `873f511aea3e1d858e216d1a890ed1cd9a709d61`; 100-39 is Done.
+[100-40](https://linear.app/1000lines/issue/100-40) created the thirteen tasks,
+verified all seventeen direct blocker relations, then activated the set.
+[Fan-out record and branch mapping](client-template/fan-out-100-40.md) links
+the live issues. Payload keys remain stable manifest keys; graph labels now
+carry the mapped Linear identifiers. Existing 100-43 retains Misc/blue and Done.
 
 The result is a small client for Jeremy's shared host: build in the example,
 publish the template and workflows separately, run the template repository as
@@ -170,20 +173,20 @@ integration, real adoption and consumer-aware retirement.
 ```mermaid
 %% symphony-dag/v1
 flowchart LR
-  I["Round 1: CT-I · Review exact client-copy manifest and export lists"]
-  Q["Round 1: CT-Q · Define seven answers and safe delimiters independently"]
-  CHECK["Round 1: 100-43 · Reuse accepted advisory check and ready handoff"]
-  M["Round 2: CT-M · Straight copy of every listed file in its own PR"]
-  C["Round 2: CT-C · Support native Docker remote CI and portable config"]
-  R["Round 2: CT-R · Add reusable explicit-secret Codex and Claude review"]
-  T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
-  L["Round 4: CT-L · Add late CI and Codex parts before release"]
-  O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
-  U["Round 5: CT-U · Publish template alpha and instantiate its root client"]
-  V["Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
-  F["Round 6: CT-F · Move template and root callers to workflow alpha and prove root use"]
-  A["Round 7: CT-A · Adopt published pair in example and prove live paths"]
-  Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
+  I["100-47 · Round 1: CT-I · Review exact client-copy manifest and export lists"]
+  Q["100-50 · Round 1: CT-Q · Define seven answers and safe delimiters independently"]
+  CHECK["100-43 · Round 1: Reuse accepted advisory check and ready handoff"]
+  M["100-51 · Round 2: CT-M · Straight copy of every listed file in its own PR"]
+  C["100-48 · Round 2: CT-C · Support native Docker remote CI and portable config"]
+  R["100-49 · Round 2: CT-R · Add reusable explicit-secret Codex and Claude review"]
+  T["100-52 · Round 3: CT-T · Convert copied files into initial template in its own PR"]
+  L["100-53 · Round 4: CT-L · Add late CI and Codex parts before release"]
+  O["100-54 · Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
+  U["100-55 · Round 5: CT-U · Publish template alpha and instantiate its root client"]
+  V["100-56 · Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
+  F["100-57 · Round 6: CT-F · Move template and root callers to workflow alpha and prove root use"]
+  A["100-58 · Round 7: CT-A · Adopt published pair in example and prove live paths"]
+  Z["100-59 · Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
   I --> M
   I --> C
   I --> R
@@ -204,6 +207,9 @@ flowchart LR
 ```
 
 [Standalone matching graph](fan-out-plan-100-39-client-template.mmd).
+Click directives are omitted because the existing shared DAG parser rejects them
+as malformed Mermaid. Identifier labels remain in both graph copies; clickable
+issue links are in the [fan-out record](client-template/fan-out-100-40.md).
 
 ## Manifest and branch declarations
 
@@ -486,8 +492,9 @@ edges:
 
 Resolve each key to its actual issue UUID after creation/reuse; then submit exactly
 `{issueId: blockerUUID, relatedIssueId: blockedUUID, type: "blocks"}`. This table
-and the graph/manifest have the same seventeen direct edges. There are no live UUIDs
-for future tasks yet; do not submit a placeholder or reverse an endpoint.
+and the graph/manifest have the same seventeen direct edges. The
+[fan-out record](client-template/fan-out-100-40.md) resolves their live issues;
+do not submit a placeholder or reverse an endpoint.
 
 | Source    | issueId (blocker key) | relatedIssueId (blocked key) | type     |
 | --------- | --------------------- | ---------------------------- | -------- |

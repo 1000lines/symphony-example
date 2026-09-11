@@ -90,6 +90,11 @@ jobs:
 
   review:
     needs: resolve
+    # Permit the callee's finish job to ready drafts with this repository token.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:

@@ -747,10 +747,15 @@ jobs:
   finish:
     name: "Publish Cadence result for PR #${{ inputs.pr_number || github.event.pull_request.number }}"
     needs: [accept, review]
-    if: always() && needs.accept.outputs.check_id != ''
+    if: always() && github.ref == 'refs/heads/main' && needs.accept.outputs.check_id != ''
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # GitHub gates draft readiness on contents:write. Limit it to this trusted
+    # repository job; the shared Cadence App still only publishes checks.
+    permissions:
+      contents: write
+      pull-requests: write
     concurrency:
       group: cadence-check-publication-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
@@ -769,7 +774,7 @@ jobs:
           private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-pull-requests: write
+          permission-pull-requests: read
           permission-checks: write
       - name: Finish advisory check and hand clean drafts to humans
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
@@ -778,12 +783,17 @@ jobs:
           REVIEW_RESULT: ${{ needs.review.result }}
           RAN_REVIEW: ${{ needs.review.outputs.ran_review }}
           REVIEW_BASELINE: ${{ needs.review.outputs.baseline }}
+          HANDOFF_TOKEN: ${{ github.token }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const { finishCheck } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
-            await finishCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}', {
+            const handoffGithub = new github.constructor({ auth: process.env.HANDOFF_TOKEN, baseUrl: process.env.GITHUB_API_URL });
+            const outcome = await finishCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}', {
               result: process.env.REVIEW_RESULT, ranReview: process.env.RAN_REVIEW,
               baseline: process.env.REVIEW_BASELINE === '' ? undefined : Number(process.env.REVIEW_BASELINE),
               reviewer: process.env.CADENCE_REVIEWER,
+              readyGraphql: handoffGithub.graphql,
             });
+            if (outcome) await core.summary.addRaw(`${outcome.summary}\n`).write();
+            if (outcome?.handoffError) core.setFailed(outcome.handoffError);
