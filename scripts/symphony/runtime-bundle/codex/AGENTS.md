@@ -31,11 +31,9 @@ Put material technical objections and accepted tradeoffs in the PR body being
 merged, alongside the human decision. Record them and proceed; they do not
 require a separate approval round.
 
-When feedback changes the approach or plan boundaries, use the installed
-`symphony-replan` skill before implementing against the old criteria. It may
-keep the current ticket/PR, amend related tickets, or prepare a replacement
-plan. Preserve unresolved feedback across workpad updates and branch rewrites;
-an old comment does not become resolved merely because the workpad is newer.
+Use `symphony-replan` for changed plans: apply small node changes directly;
+larger changes get a replanning ticket and dependent fan-out ticket using the
+existing templates. Record the decision and links; preserve unresolved feedback.
 
 ## Questions And Assumptions
 

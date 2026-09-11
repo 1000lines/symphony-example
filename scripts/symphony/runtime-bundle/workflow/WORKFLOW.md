@@ -340,12 +340,10 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   reviewer-facing clarity improvements.
 - Before returning to review, update the Codex workpad review-comment ledger so
   incoming, addressed, deferred, and blocked comments are each accounted for.
-- When human feedback changes the approach, boundaries, or accepted plan,
-  use the installed `symphony-replan` skill before coding against old criteria.
-  Keep a sound ticket/PR when replacing its internals is sufficient; otherwise
-  amend ownership and dependencies, account for merged work, and create only
-  the authorized follow-up work. Carry unresolved comments forward even when
-  they predate the latest workpad update.
+- For changed plans, use `symphony-replan`: do small node additions, deletions,
+  or splits directly, adding a Linear ticket if needed. For larger changes,
+  create a replanning ticket from the planning template and a dependent fan-out
+  ticket. Preserve unresolved feedback.
 - A clear design instruction from a human with repository write access is an
   authorized decision. Minute it, amend affected plan/ticket text, and implement
   and commit. Do not wait for a named design owner, the original author, or

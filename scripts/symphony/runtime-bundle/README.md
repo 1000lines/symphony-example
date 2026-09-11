@@ -59,15 +59,11 @@ Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
 
 ## Human feedback and replanning
 
-The installed `symphony-replan` skill handles human comments that change an
-approach or accepted plan. It uses the shared
-[replanning guide](../../../docs/engineering/symphony/replanning.md) and a
-revision template in the pinned workpad. It distinguishes replacing a ticket's
-implementation from changing ticket boundaries, accounts for running and merged
-work, and preserves unresolved feedback across rewrites. Existing GitHub event
-routing still delivers ordinary human comments; no new verdict syntax or
-controller state is introduced. Install the accepted runtime bundle and workflow
-to activate these worker instructions on an existing host.
+The installed `symphony-replan` skill follows the
+[replanning guide](../../../docs/engineering/symphony/replanning.md): apply small
+node changes directly; create a replanning ticket and dependent fan-out ticket
+for larger changes, using the existing templates. Install the accepted runtime
+bundle and workflow to activate these instructions on an existing host.
 
 ## Supplying host settings
 
