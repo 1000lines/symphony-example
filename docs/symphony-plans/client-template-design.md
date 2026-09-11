@@ -21,14 +21,17 @@ override or planning-seed `mature` before human approval and merge.
 Give an existing repository a small client for Jeremy's shared Symphony host.
 Participants install no host. Build the template in
 `templates/symphony-client/`, publish the reviewed contents as the public
-`1000lines/symphony-client-template`, then prove the published template by applying
+`1000lines/symphony-client-template`, and develop reusable workflows initially in
+`symphony-example`. Near the end of the project, move those workflows and their
+required helpers into public `1000lines/symphony-client-workflows` (working name).
+Publish a template ref pinned to that workflow source, then prove it by applying
 it to an isolated `symphony-example` checkout and reviewing the adoption PR.
 Remove the staging directory only after successful extraction and adoption.
 
 The [project brief](https://linear.app/1000lines/project/symphony-client-copier-template-0b2d70d81c4f)
 narrows the wider September 12 MVP to the template, necessary shared-workflow
-compatibility changes, publication, and real self-adoption proof. Three participant
-repos, concurrent host operation and the complete `onboard <repo-url>` command
+compatibility changes, both repository publications, and real self-adoption proof.
+Three participant repos, concurrent host operation and the complete `onboard <repo-url>` command
 belong to the parent MVP; this project documents their client interface.
 
 Out of scope: Terraform, per-user provisioning, rebuilding the shared host,
@@ -42,15 +45,16 @@ dormant Codex controller or copy the entire tooling repository into clients.
 All required inputs below were read successfully on September 11. No required
 source is unavailable. `orc-app` and Jeremy's Downloads are not prerequisites.
 
-| Input                                                                                                                                                        | Revision or evidence                                                                                                                                                                   | Design consequence                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| [100-38](https://linear.app/1000lines/issue/100-38) and full project brief                                                                                   | Linear GraphQL; project updated `2026-09-11T12:46:33.717Z`                                                                                                                             | Deliver design only; small template, extraction and adoption; human merges.                                         |
-| [Hackathon MVP scope — client-template source](https://linear.app/1000lines/document/hackathon-mvp-scope-client-template-source-c5a644291330)                | Full Linear document; updated `2026-09-11T12:47:03.100Z`                                                                                                                               | Exact questions/secrets, provider selection, fork/direct paths and credential restriction.                          |
-| [Required repository baseline](https://github.com/1000lines/symphony-example/tree/3de96c9f739d732cc7efd498225b4444b547cc57)                                  | Workflow guidance, native review/ingress/handoff/wakeup workflows, config and runtime `WORKFLOW.md` read; also inspected selected `main` at `0487f8d17586e2c21492b0e78bf4fefdd3d51986` | Current native workflows are the starting point. Later accepted changes concern host credential installation/setup. |
-| [PR #29](https://github.com/1000lines/symphony-example/pull/29), [PR #24](https://github.com/1000lines/symphony-example/pull/24)                             | #29 merged; #24 closed, unmerged                                                                                                                                                       | Internal inheritance workaround is not the client interface; obsolete controller work is not a dependency.          |
-| Repository README, `.github/README.md`, `.github/workflows/AGENTS.md`, `.symphony.cfg.json`, package files, runtime workflow and existing config/review code | Selected `main` above                                                                                                                                                                  | Preserve native authorization, feedback, CI and human acceptance; use existing tooling.                             |
-| [Copier configuration](https://copier.readthedocs.io/en/latest/configuring/)                                                                                 | Official documentation read                                                                                                                                                            | Root `copier.yml`, `_subdirectory`, one template per published Git repository, answers with source/ref metadata.    |
-| [GitHub reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)                                                    | Official secret/input and nested-call rules read                                                                                                                                       | Named secrets pass at every call boundary; environment secrets do not originate in the workflow-source repository.  |
+| Input                                                                                                                                                        | Revision or evidence                                                                                                                                                                   | Design consequence                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [100-38](https://linear.app/1000lines/issue/100-38) and full project brief                                                                                   | Linear GraphQL; project updated `2026-09-11T12:46:33.717Z`                                                                                                                             | Deliver design only; small template, extraction and adoption; human merges.                                                                      |
+| [Hackathon MVP scope — client-template source](https://linear.app/1000lines/document/hackathon-mvp-scope-client-template-source-c5a644291330)                | Full Linear document; updated `2026-09-11T12:47:03.100Z`                                                                                                                               | Exact questions/secrets, provider selection, fork/direct paths and credential restriction.                                                       |
+| [Jeremy's workflow-repository decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5634828727)                                       | September 11, 2026, 13:03 UTC; GitHub permission API confirms `jeremycarroll` has `admin` access                                                                                       | Start in `symphony-example`, then extract workflows into a separate repository near project end; supersedes permanent seed-repository ownership. |
+| [Required repository baseline](https://github.com/1000lines/symphony-example/tree/3de96c9f739d732cc7efd498225b4444b547cc57)                                  | Workflow guidance, native review/ingress/handoff/wakeup workflows, config and runtime `WORKFLOW.md` read; also inspected selected `main` at `0487f8d17586e2c21492b0e78bf4fefdd3d51986` | Current native workflows are the starting point. Later accepted changes concern host credential installation/setup.                              |
+| [PR #29](https://github.com/1000lines/symphony-example/pull/29), [PR #24](https://github.com/1000lines/symphony-example/pull/24)                             | #29 merged; #24 closed, unmerged                                                                                                                                                       | Internal inheritance workaround is not the client interface; obsolete controller work is not a dependency.                                       |
+| Repository README, `.github/README.md`, `.github/workflows/AGENTS.md`, `.symphony.cfg.json`, package files, runtime workflow and existing config/review code | Selected `main` above                                                                                                                                                                  | Preserve native authorization, feedback, CI and human acceptance; use existing tooling.                                                          |
+| [Copier configuration](https://copier.readthedocs.io/en/latest/configuring/)                                                                                 | Official documentation read                                                                                                                                                            | Root `copier.yml`, `_subdirectory`, one template per published Git repository, answers with source/ref metadata.                                 |
+| [GitHub reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)                                                    | Official secret/input and nested-call rules read                                                                                                                                       | Named secrets pass at every call boundary; environment secrets do not originate in the workflow-source repository.                               |
 
 Observed gaps, not completed features: the current review callee requires a bot
 PAT and Anthropic key, callers use `secrets: inherit`, privileged jobs assume
@@ -109,16 +113,40 @@ Apply into a clean, isolated existing checkout and inspect collisions before
 overwriting. Merge existing config/instruction content explicitly in the adoption
 PR. Preserve application files and existing CI. Generated caller filenames above
 are distinct from central reusable body filenames: self-adoption must not overwrite
-the source workflows. Eliminate duplicate native triggers when replacing old
-callers; preserve reusable entry points and the existing manual review path.
+the source workflows during staging. After workflow extraction under D3, adoption
+uses the new public source. Eliminate duplicate native triggers when replacing old
+callers; preserve the existing manual review path and unrelated seed workflows.
 
 ### D3 — Public reusable code and trusted execution
 
-Keep workflow implementations and their helpers in `1000lines/symphony-example`.
+Develop workflow implementations and their helpers in `1000lines/symphony-example`
+first, then extract the reusable client-facing workflows and required helpers to
+public `1000lines/symphony-client-workflows` near project end. This follows
+[Jeremy's September 11 decision](https://github.com/1000lines/symphony-example/pull/30#issuecomment-5634828727)
+and supersedes the earlier brief/seed instruction to retain their implementations
+in `symphony-example` permanently. The name is a working default; verify availability
+at publication. The template repository contains no workflow implementations.
+
 The template contains literal reviewed full commit refs in generated `uses`
 declarations; changing the workflow ref is a template release operation, not
 another question. Central workflows declare `workflow_call` inputs/secrets.
 Nested cross-repository calls obey the same explicit boundary.
+
+Record the reviewed source commit, copied workflow/helper paths, exclusions,
+license/attribution and resulting published ref with existing Git/diff tools.
+Move only dependencies needed by the reusable entry points, including their
+instructions/tests; keep host installers and seed-specific workflows in the seed.
+Repoint helper checkouts and nested calls to the reviewed new source, publish a
+template ref with those pins, then run final self-adoption and real review proof
+against that pair of published refs. Earlier Codex proof in `symphony-example`
+reduces risk but does not prove the extracted workflow path.
+
+Keep the original workflow paths usable until current callers have migrated and
+replacement runs pass. Remove duplicate bodies only after checking those consumers;
+preserve published historical refs and any still-needed forwarding entry points.
+Staging-folder deletion does not authorize deleting unrelated central tooling.
+The tradeoff is one additional publication and ref migration; the benefit is a
+dedicated reusable-workflow source independent of the example and template.
 
 Retain native ingress → trusted default-branch review/handoff. Separate checkout
 of pinned central tooling from the target's config/source context; a remote
@@ -250,45 +278,48 @@ These are project acceptance targets, not results claimed by this design ticket.
 The planner assigns implementation ownership and maps each ID to its artifact and
 proof using existing tooling; it must preserve the stated boundaries.
 
-| ID   | Observable acceptance                                                                                                                                                                                | Evidence / responsible role                                                                                                                                                                                                                                     |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AC1  | Generated tree contains only justified client assets and the eight answers; secrets and host/application code are absent.                                                                            | Template implementer: file inventory, rendered diff and inspection of answers.                                                                                                                                                                                  |
-| AC2  | Generation works for at least two repository slugs, two default branches (including one other than `main`) and differing commands/Linear keys; unrelated existing files survive.                     | Template implementer: isolated render fixtures and collision/adoption diffs; correctly escaped GitHub expressions and serialized YAML/JSON.                                                                                                                     |
-| AC3  | Central helpers execute from the reviewed source ref; thin callers use only named secrets and nonsecret inputs; CI and ingress receive no reviewer secrets.                                          | Workflow implementer: existing workflow tests plus explicit-call inspection; retained trusted-ref/author/stale-head/terminal/loop cases.                                                                                                                        |
-| AC4  | The four provider cases match D6; both providers publish the same current-head verdict contract as the configured App, without a bot PAT.                                                            | Workflow implementer: proportional selection/output/publication tests, including malformed output and provider failure; retain Claude-only coverage.                                                                                                            |
-| AC5  | A real PR receives a Codex Cadence review through generated callers and explicit target-secret delivery.                                                                                             | Self-adoption owner: run/attempt, target/head, App identity, provider execution, verdict, matching Cadence workpad and feedback/handoff evidence. Mock selection or source presence is insufficient. Prioritize this Friday risk before participant onboarding. |
-| AC6  | Published template is usable from its public reviewed ref with reproducible staging-to-root mapping, license/provenance and minimal usage/credential docs.                                           | Publication owner: repository/ref readback, tree comparison and actual render from that ref. Creation rights or name conflicts gate publication only.                                                                                                           |
-| AC7  | Adoption PR renders from the published source, preserves source reusable bodies and application files, retains Copier source/ref metadata, and removes the staging folder after extraction succeeds. | Adoption owner: small reviewed diff, exact template/source refs, required current-head CI and AC5 proof; Jeremy owns merge.                                                                                                                                     |
-| AC8  | Generated config loads through existing target/host readers with the project key; old team-only configs still work.                                                                                  | Compatibility owner: existing-reader tests and installed-reader/version readback before activation. No parallel config validator or host rebuild.                                                                                                               |
-| AC9  | Direct App/secret instructions work; fork delivery is either demonstrated under OD1's restriction or explicitly recorded as an outstanding parent-MVP dependency.                                    | Onboarding owner/Jeremy: permission/secret-name readbacks without values, operation results and OD1 decision. Do not claim complete fork onboarding while unresolved.                                                                                           |
-| AC10 | Required source reads, current-head CI and review evidence are recorded; every target's owner approves merges.                                                                                       | Delivery owners: draft PRs with business purpose/linked progress diagram, labels `pink` and `symphony`, local → Docker if needed → CI evidence; human acceptance remains separate.                                                                              |
+| ID   | Observable acceptance                                                                                                                                                                                                                     | Evidence / responsible role                                                                                                                                                                                                                                       |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC1  | Generated tree contains only justified client assets and the eight answers; secrets and host/application code are absent.                                                                                                                 | Template implementer: file inventory, rendered diff and inspection of answers.                                                                                                                                                                                    |
+| AC2  | Generation works for at least two repository slugs, two default branches (including one other than `main`) and differing commands/Linear keys; unrelated existing files survive.                                                          | Template implementer: isolated render fixtures and collision/adoption diffs; correctly escaped GitHub expressions and serialized YAML/JSON.                                                                                                                       |
+| AC3  | Central helpers execute from the reviewed source ref; thin callers use only named secrets and nonsecret inputs; CI and ingress receive no reviewer secrets.                                                                               | Workflow implementer: existing workflow tests plus explicit-call inspection; retained trusted-ref/author/stale-head/terminal/loop cases.                                                                                                                          |
+| AC4  | The four provider cases match D6; both providers publish the same current-head verdict contract as the configured App, without a bot PAT.                                                                                                 | Workflow implementer: proportional selection/output/publication tests, including malformed output and provider failure; retain Claude-only coverage.                                                                                                              |
+| AC5  | A real PR receives a Codex Cadence review through generated callers pinned to the extracted workflow repository, with explicit target-secret delivery.                                                                                    | Self-adoption owner: published template/workflow refs, run/attempt, target/head, App identity, provider execution, verdict, matching Cadence workpad and feedback/handoff evidence. Prioritize an early Friday run; repeat after migration for final proof.       |
+| AC6  | Published template is usable from its public reviewed ref with reproducible staging-to-root mapping, license/provenance and minimal usage/credential docs.                                                                                | Publication owner: repository/ref readback, tree comparison and actual render from that ref. Creation rights or name conflicts gate publication only.                                                                                                             |
+| AC7  | Adoption PR renders from the published template pinned to the new workflow repository, preserves application files and working CI/review/manual paths, retains Copier metadata, and removes the staging folder after extraction succeeds. | Adoption owner: small reviewed diff, exact template/workflow refs, required current-head CI and AC5 proof; obsolete bodies are removed only under D3's consumer checks. Jeremy owns merge.                                                                        |
+| AC8  | Generated config loads through existing target/host readers with the project key; old team-only configs still work.                                                                                                                       | Compatibility owner: existing-reader tests and installed-reader/version readback before activation. No parallel config validator or host rebuild.                                                                                                                 |
+| AC9  | Direct App/secret instructions work; fork delivery is either demonstrated under OD1's restriction or explicitly recorded as an outstanding parent-MVP dependency.                                                                         | Onboarding owner/Jeremy: permission/secret-name readbacks without values, operation results and OD1 decision. Do not claim complete fork onboarding while unresolved.                                                                                             |
+| AC10 | Required source reads, current-head CI and review evidence are recorded; every target's owner approves merges.                                                                                                                            | Delivery owners: draft PRs with business purpose/linked progress diagram, labels `pink` and `symphony`, local → Docker if needed → CI evidence; human acceptance remains separate.                                                                                |
+| AC11 | Reusable workflows and their minimum dependencies are published in a separate public workflow repository; final template callers, nested calls and helper checkouts use reviewed refs there.                                              | Workflow publication owner: source-to-destination mapping, license/provenance, repository/ref/access readback, relevant existing tests and real consumer runs. No second maintained implementation in the template; retain old entry points only as needed by D3. |
 
 ## Execution inputs and planning handoff
 
-| Input or verification                                                                 | Owner                                                     | Only the dependent action                                                                  |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Published repo availability, creation/push rights and public workflow access          | Publication owner; Jeremy for unavailable admin operation | Repository publication/access; keep independent local template work moving.                |
-| Reviewed workflow/template refs and maintained Action versions                        | Workflow/template implementers                            | Release/pinning and compatibility validation, not additional product questions.            |
-| App IDs/slugs, installations/grants, variables and named secrets                      | Onboarding owner and target owner                         | Live authentication/review; use observed values, never fixtures as deployment proof.       |
-| Required CI check names, workflow/App provenance, Actions enablement and branch rules | Target owner with delivery implementer                    | Exact-target acceptance/activation; seed's `CI Required` is not a universal adopter check. |
-| Current host config-reader version and bounded compatibility rollout                  | Jeremy / host operator                                    | Activation of configs using `linear.projectKey`; no wider host rebuild.                    |
-| Provider keys, rate limits for three simultaneous targets and event-time revocation   | Jeremy and each key owner; parent-MVP coordination        | Live provider runs/concurrency readiness; no dependence on sponsor credits arriving.       |
-| Fork credential choice and explicit delivery proof                                    | Jeremy / parent onboarding owner                          | Fork onboarding completion only (OD1).                                                     |
+| Input or verification                                                                 | Owner                                                      | Only the dependent action                                                                  |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Both published repo names, creation/push rights and public workflow access            | Publication owners; Jeremy for unavailable admin operation | Publication/access for the affected repository; keep independent staging work moving.      |
+| Reviewed workflow/template refs and maintained Action versions                        | Workflow/template implementers                             | Release/pinning and compatibility validation, not additional product questions.            |
+| App IDs/slugs, installations/grants, variables and named secrets                      | Onboarding owner and target owner                          | Live authentication/review; use observed values, never fixtures as deployment proof.       |
+| Required CI check names, workflow/App provenance, Actions enablement and branch rules | Target owner with delivery implementer                     | Exact-target acceptance/activation; seed's `CI Required` is not a universal adopter check. |
+| Current host config-reader version and bounded compatibility rollout                  | Jeremy / host operator                                     | Activation of configs using `linear.projectKey`; no wider host rebuild.                    |
+| Provider keys, rate limits for three simultaneous targets and event-time revocation   | Jeremy and each key owner; parent-MVP coordination         | Live provider runs/concurrency readiness; no dependence on sponsor credits arriving.       |
+| Fork credential choice and explicit delivery proof                                    | Jeremy / parent onboarding owner                           | Fork onboarding completion only (OD1).                                                     |
 
 No other material product decision remains open. The planner may decompose work
 without choosing a fork credential architecture: carry OD1 as the named external
 dependency with the restricted effect above. Inventory/rendering does not depend
-on live credentials; published-ref adoption requires successful publication;
-staging removal requires successful extraction and reviewed adoption. These are
-artifact prerequisites, not a ticket list or DAG.
+on live credentials; final published-ref adoption requires workflow publication
+and a template release pinned to it. Staging removal requires successful template
+extraction and reviewed adoption; obsolete workflow-body removal additionally
+requires consumer migration under D3. These are artifact prerequisites, not a
+ticket list or DAG.
 
 [100-39](https://linear.app/1000lines/issue/100-39) owns the reviewed decomposition,
 file/resource ownership and dependency graph; [100-40](https://linear.app/1000lines/issue/100-40)
 owns fan-out. Both consume this merged document and the required sources. Use the
 shared Symphony DAG tooling; do not add a schema or validator for this design.
 Task branches and PRs use `main`; never commit unmerged predecessor work into a
-task branch. Published-template PRs need their own repository access and human
-review, not permission inferred from a seed-repository merge.
+task branch. Published-template and workflow PRs need their own repository access
+and human review, not permission inferred from a seed-repository merge.
 
 For this design ticket, validation is locked Prettier on this Markdown, diff
 whitespace checking, and manual source/acceptance coverage review, followed by
