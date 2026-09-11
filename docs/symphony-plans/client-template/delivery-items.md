@@ -241,7 +241,9 @@ repositories created by this planning ticket.
   `.github/workflows/symphony-client-ci.yml` only if needed,
   `SYMPHONY.md`, `.github/symphony/REVIEW.md`,
   `.github/symphony/cadence-app-manifest.json`, `.symphony.cfg.json`,
-  `.copier-answers.yml`; native event triggers in
+  `.copier-answers.yml`, `.gitattributes`, and the fourteen skill/resource
+  destinations in corrected `client-copy.txt` (relative to `template/`);
+  native event triggers in
   `cadence-ai-review-events.yml`, `cadence-linear-rework.yml`,
   `symphony-linear-wakeups.yml`, `cadence-ai-review-trigger.yml` and
   `cadence-ai-review.yml` and `cadence-review-check-cleanup.yml` under
@@ -272,6 +274,8 @@ repositories created by this planning ticket.
 - **required_actions:** render from CT-F's published Git URL with `--vcs-ref=alpha` into
   an isolated clean checkout. Inspect collisions and merge existing config and
   instruction content explicitly; preserve unrelated file hashes and existing CI.
+  The fourteen copied skill/resource paths already exist in the seed; preserve
+  their existing content or reconcile changes explicitly in the adoption PR.
   Keep Copier source/version answers and record actual resolved template and
   workflow/helper commits under the alpha evidence contract. Delete staging only after extraction and
   successful isolated adoption; human reviews the adoption diff before merge.

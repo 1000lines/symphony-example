@@ -1,4 +1,4 @@
-# CT-M frozen copy input. Repository: https://github.com/1000lines/symphony-example
+# CT-M pinned copy input. Repository: https://github.com/1000lines/symphony-example
 # Existing reviewed source: main / merged PR #43, including accepted PRs #34/#31/#40/#38.
 # Refreshed after Jeremy's PR #41 comment 5637447356; adds client .gitattributes.
 # Each data row is: source-commit mode git-blob-sha1 source-path destination-path
@@ -13,3 +13,20 @@ d5e9692b84c3f338014b964fd9713143fb723b55 100644 45bc24ef9f839bf2c25470b26d78cde4
 d5e9692b84c3f338014b964fd9713143fb723b55 100644 47bb6bfb6ac14a5b80fe18bac8e71b71df38b194 .github/workflows/ci.yml templates/symphony-client/template/.github/workflows/symphony-client-ci.yml
 d5e9692b84c3f338014b964fd9713143fb723b55 100644 183cb1d3056fc6412d7948f2409978c38be59002 .symphony.cfg.json templates/symphony-client/template/.symphony.cfg.json
 d5e9692b84c3f338014b964fd9713143fb723b55 100644 b516bad9ba500fa059ec55580e05a67068876617 .gitattributes templates/symphony-client/template/.gitattributes
+
+# Jeremy's PR #44 comment 5638514034 corrects #46: client skills, not CI exports.
+# Preserve original relative paths and full resource directories in the client.
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 4da117470d40b2a0cd4327f3bdb0ac08352bfd06 .agents/skills/symphony-project-factory/SKILL.md templates/symphony-client/template/.agents/skills/symphony-project-factory/SKILL.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 41362ea82607b7a9a8083f02b75ee9d240e74ba2 .agents/skills/symphony-project-factory/templates/project-description.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/project-description.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 cd30f0d8406dd2567fe15ffead8b834cac317b11 .agents/skills/symphony-project-factory/templates/tickets/requirements-and-design.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/tickets/requirements-and-design.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 6cc331fd8c7e859f1be0a23da87b092123e2ae80 .agents/skills/symphony-project-factory/templates/tickets/plan-project.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/tickets/plan-project.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 bb12b17db6ee64fd845a8bf20e50745c89d6e4d1 .agents/skills/symphony-project-factory/templates/tickets/trigger-fan-out.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/tickets/trigger-fan-out.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 5cc03e60152010cf3d7a589e4c08b751c09a7857 .agents/skills/symphony-project-factory/templates/tickets/broaden-fanout-integration.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/tickets/broaden-fanout-integration.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 79c962720d549a5b8c9949820bdbac8507d776bf .agents/skills/symphony-project-factory/templates/tickets/standup.md templates/symphony-client/template/.agents/skills/symphony-project-factory/templates/tickets/standup.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 9e78011f5f701546f54398c1f3d837732d6c02a7 .agents/skills/linear-graphql/SKILL.md templates/symphony-client/template/.agents/skills/linear-graphql/SKILL.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 aad71dde5bd5174e7371b95bc831d04f52287d1d .agents/skills/linear-graphql/agents/openai.yaml templates/symphony-client/template/.agents/skills/linear-graphql/agents/openai.yaml
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 02dea49a05f7bbcca6b3b4f42b0fa363d49af737 .agents/skills/linear-graphql/scripts/linear-graphql.mjs templates/symphony-client/template/.agents/skills/linear-graphql/scripts/linear-graphql.mjs
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 c39064afb3ae813dff80a489e3ba5f5cbd95d4c5 scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md templates/symphony-client/template/scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 0913ba0a92bc373f47531b2143317f391190c04c docs/engineering/symphony/replanning.md templates/symphony-client/template/docs/engineering/symphony/replanning.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 128a16df116932023860bb86543aba1fa771a958 .agents/skills/karpathy-guidelines/SKILL.md templates/symphony-client/template/.agents/skills/karpathy-guidelines/SKILL.md
+d5e9692b84c3f338014b964fd9713143fb723b55 100644 43d8f77dc3d056ef8f5a118b2551c2b829ef10a4 .agents/skills/karpathy-guidelines/EXAMPLES.md templates/symphony-client/template/.agents/skills/karpathy-guidelines/EXAMPLES.md

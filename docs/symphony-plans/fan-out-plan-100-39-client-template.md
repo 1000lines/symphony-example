@@ -518,6 +518,17 @@ do not submit a placeholder or reverse an endpoint.
 
 ## Decisions
 
+**September 11 client-skill correction:** [Jeremy's PR #44 comment](https://github.com/1000lines/symphony-example/pull/44#issuecomment-5638514034)
+corrects #46's list placement: fourteen skill/resource paths belong in the
+client template, not `ci-export.txt`. CT-M owns the two-list correction,
+inventory/design/item reconciliation and exact 22-file copy in #44. CT-C is
+already merged (#45), so this bounded correction has no concurrent list writer.
+CT-T/L consume the enlarged client tree, CT-U publishes/renders it, CT-O loads
+skills from that client, CT-A preserves existing skill collisions, and CT-V
+excludes the fourteen paths. The fourteen nodes/seventeen hard edges and main/main
+branches remain unchanged. The reviewed source pin is unchanged; human authority
+supersedes the earlier CT-M inventory-edit exclusion for this correction only.
+
 The [September 11, 16:30 reviewer-choice decision on PR #42](https://github.com/1000lines/symphony-example/pull/42#discussion_r3991277811)
 amends D4/D6 and decisions 2/4 below with verified repository admin authority.
 It adds `cadence_reviewer` as the eighth answer and supersedes key-presence

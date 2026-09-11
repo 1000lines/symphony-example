@@ -85,6 +85,15 @@ for approval here. IDs give the planner stable references; they are not tickets.
 
 ### D1 — Minimal client assets and ownership
 
+[Jeremy's September 11, 17:48 UTC correction](https://github.com/1000lines/symphony-example/pull/44#issuecomment-5638514034), with verified
+repository admin authority, adds the fourteen project-factory, Linear GraphQL,
+replan and Karpathy skill/resource files enumerated in
+[client-copy.txt](client-template/client-copy.txt) to the generated client.
+CT-M corrects the mistaken CI-export membership from #46 and copies them exactly;
+CT-T/U convert/publish them as client assets, and CT-O loads them from the client.
+This supersedes the earlier operator-skill exclusion for these selected paths.
+The separate `symphony-onboard` entry point and unattended host profile are unchanged.
+
 Inventory the actual generated tree against these roles before copying files.
 Use the following paths as design defaults. Reuse equivalent existing target
 files through reviewed edits; preserve unrelated content and explain any extra
@@ -106,7 +115,7 @@ generated file in the implementation PR.
 `copier.yml`, usage/credential documentation, license and extraction provenance
 belong to the template repository, outside the rendered subdirectory. Keep usage
 instructions short and link them from target guidance. Do not emit host installers,
-Terraform, AWS configuration, personal skills, application files, shared workflow
+Terraform, AWS configuration, unselected personal skills, application files, shared workflow
 bodies or a Node package merely to make remote workflows run. Onboarding skills
 live in the seed repository under D7, not in every rendered client. In Docker
 mode the client supplies its own suitable Dockerfile; the generic template does
@@ -287,9 +296,10 @@ Deliver onboarding as skills in `symphony-example` initially, following
 Use one small `.agents/skills/symphony-onboard/SKILL.md` entry point for
 `onboard <repo-url>`, with fork/direct procedures in that skill or linked resources.
 Reuse existing repository, GitHub/Linear and planning tools; add only a small
-helper for an actual API gap. Do not build a new orchestration service or copy
-operator skills into the client template. Later relocation of these skills is
-not required by the workflow-repository extraction.
+helper for an actual API gap. Do not build a new orchestration service. The
+fourteen client-session skill/resource paths selected under amended D1 are
+rendered into clients; keep the `symphony-onboard` entry point in the seed.
+Workflow-repository extraction does not relocate those client assets.
 
 The skill supplies the eight answers, records the D8 mode/commands, discovers IDs,
 enables Actions, sets explicit workflow permissions and required CI checks, and
