@@ -191,8 +191,8 @@ approval with notes receives a Cadence re-look without directly waking Linear.
 
 The GitHub wakeup workflow resolves the current PR's ticket from the repository
 team config, using the PR title prefix, then the branch. It gives an Active
-worker up to one minute to finish and otherwise
-leaves Active work alone. Inactive tickets with conflicts move to Active with a
+worker up to one minute to finish and otherwise leaves Active work alone.
+Inactive tickets with conflicts move to Active with a
 Cadence workpad instruction. Pending CI waits in Unhappy with wake:15m; current
 CI completion moves the ticket to Inactive on success or Active on failure.
 Current required external-check failures also move waiting tickets to Active.

@@ -48,6 +48,14 @@ shared tooling available through `SYMPHONY_TOOLING_ROOT`, and review the retaine
 GPT-6 Astra command. Repository-specific hooks remain an operator choice.
 Default hooks are no-ops; required PR labels are verified during publication.
 
+The retained CI profile uses `Unhappy` with `wake:15m`, dispatches `Evaluating`,
+and caps concurrent evaluations at one. Supply `Active`, `Inactive`, `Unhappy`,
+`Evaluating`, and the `wake:15m` label in the configured Linear team before
+enabling CI reconciliation. The GitHub workflow requires the wake label even
+when removing it on success or failure. Reconcile older overrides that still
+disable these states or tell workers to sleep while CI runs; otherwise they
+will not provide the server timer behavior described by the source profile.
+
 For an existing host, deploy the accepted source, refresh `45-runtime-bundle`,
 render `80-config`, and reload the service through the authorized deployment
 procedure. A bundle-only freshness refresh does not re-render the running
@@ -251,17 +259,19 @@ back to the source bundle. A supplied file needs YAML frontmatter with exactly
 one indented numeric `max_concurrent_agents` line and one `command: codex` line
 so the renderer can substitute worker slots and the freshness wrapper.
 
-Configure the supplied workflow's `tracker` team/state/maturity mappings,
-`workspace.root`, clone repository/branch, `hooks`, `codex` command and `server`
-settings for the adopter. The bundled hooks default to `true`; the repository skill selects checkout,
-setup and publication steps after reading the issue/project context. Configure these shell commands in the
-operator's workflow file. Misc routing still has a synthetic team predicate and
-must be assessed before enabling it for another team. These hooks do not define
-a required product language or application CI.
+Configure `tracker` team/state/maturity mappings, `workspace.root`, `hooks`,
+the `codex` command and `server` settings in an operator-owned override as needed.
+The bundled hooks default to `true`; the repository skill selects checkout,
+setup and publication steps after reading the issue/project context. Optional
+misc routing reads `linear.teamKey` from the checkout's `.symphony.cfg.json` and
+accepts `lookup.teamKey` in exported functions; assess its project/color policy
+before enabling it. These hooks do not define a required product language or
+application CI.
 
-Shared review/wakeup helpers choose `Active` first and legacy `Rework` only when
-`Active` is absent; configure these names in the Linear team, not just runtime
-state lists. The DAG parser no longer accepts integration-branch/frontier
+The shared review wake helper chooses `Active` first and legacy `Rework` only
+when `Active` is absent. The CI YAML instead requires the exact states and wake
+label listed in the migration section. Configure these in Linear, not just
+runtime state lists. The DAG parser no longer accepts integration-branch/frontier
 policies. The profile still carries `mature` and maturity state lists: these
 require a compatible external runtime and explicit project policy, not a
 replacement integration queue. Projects that disable maturity must arrange a

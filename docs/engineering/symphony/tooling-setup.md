@@ -124,8 +124,8 @@ former integration queue, workflow and dependency-link scripts are absent. Their
 inputs have no consumer; do not provision them or a `PR Checks` caller for that
 removed automation. DAG validation remains `npm run symphony-dag:check`.
 
-The shared `scripts/linear-issue-wakeup.mjs`, used by review handoff and non-review
-wakeups, selects the Linear team's `Active` state first, then legacy `Rework`
+The shared `scripts/linear-issue-wakeup.mjs` wake helper, used by review handoff
+and the retained standalone non-review bridge, selects `Active`, then legacy `Rework`
 only if `Active` is absent (names are compared case-insensitively). Create one
 of those states in Linear before enabling either route. It preserves terminal
 issues, leaves an issue already in the target state unchanged, and fails if
@@ -133,12 +133,20 @@ neither safe state exists. The GitHub PR label remains `symphony`. Runtime
 profile state lists do not remap these helpers. A wakeup makes work eligible;
 the worker must still honor hard dependencies and pending review/CI evidence.
 
-Misc routing retains the example team restriction, `misc` project code, `blue`
-color, `main` base, and project states `planned`, `started`, `in progress` in
-`scripts/symphony/route-misc-project.mjs`. The exported functions accept a
-`lookup` object for project settings, but that does not replace the fixed team
-eligibility predicate. Do not enable this optional ticket-start hook for a
-different team until its adopter-owned routing policy has been supplied.
+The CI wakeup YAML uses exact `Active`, `Inactive` and `Unhappy` state names,
+and the server dispatches `Evaluating`. Provision those states and `wake:15m`
+in the team identified by the checkout's top-level `.symphony.cfg.json`
+`linear.teamKey`. The workflow requires that label on every transition,
+including success/failure transitions that remove it. It does not use the
+legacy `Rework` fallback.
+
+Misc routing reads that same `linear.teamKey` (`100` here) and retains the
+`misc` project code, `blue` color, `main` base, and project states `planned`,
+`started`, `in progress` in `scripts/symphony/route-misc-project.mjs`. Exported
+functions accept a `lookup` object with `teamKey` and project settings. Run
+from a configured Git checkout; the default team is read during import, even
+for `--help`. The [routing guide](./misc-project-routing.md) describes the
+optional ticket-start hook; bundled hooks do not invoke it.
 The color allocator accepts `activeStates` as a function option and retains
 the palette listed in `scripts/symphony/project-colors.ts`.
 
@@ -153,22 +161,40 @@ branch color and CLI guesses are not color authorities. The helper takes an
 explicit repository and issue, requires Linear read and GitHub label-write
 access, and adds missing labels only after verifying a unique open PR.
 
-The optional `.github/workflows/symphony-linear-wakeups.yml` consumes failed
-required checks, confirmed merge conflicts and completed `workflow_dispatch`
-runs on `symphony/` branches in the same repository. It does not dispatch work.
-It reads trusted bridge code from the default branch; `workflow_run` must be
-available there. The wildcard completion subscription is narrowed by the job
-gate, including recursion suppression. Non-Actions check runs and commit
-statuses have separate failure gates; PR events require the `symphony` label.
-The conflict sweep runs at minutes 17 and 47 each hour on `ubuntu-latest`.
-GitHub must support the retained `concurrency.queue: max` syntax; runner,
-schedule and event availability remain adopter setup assumptions.
+The optional `.github/workflows/symphony-linear-wakeups.yml` handles same-repository
+PR events, completed `CI` runs triggered by `pull_request`, and failed external
+required checks/statuses. It selects one open PR with the `symphony` label at
+the event's current head and resolves the configured team's issue from the PR
+title prefix, then the branch. It reads trusted helpers from the default branch.
+Its `workflow_run` subscription names `CI`; it does not subscribe to arbitrary
+dispatched workflows or run a scheduled conflict sweep.
+
+An Active worker gets up to one minute to finish; if still Active, it is left
+alone. For waiting tickets, pending CI means `Unhappy` with `wake:15m`, successful
+CI means `Inactive`, and failed CI or a current required external-check failure
+means `Active`. The event workflow records conflict instructions and activates
+a ticket only when GitHub reports a confirmed conflict while it is `Inactive`.
+It does not retry unknown mergeability or sweep conflicts introduced by base
+changes. The server's per-ticket timer supplies another check for `Unhappy`
+tickets through the authoritative workflow's `Evaluating` instructions.
+
+The job runs on `ubuntu-latest` with a five-minute timeout and
+`concurrency.queue: max`. Configure compatible GitHub event/queue support and
+install/reload the server workflow before relying on timer recovery. Source
+configuration alone does not prove a running server loaded it.
 
 Setting location: the workflow maps the automatic GitHub token to `GH_TOKEN`
 and Actions secret `CADENCE_LINEAR_API_TOKEN` to `LINEAR_API_TOKEN`. The former
 needs Actions/checks/contents/PR/status read permissions; the latter is a secret
 Linear API-token string with issue and workpad read/write access. No supplied
-GitHub secret is needed by this workflow. A standalone caller must supply
+GitHub secret is needed by this workflow. The YAML records conflict instructions
+in the Cadence workpad and state changes in its run log. It rereads the issue
+and PR before mutation, preserves unrelated labels, and only updates tickets
+still in the observed `Inactive` or `Unhappy` state.
+
+The retained `.github/workflows/scripts/symphony-linear-wakeups.mjs` standalone
+entry point is separate from the YAML orchestration. A caller of that entry
+point must supply
 `GH_TOKEN`, `LINEAR_API_TOKEN` (or fallback `LINEAR_API_KEY`) and GitHub event
 context: `GITHUB_REPOSITORY` (`owner/repository`), `GITHUB_EVENT_NAME`,
 `GITHUB_EVENT_PATH` (path to webhook JSON), `GITHUB_ACTOR` and `GITHUB_RUN_ID`.
@@ -176,7 +202,7 @@ context: `GITHUB_REPOSITORY` (`owner/repository`), `GITHUB_EVENT_NAME`,
 it does not change the helper's GitHub API endpoint. `GITHUB_STEP_SUMMARY` is an
 optional output-file path, unset by default outside Actions.
 
-The bridge's `applyPlan` function in
+The standalone bridge's `applyPlan` function in
 `.github/workflows/scripts/symphony-linear-wakeups.mjs` checks an exact synthetic
 Linear viewer display name before writing. Its replacement location and token
 owner are described in the setup reference. `LINEAR_WAKEUP_BOT_NAME` is a
@@ -184,19 +210,14 @@ documentation name, not a read environment variable. Keep the matching
 credential-owner documentation in `docs/engineering/review/cadence-linear-workpad.md`
 aligned during later setup; do not disable the guard. No new override is provided.
 
-The issue recognizers in that bridge and `scripts/cadence-linear-workpad.mjs`
-must agree with the adopter's team prefix. Workflow completion ownership uses
-an anchored run-name marker such as `[linear:DEMO-123] Validate tooling` first,
-then PR title or branch identity. Dispatch inputs are not delivered with
-`workflow_run`; an adopter-owned caller must put its `ticket_number` in that
-marker when explicit ownership is needed. This example uses the synthetic team
-prefix; align recognizers and real event metadata during setup, keeping test
-fixtures synthetic. Retain unambiguous identity and current-head evidence. Required-check
-status comes from GitHub's PR check data, not a hardcoded workflow name.
-The bridge records/deduplicates evidence in the existing Cadence workpad and
-preserves review coordination. It neither completes a Linear issue nor
-overrides terminal-state protection. Ordinary tooling CI requires none of this
-optional event or credential setup.
+The standalone bridge's `resolveIssue` also reads `linear.teamKey`; configure
+the checkout instead of editing a `DEMO-` recognizer. Its retained dispatch-run
+support accepts an anchored `[linear:TEAM-123]` run-name marker, using the
+configured team, before PR title or branch identity. The current YAML does not
+use that entry point or marker. The standalone bridge records/deduplicates
+evidence in the Cadence workpad and preserves review coordination. Neither
+path completes a Linear issue or overrides terminal-state protection. Ordinary
+tooling CI requires none of this optional event or credential setup.
 
 ## Review and local environment
 

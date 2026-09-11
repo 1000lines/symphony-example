@@ -40,11 +40,12 @@ complete. The leading-dot paths here are working configuration, not samples.
 inert until you run the corresponding tool. `.npmrc` refuses packages published
 in the last seven days, which looks like an install failure.
 
-`.github/workflows` is armed by existence instead: GitHub reads it from the
-default branch and starts the two cron workflows, one twice hourly, as soon as
-they land. They also do not fail closed — unset variables fall back to
-placeholders like `example-cadence-bot`, so runs act as accounts you do not
-have. Work through [repository variables](#repository-variables),
+Enabled `.github/workflows` run on their configured events. CI runs on PR
+updates and pushes to `main`; the AMI updater has a weekly Monday cron. CI
+recovery uses GitHub events and the Symphony server's per-ticket `wake:15m`
+timer, with no scheduled GitHub conflict sweep. Some optional workflows still
+use placeholder identity defaults such as `example-cadence-bot`. Work through
+[repository variables](#repository-variables),
 [repository secrets](#repository-secrets) and
 [manual setup steps](#manual-setup-steps) before enabling Actions.
 
@@ -318,10 +319,10 @@ These gaps need resolution during later operational setup:
   described above remain unverified. GitHub endpoint overrides do not establish
   enterprise-host support throughout the supplied scripts.
 - The former DAG integration queue and its workflow/helper inputs are retired.
-  Misc routing retains a fixed example team predicate that its `lookup` option
-  does not replace. Use an adopter-owned routing policy before enabling that
-  hook. Non-review wakeups retain schedule, runner, event and credential-owner
-  assumptions described in tooling setup. Guardrail scope and actor
+  Misc routing requires a configured Git checkout and uses `lookup.teamKey`,
+  defaulting to `.symphony.cfg.json` `linear.teamKey`. Non-review wakeups require
+  the Linear states, wake label, server timer installation, runner and event
+  setup described in tooling setup. Guardrail scope and actor
   classification have their own narrow overrides.
 - Retained tests may need correction before they pass. In particular,
   host label-repair and review/wakeup tests import `js-yaml` without a direct
@@ -1034,23 +1035,29 @@ Required for the feature described above; the example is synthetic and must be s
 
 `LINEAR_OTHER_TEAM_EXAMPLE` — Describe issues outside the configured example routing team.
 
-Setting: keep `non-DEMO` consistent with the example in `docs/engineering/symphony/project-workflow.md`. Set the live routing team through the adopter configuration documented by that guide and the misc routing guide. Format: an uppercase team key; `DEMO` is the synthetic example. Optional. Default: `non-DEMO` in documentation.
+Setting: configure `linear.teamKey` in the Git checkout's top-level `.symphony.cfg.json`. The misc routing helper leaves issues from other teams unchanged. Format: uppercase letters or digits, such as `100` in this repository; `DEMO` remains a synthetic fixture example.
 
 <!-- redaction:a-tool-linear-team-state-prose -->
 
 `LINEAR_STATE_TEAM` — Identify the example team whose workflow state names are described.
 
-Setting: replace the `DEMO` example team in your operator-owned workflow based on `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`, and the linked review/project-workflow guides; configure actual states in Linear team workflow settings. Format: an uppercase team key. Required for live team setup; `DEMO` is synthetic. Retain the documented Active/Rework fallback semantics.
+Setting: align `tracker.team_key` in your operator-owned workflow with `linear.teamKey` in the checkout's `.symphony.cfg.json`. The authoritative `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md` uses `100`. Configure `Active`, `Inactive`, `Unhappy`, `Evaluating`, and `wake:15m` in that Linear team for CI reconciliation. Legacy Active/Rework fallback belongs to the shared review wake helper, not the CI YAML transitions.
 
 <!-- redaction:a-tool-linear-team-key -->
 
 `LINEAR_TEAM_KEY` — Identify the Linear team used by examples and routing inputs.
 
-Use your team key in adopter project metadata and supplied issue identifiers. DEMO is a synthetic placeholder; routing/team configuration is documented by the tooling configuration owner. Format: uppercase letters, with issues such as DEMO-123.
+Set `linear.teamKey` in the Git checkout's top-level `.symphony.cfg.json` to
+your team key (uppercase letters or digits; `100` here). This required setting
+is read by `readLinearTeamKey`, the CI wakeup YAML, misc routing, and the retained
+standalone bridge's `resolveIssue`. Use matching issue identifiers in PR titles
+and branches; do not edit helper regular expressions. Synthetic test fixtures
+may still use `DEMO-123`. `LINEAR_TEAM_KEY` is a documentation label, not an
+environment override.
 
-The non-review bridge's `resolveIssue` recognizers in `.github/workflows/scripts/symphony-linear-wakeups.mjs` also contain the `DEMO-` placeholder. Set these to the same live team prefix used in PR titles, branches and optional `[linear:DEMO-123]` workflow run-name markers. The marker has no default; without it, resolution uses the PR title and then the branch. Keep the paired event and `scripts/linear-issue-wakeup.test.mjs` fixtures synthetic. The bridge keeps its existing identity precedence and rejects missing or ambiguous identifiers.
-
-Required when using the described integration. The shipped `DEMO-` text is a placeholder, not a live account or repository.
+The YAML resolves the PR title prefix, then the branch. The standalone bridge
+also retains explicit dispatch ownership via a `[linear:TEAM-123]` run-name
+marker with the configured team. That marker is not used by the current YAML.
 
 <!-- redaction:a-tool-linear-team-literal -->
 
@@ -1148,7 +1155,7 @@ Optional. Default: `ghp_fake` (synthetic example; no live identifier is needed f
 
 `Misc project routing` — optionally assign eligible unowned issues to an active project.
 
-Setting location: an adopter-owned caller passes `lookup` to the exported routing functions in `scripts/symphony/route-misc-project.mjs`. Shape: `projectCode`, `projectColor`, `baseBranch`, `activeStates` string array, and `actorEmail`. Defaults are `misc`, `blue`, `main`, and the active project states listed in that source. The fixed example-team eligibility predicate is a known setup gap: changing `lookup` does not change it. Optional; leave the ticket-start hook unused until your routing policy exists. Color helpers separately accept an `activeStates` array and retain their declared palette.
+Setting location: an adopter-owned caller passes `lookup` to the exported routing functions in `scripts/symphony/route-misc-project.mjs`. Shape: `teamKey`, `projectCode`, `projectColor`, `baseBranch`, `activeStates` string array, and `actorEmail`. The team defaults to the checkout's `.symphony.cfg.json` `linear.teamKey`; other defaults are `misc`, `blue`, `main`, and the active project states listed in the source. The helper reads the default team at import time, so even `--help` requires a configured Git checkout. Routing is optional and bundled workflow hooks are no-ops. Color helpers separately accept an `activeStates` array and retain their declared palette.
 
 The routing lookup does not override the owning project `project-color` used by
 PR label repair. No `integrationBranch` lookup setting is supported.
@@ -1164,7 +1171,9 @@ automatic GitHub token to `GH_TOKEN`. Shapes: private API-token strings; Linear
 needs issue/workpad read/write and GitHub needs Actions/checks/contents/PR/status
 reads. Required when enabled, no credential default; no supplied GitHub secret.
 
-A standalone caller supplies `GH_TOKEN`, `LINEAR_API_TOKEN` (fallback
+The retained standalone `.github/workflows/scripts/symphony-linear-wakeups.mjs`
+entry point has separate orchestration from the YAML. Its caller supplies
+`GH_TOKEN`, `LINEAR_API_TOKEN` (fallback
 `LINEAR_API_KEY`), `GITHUB_REPOSITORY` (`owner/repository`), `GITHUB_EVENT_NAME`,
 `GITHUB_EVENT_PATH` (webhook JSON file), `GITHUB_ACTOR` and `GITHUB_RUN_ID`.
 Optional `GITHUB_SERVER_URL` defaults to `https://github.com` for evidence links
@@ -1174,24 +1183,30 @@ the manual credential-owner setup in the identity reference; its reference
 name `LINEAR_WAKEUP_BOT_NAME` is not a read environment variable. Preserve the
 guard and synthetic tests; no override interface is added.
 
-Optional automation; its shipped defaults use `ubuntu-latest`, a ten-minute
-job timeout, `concurrency.queue: max` and a conflict sweep at minutes 17 and 47
-each hour. Assess platform/event availability before enabling. Failed required
-checks and confirmed conflicts use current open PR evidence with `symphony`
-labels. Completed `workflow_dispatch` runs must be on same-repository
-`symphony/` branches. The bridge never dispatches workflows. An optional
-explicit owner marker in an adopter-owned workflow run name is
-`[linear:DEMO-123] Validate tooling`; absent that marker, ownership falls back
-to PR title or branch identity. Dispatch inputs are not included in
-`workflow_run`, so `ticket_number` must be carried by that anchored marker.
-Align team recognizers with the adopter's metadata; leave fixtures synthetic.
+The YAML uses `ubuntu-latest`, a five-minute job timeout and
+`concurrency.queue: max`. It handles PR events, completed `CI` runs triggered
+by `pull_request`, and failed external required checks/statuses. It selects
+one open same-repository PR with the `symphony` label at the current head and
+uses the configured team's PR title prefix, then branch identity. It has no
+wildcard completion subscription, dispatch-run ownership marker, or scheduled
+conflict sweep.
 
-The job excludes recursive completions and unrelated runs, uses trusted
-bridge source, and rechecks stale/ambiguous evidence. Writes preserve and
-deduplicate the Cadence workpad's review coordination. Shared state selection
-prefers `Active`, then legacy `Rework`; terminal issues stay terminal. No
-product pipeline or generic state/identity mapping is supplied. Ordinary
-build/test/lint callers require none of this optional setup.
+An Active worker has up to one minute to finish; if still Active, it is left
+alone. Waiting CI uses `Unhappy` with `wake:15m`; current CI success uses
+`Inactive`, and failure uses `Active`. Provision all three states, `Evaluating`,
+and the `wake:15m` label before enabling the workflow. The label is required
+even when success/failure removes it. Confirmed conflicts activate `Inactive`
+tickets with instructions in the Cadence workpad. Unknown mergeability and
+base-change conflicts are not swept; sleeping `Unhappy` tickets get another
+check through the server timer's `Evaluating` instructions. The profile must
+be installed and reloaded for that timer path to operate.
+
+The YAML reads trusted default-branch helpers, rereads the issue and PR before
+mutation, preserves unrelated labels, and logs state changes. The standalone
+bridge retains its own workpad deduplication, dispatch marker and legacy
+Active/Rework fallback; those are not the YAML's execution path. Terminal
+issues remain untouched. Ordinary build/test/lint callers require none of this
+optional setup.
 
 <!-- redaction:a-tool-organization-display-name -->
 
@@ -1519,19 +1534,19 @@ Optional. Default: `demoIssue` (synthetic example).
 
 <!-- redaction:a-tool-linear-team-routing-comparison -->
 
-`TEAM_ROUTING_COMPARISON` — Keep the example team representation consistent with issue identifiers.
+`TEAM_ROUTING_COMPARISON` — Understand the misc routing team's eligibility check.
 
-Keep this synthetic routing representation paired with the `DEMO` example team. Live team configuration is supplied through adopter-owned tooling configuration. Format: `normalize(issue.team?.key) === "demo"`.
-
-Optional. Default: `normalize(issue.team?.key) === "demo"` (synthetic example).
+`planMiscProjectRoute` compares `normalize(issue.team?.key)` with
+`normalize(lookup.teamKey)`. The default lookup reads `linear.teamKey` from
+the checkout's `.symphony.cfg.json`. There is no fixed `DEMO` comparison to edit.
 
 <!-- redaction:a-tool-linear-team-routing-symbol -->
 
-`TEAM_ROUTING_SYMBOL` — Keep the example team representation consistent with issue identifiers.
+`TEAM_ROUTING_SYMBOL` — Locate the misc routing eligibility logic.
 
-Keep this synthetic routing representation paired with the `DEMO` example team. Live team configuration is supplied through adopter-owned tooling configuration. Format: `isDemoIssue`.
-
-Optional. Default: `isDemoIssue` (synthetic example).
+`planMiscProjectRoute` performs the team comparison directly; the historical
+`isDemoIssue` helper was removed. Configure `linear.teamKey` or pass a
+`lookup.teamKey` to the exported routing functions instead of renaming a helper.
 
 <!-- redaction:a-infra-state-bucket -->
 
