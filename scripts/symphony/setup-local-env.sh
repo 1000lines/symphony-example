@@ -109,6 +109,11 @@ symphony_json_field() {
 
 symphony_set_identity_defaults() {
   # HACKATHON_LEGACY_AUTH: App opt-in is durable; RETIRE removes legacy defaults.
+  # The legacy identity check and Git askpass still require GITHUB_TOKEN.
+  # Remove this default only after deployed App-authenticated clone/push/PR
+  # and current-head CI/review evidence; a local App preflight is insufficient.
+  # Host App auth does not replace the native Cadence reviewer's publishing
+  # token, Claude key, or APPROVE/COMMENT signal.
   case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
     app)
       export SYMPHONY_GITHUB_AUTH_MODE=app

@@ -258,6 +258,12 @@ write_runtime_credentials() {
 
   keys_json="$(require_secret "$keys_secret")"
   # HACKATHON_LEGACY_AUTH: keep the working deployment selected until DEPLOY.
+  # Legacy mode materializes GITHUB_TOKEN for the installed Git askpass.
+  # Before retiring that field, verify every live consumer has migrated:
+  # infra/static/modules/symphony-host/files/user-data.sh also reads it to
+  # bootstrap a host, even when an existing host has switched to App mode.
+  # Retain the field until replacement proof and the operator retirement action;
+  # preserve OPENAI_API_KEY, LINEAR_API_TOKEN and all other fields in the JSON.
   case "${SYMPHONY_GITHUB_AUTH_MODE:-legacy}" in
     legacy) github_token="$(json_value "$keys_json" GITHUB_TOKEN)" || die "$keys_secret is missing GITHUB_TOKEN" ;;
     app) write_runtime_app_auth ;;
