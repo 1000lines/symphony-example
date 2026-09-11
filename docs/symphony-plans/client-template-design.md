@@ -186,11 +186,15 @@ onboarding path and their existing CI configuration.
 
 ### D4 — Questions and configuration
 
-Exactly seven nonsecret answers: `repo_slug`, `default_branch`, `linear_team_key`,
-`symphony_app_slug`, `cadence_app_slug`, `build_command`, `test_command`.
+Exactly eight nonsecret answers: `repo_slug`, `default_branch`, `linear_team_key`,
+`symphony_app_slug`, `cadence_app_slug`, `cadence_reviewer`, `build_command`,
+`test_command`. `cadence_reviewer` is a required string choice, `claude` or `codex`,
+with no default. [Jeremy's September 11, 16:30 PR #42 review](https://github.com/1000lines/symphony-example/pull/42#discussion_r3991277811),
+with verified repository admin authority, supersedes the seven-answer limit,
+the prohibition on a provider question, and key-presence selection in D6.
 `build_command` generalizes the earlier `docker_build_command` name so native and
 remote targets do not imply Docker. The two slugs identify author and reviewer
-Apps. No `linear_project_key`, provider toggle, model question, credential, App ID,
+Apps. No `linear_project_key`, additional provider toggle, model question, credential, App ID,
 installation ID or workflow-source question. Onboarding supplies known answers
 without another agentic interview.
 
@@ -235,7 +239,7 @@ explicit delivery in the caller context; PR #29's inheritance workaround is excl
 | Non-review CI wakeup          | `CADENCE_LINEAR_API_TOKEN` only, using the existing automatic GitHub token for reads                                                     |
 | CI / build / test and ingress | None of these secrets                                                                                                                    |
 
-Review requires the App and Linear credentials and at least one provider key.
+Review requires the App and Linear credentials and the selected reviewer's key.
 Mint a repository-scoped App token for publication and author permission checks;
 both providers publish as that App. `CADENCE_BOT_GITHUB_TOKEN` is not an adopter
 requirement. Declare the minimum `GITHUB_TOKEN` permissions needed per role.
@@ -245,17 +249,20 @@ list, use separate provider keys per target, and own revocation after the event.
 
 ### D6 — Provider selection and verdict
 
-| OpenAI key nonempty | Anthropic key nonempty | Required result                                                           |
-| ------------------- | ---------------------- | ------------------------------------------------------------------------- |
-| Yes                 | No                     | Codex                                                                     |
-| No                  | Yes                    | Claude                                                                    |
-| Yes                 | Yes                    | Codex                                                                     |
-| No                  | No                     | Clear missing-key failure before provider execution or review publication |
+| `cadence_reviewer`  | Matching key      | Other key         | Required result                                                           |
+| ------------------- | ----------------- | ----------------- | ------------------------------------------------------------------------- |
+| `codex`             | OpenAI present    | Present or absent | Codex                                                                     |
+| `claude`            | Anthropic present | Present or absent | Claude                                                                    |
+| Either valid choice | Missing           | Present or absent | Clear missing-key failure before provider execution or review publication |
+| Missing or invalid  | Any               | Any               | Reject the selection before provider execution                            |
 
-Declare both keys optional at `workflow_call`; check presence before execution.
-Run exactly one provider. API failure does not silently switch providers or produce
-approval. Every MVP target is provisioned for Codex. To select the working Claude
-fallback, omit the OpenAI mapping; no key deletion or rotation is required.
+Declare both keys optional at `workflow_call`; carry the explicit nonsecret
+`cadence_reviewer` input through each review boundary and validate the matching
+key before execution. Run exactly the selected provider, including when both
+keys are present. Missing credentials or API failure must not silently switch
+providers or produce approval. Selecting Claude requires `cadence_reviewer: claude`,
+not deleting an OpenAI key. Existing native/manual entry points retain their
+working behavior; generated clients must always supply the explicit choice.
 
 Use one small provider-neutral result containing `repository`, `prNumber`,
 `headSha`, `verdict` (`approve`, `request_changes`, `escalate_to_replan`), `summary`
@@ -284,7 +291,7 @@ helper for an actual API gap. Do not build a new orchestration service or copy
 operator skills into the client template. Later relocation of these skills is
 not required by the workflow-repository extraction.
 
-The skill supplies the seven answers, records the D8 mode/commands, discovers IDs,
+The skill supplies the eight answers, records the D8 mode/commands, discovers IDs,
 enables Actions, sets explicit workflow permissions and required CI checks, and
 provisions target secrets outside answers. It creates or selects the initial
 Linear project and starts the existing planning/host flow using that operation's
@@ -407,10 +414,10 @@ proof using existing tooling; it must preserve the stated boundaries.
 
 | ID   | Observable acceptance                                                                                                                                                                                                                                    | Evidence / responsible role                                                                                                                                                                                                                                        |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| AC1  | Generated tree contains only justified client assets and the seven answers; secrets and host/application code are absent.                                                                                                                                | Template implementer: file inventory, rendered diff and inspection of answers.                                                                                                                                                                                     |
+| AC1  | Generated tree contains only justified client assets and the eight answers; secrets and host/application code are absent.                                                                                                                                | Template implementer: file inventory, rendered diff and inspection of answers.                                                                                                                                                                                     |
 | AC2  | Generation works for at least two repository slugs, two default branches (including one other than `main`) and differing commands/Linear teams; unrelated existing files survive.                                                                        | Template implementer: isolated render fixtures and collision/adoption diffs; correctly escaped GitHub expressions and serialized YAML/JSON.                                                                                                                        |
 | AC3  | Central helpers execute from the reviewed source ref; thin callers use only named secrets and nonsecret inputs; CI and ingress receive no reviewer secrets.                                                                                              | Workflow implementer: existing workflow tests plus explicit-call inspection; retained trusted-ref/author/stale-head/terminal/loop cases.                                                                                                                           |
-| AC4  | The four provider cases match D6; both providers publish the same current-head verdict contract as the configured App, without a bot PAT.                                                                                                                | Workflow implementer: proportional selection/output/publication tests, including malformed output and provider failure; retain Claude-only coverage.                                                                                                               |
+| AC4  | Explicit reviewer/key combinations match D6; both providers publish the same current-head verdict contract as the configured App, without a bot PAT.                                                                                                     | Workflow implementer: proportional selection/output/publication tests, including malformed output and provider failure; retain Claude-only coverage.                                                                                                               |
 | AC5  | A real PR receives a Codex Cadence review through generated callers pinned to the extracted workflow repository, with explicit target-secret delivery.                                                                                                   | Self-adoption owner: published template/workflow refs, run/attempt, target/head, App identity, provider execution, verdict, matching Cadence workpad and feedback/handoff evidence. Prioritize an early Friday run; repeat after migration for final proof.        |
 | AC6  | Published template is usable from its public reviewed ref with reproducible staging-to-root mapping, license/provenance and minimal usage/credential docs.                                                                                               | Publication owner: repository/ref readback, tree comparison and actual render from that ref. Creation rights or name conflicts gate publication only.                                                                                                              |
 | AC7  | Adoption PR renders from the published template pinned to the new workflow repository, preserves application files and working CI/review/manual paths, retains Copier metadata, and removes the staging folder after extraction succeeds.                | Adoption owner: small reviewed diff, exact template/workflow refs, required current-head CI and AC5 proof; obsolete bodies are removed only under D3's consumer checks. Jeremy owns merge.                                                                         |

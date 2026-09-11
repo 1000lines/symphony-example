@@ -6,6 +6,17 @@ requirements. Paths below are relative to `1000lines/symphony-example`.
 Estimated sizes and difficulties are in the main plan. No item creates live
 participant projects or operates the parent rehearsal.
 
+[Jeremy's September 11 PR #42 review](https://github.com/1000lines/symphony-example/pull/42#discussion_r3991277811)
+adds the required `cadence_reviewer` choice (`claude`/`codex`) to D4 and replaces
+key-presence selection in D6. CT-Q owns the answer and synthetic render tests;
+CT-R retains provider input/selection, CT-T carries the value, CT-L verifies the
+complete caller/callee contract, and CT-O/U/F/A consume it. Existing nodes,
+hard edges and implementation file ownership remain unchanged. CT-Q also owns
+these small plan/acceptance updates and the primary-source provenance credit.
+The native App-identity checkpoint merged in PR #43 does not prove the remaining
+CT-R provider interface: CT-L must verify the actual merged artifact before
+claiming integration, regardless of 100-49's terminal Linear state.
+
 ## CT-I — Inventory client files and justify export lists
 
 - **Scope:** establish the smallest client tree and separately reviewed export
@@ -152,7 +163,7 @@ explicit-secret, provider and live-proof requirements open; no dependency edge
 is changed by this limited instruction.
 
 - **Scope:** expose existing native review/handoff as reusable workflows with
-  explicit target inputs/secrets, add key-selected Codex execution, and prove
+  explicit target inputs/secrets, add explicitly selected Codex/Claude execution, and prove
   the early real review in the seed. Retain the working Claude-only path.
 - **owned_files:** `.github/workflows/cadence-ai-review-events.yml`,
   `.github/workflows/cadence-ai-review-trigger.yml`,
@@ -193,7 +204,7 @@ is changed by this limited instruction.
   its `cadence-review/v1` schema/ledger tests and Claude skill; read dormant Codex source
   only to understand historical constraints, not to revive its controller.
 - **required_actions:** declare `workflow_call` inputs for repository/default
-  branch, identity and discovered App IDs; caller config/source and pinned trusted
+  branch, identity, `cadence_reviewer` and discovered App IDs; caller config/source and pinned trusted
   workflow/helper checkouts stay separate. Explicitly declare/map
   `CADENCE_APP_PRIVATE_KEY`, `CADENCE_LINEAR_API_TOKEN`, optional
   `CADENCE_OPENAI_API_KEY`, optional `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`.
@@ -206,9 +217,10 @@ is changed by this limited instruction.
   coverage through publication; trusted code supplies identity/provenance.
   Expose advisory cleanup via `workflow_call` with target/run inputs and App key
   only, retaining its seed native listener until migration. The generated local
-  listener owns `workflow_run` names/triggers; no new secret or opt-in. Codex wins with
-  OpenAI, Claude runs with Anthropic alone, neither fails before review, and API
-  failure never selects another provider. Reuse the existing review ledger and
+  listener owns `workflow_run` names/triggers; no new secret or opt-in.
+  Honor `cadence_reviewer` (`claude`/`codex`), including with both keys present;
+  invalid/missing selection or a missing matching key fails before review, and
+  API failure never selects another provider. Reuse the existing review ledger and
   APPROVE/COMMENT publication; no GitHub REQUEST_CHANGES.
   Preserve 100-43's App-owned actual-head queue/run/result, same-head feedback
   freshness, safe overlap/cancellation/closure and draft-ready behavior for both
@@ -216,7 +228,8 @@ is changed by this limited instruction.
   guards. Replace main/repository assumptions with trusted target values; do not
   run PR-controlled code with privileged secrets or widen environment eligibility
   to unreviewed refs. Keep native/manual compatibility entry points working.
-- **acceptance_checks:** all four key combinations and malformed/stale/missing
+- **acceptance_checks:** both reviewer choices across all four key combinations,
+  missing/invalid selections, and malformed/stale/missing
   output tested; one provider runs; both use the same verdict/handoff contract.
   Include carried-forward mandatory human feedback and unmet requirements so
   a provider adapter cannot silently lose them or incorrectly permit approval.
@@ -236,10 +249,10 @@ is changed by this limited instruction.
 - **delivery_notes / exclusions:** one owner for native review behavior;
   CT-V copies the final reviewed export list later. Do not edit CT-C's config,
   wakeup or command-runner files; no custom queue/controller, new secret name,
-  provider question, blanket workflow deletion or public-fork key service.
+  extra question beyond CT-Q's reviewer choice, blanket workflow deletion or public-fork key service.
 - **split_criteria:** `automation-identity-boundary`, `async-pipeline-boundary`.
 
-## CT-Q — Define and test the seven Copier answers
+## CT-Q — Define and test the eight Copier answers
 
 - **Scope:** build the ordinary Copier question/answers package independently
   of file inventory, copying, Docker compatibility and provider implementation.
@@ -257,8 +270,10 @@ is changed by this limited instruction.
 - **source_files:** merged design D4 and ordinary Copier configuration guidance.
 - **required_actions:** `_subdirectory: template`; exactly `repo_slug`,
   `default_branch`, `linear_team_key`, `symphony_app_slug`, `cadence_app_slug`,
-  `build_command`, `test_command`. Keep defaults/types and source/ref metadata
-  ordinary Copier. No credentials, project binding, mode/provider/ref question.
+  `cadence_reviewer`, `build_command`, `test_command`. The reviewer is a required
+  string choice (`claude` or `codex`) without a default. Keep defaults/types and
+  source/ref metadata ordinary Copier. No credentials, project binding, mode/ref
+  question or additional provider setting.
   Fix `_envops` now: `variable_start_string: "[["`, `variable_end_string: "]]"`,
   `block_start_string: "[%"`, `block_end_string: "%]"`; preserve trailing newlines.
   Use these delimiters for all Copier substitutions, including answer metadata,
@@ -273,7 +288,9 @@ is changed by this limited instruction.
   tests, including when only a template changes; inspect rendered workflows and
   config, never treat excluding raw syntax as permission to skip those tests.
   Record the interim package's limited scope and the later CT-L release gate.
-- **acceptance_checks:** seven answers work noninteractively for two repo slugs,
+- **acceptance_checks:** eight answers, including both reviewer choices, work
+  noninteractively for two repo slugs; missing/invalid reviewer choices fail.
+  Retain coverage of
   non-main branches, teams and commands with quotes/newlines; ordinary answer
   metadata retains `_src_path`/`_commit` without secrets. No writes inside the
   committed `template/` tree, no CI registration or claim of live client behavior.
@@ -343,7 +360,7 @@ is changed by this limited instruction.
 - **dependencies:** CT-M, hard, accepted exact copy; CT-Q, hard, merged Copier
   package/question interface for actual renders. CT-C/R are independent.
 - **source_files:** CT-I mappings, CT-M snapshot, CT-Q package, design D1–D6.
-- **required_actions:** introduce substitutions for the seven established names
+- **required_actions:** introduce substitutions for the eight established names
   using CT-Q's fixed `[[ ]]` / `[% %]` delimiters; preserve native GitHub
   expressions and serialize shell arrays/YAML/JSON correctly.
   Render short instructions, config, direct App manifest and only callers whose
@@ -354,7 +371,9 @@ is changed by this limited instruction.
   reusable bodies or claim Docker/Codex support before its integration.
 - **acceptance_checks:** real Copier render matrix covers two slugs/default
   branches (including non-main), teams, quoted/newline commands and file
-  collisions. No project key, provider toggle, secrets, host or reusable bodies
+  collisions. Carry `cadence_reviewer` into the generated caller's explicit input;
+  CT-L closes any deferred reviewer wiring. No project key, extra provider toggle,
+  secrets, host or reusable bodies
   in output. Assert exact preservation of `${{ ... }}` expressions, no unresolved
   Copier placeholders, and no root-only development workflows/config/tests in
   output. Validate rendered YAML/JSON while ordinary lint/format skips raw syntax.
@@ -390,7 +409,7 @@ is changed by this limited instruction.
 - **source_files:** CT-T pending-addition list, CT-C/R final files/proof,
   actual config reader and both reviewed exports.
 - **required_actions:** add the missing thin callers and any client-Dockerfile
-  mode guidance/config changes without changing the seven answers. The client
+  mode guidance/config changes without changing the eight answers. The client
   supplies its Dockerfile; do not introduce a generic application Dockerfile.
   Pin reviewed full seed refs, explicitly map named secrets at every hop and
   preserve 100-43's advisory/ready behavior without a setting or required check.
@@ -405,7 +424,9 @@ is changed by this limited instruction.
 - **acceptance_checks:** full CT-T matrix plus native/optional Docker/remote
   reader compatibility passes; generated paths equal the final inventory;
   no remaining deferred caller, placeholder ref or raw workflow body. Exact
-  secret mappings and provider matrix match CT-R's tested interface; no new
+  secret mappings and explicit `cadence_reviewer`/key matrix match revised D6
+  and CT-R's tested interface. Verify the merged provider input and missing-key
+  validation exist; PR #43's App-identity checkpoint alone is insufficient. No new
   questions or changed CT-Q delimiters. Test full generated workflows for
   unchanged GitHub expressions and exclusion of root development files.
   Existing application/instruction/license content is preserved.
@@ -432,7 +453,7 @@ is changed by this limited instruction.
   operations, do not execute participant setup. CT-A later owns the one live
   walkthrough; Jeremy/parent owns installing/invoking the skill.
 - **creates:** all four owned skill files. **edits:** none.
-- **dependencies:** CT-L, hard, complete merged template/actual seven-answer interface
+- **dependencies:** CT-L, hard, complete merged template/actual eight-answer interface
   needed for executable skill instructions and render dry runs.
 - **source_files:** CT-L README/template/config/manifest and test fixtures,
   existing repository/Linear/planning skills and their tools; D7/D8/D9.
@@ -447,7 +468,7 @@ is changed by this limited instruction.
   Explain the template repository's own root client as a real consumer, with
   root `copier.yml` selecting only `template/`. Link CT-F's eventual live proof;
   do not claim self-hosted development before its runs exist.
-  Supply seven known answers; set chosen mode/commands outside questions;
+  Supply eight known answers; set chosen mode/commands outside questions;
   discover IDs, Actions enablement/permissions and actual required checks.
   Provision named secrets separately and show names only. Record accepted public
   App cross-installation PR/issues/checks write scope accurately; no fork-key gate.

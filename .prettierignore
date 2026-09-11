@@ -9,3 +9,6 @@ test-results
 # Ignore Claude Code files from prettier check
 .claude/
 node_modules
+
+# Raw Copier source is validated by dedicated render tests.
+templates/symphony-client/template/

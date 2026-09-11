@@ -66,7 +66,7 @@ repositories created by this planning ticket.
   justified publication-only differences and Apache-2.0 attribution. Preserve
   template tests/CI at their root-relative paths. Keep root `copier.yml` with
   `_subdirectory: template` and CT-Q's delimiters. Render the accepted staged
-  template with this destination's seven answers into an isolated root checkout,
+  template with this destination's eight answers into an isolated root checkout,
   using its actual build/test commands and discovered required-check contract.
   Merge collisions explicitly: root client CI must run package/render tests;
   generic formatting/lint excludes raw `template/`, not the rendered fixtures.
@@ -85,7 +85,7 @@ repositories created by this planning ticket.
   render with `--vcs-ref=alpha`. Record branch resolution and actual rendered
   commit; verify no same-name tag. Follow the plan's alpha evidence contract.
 - **acceptance_checks:** public anonymous readback; source/tree comparison with
-  no lost dotfiles, secrets or additional rendered assets; seven answers and
+  no lost dotfiles, secrets or additional rendered assets; eight answers and
   `_src_path`/`_commit`; exact published render passes CT-L's full matrix. Template
   and root still reference reviewed seed workflows at this intermediate
   publication; CT-F owns final alpha references and migrated root proof. The root
@@ -197,7 +197,7 @@ repositories created by this planning ticket.
   CT-V evidence. Also regenerate/update the root instance from the revised
   template with its own answers in an isolated checkout; review the generated
   delta, preserving root package CI/instructions and excluding `template/` from
-  generic lint/format. Keep all named secrets and seven questions unchanged. After
+  generic lint/format. Keep all named secrets and eight questions unchanged. After
   human acceptance advance template `refs/heads/alpha`, render using
   `--vcs-ref=alpha` from its Git URL in a fresh isolated checkout and record
   the actual template/workflow commits. Moving branches are intentional; apply
@@ -293,8 +293,9 @@ repositories created by this planning ticket.
   provider/App identity and before/after PR state. The local cleanup listener
   must match the actual caller workflow names and close checks after canceled
   or failed review execution; include migrated cancellation/recovery proof.
-  Keep proportional Claude-only/both/neither tests at the final exported source;
-  an actual provider fallback smoke test is required if migration changes its
+  Keep proportional tests for both explicit reviewer choices with matching,
+  both, other-only and neither key at the final exported source; the selected
+  reviewer wins and its missing key fails. An actual Claude smoke test is required if migration changes its
   execution boundary beyond already tested behavior. Do not claim Claude live
   execution from a fixture. Confirm secrets reach all needed hops without values.
   Demonstrate native commands and client-Dockerfile commands with image digest.
