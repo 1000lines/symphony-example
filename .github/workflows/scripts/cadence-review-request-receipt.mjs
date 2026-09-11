@@ -11,6 +11,7 @@ export const prepareReviewRequestReceipt = async ({
   payload,
   eventName,
   reviewer,
+  requestActor = reviewer,
   pullPath,
   request,
   list,
@@ -87,7 +88,7 @@ export const prepareReviewRequestReceipt = async ({
   const comments = await list(`${issuePath}/comments?per_page=100`);
   const receipts = comments.filter(
     (comment) =>
-      normalize(comment.user?.login) === normalize(reviewer) &&
+      normalize(comment.user?.login) === normalize(requestActor) &&
       comment.body?.startsWith(MARKER)
   );
   if (receipts.length > 1)
@@ -120,7 +121,7 @@ export const prepareReviewRequestReceipt = async ({
   const latestRequestId = timeline.reduce(
     (latest, event) =>
       event.event === "review_requested" &&
-      normalize(event.actor?.login) === normalize(reviewer) &&
+      normalize(event.actor?.login) === normalize(requestActor) &&
       normalize(event.requested_reviewer?.login) === normalize(reviewer)
         ? Math.max(latest, event.id)
         : latest,

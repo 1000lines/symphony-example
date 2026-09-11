@@ -54,6 +54,7 @@ test("request-review uses workflow token for delete and bot token for post", () 
     /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/
   );
   assert.match(workflow, /DELETE_GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(workflow, /REVIEW_REQUEST_ACTOR: \$\{\{ format\('\{0\}\[bot\]', steps.app-token.outputs.app-slug\) \}\}/);
 });
 
 test("request-review failure path does not dispatch workflow and names manual remedy", () => {

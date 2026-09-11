@@ -169,7 +169,9 @@ preserve the current event-loop behavior.
 
 The review trigger admits App-originated review requests to a guard that checks
 the requesting bot against the slug returned by token minting. An unrelated App
-stops before feedback acquisition or review mutations. Existing human and
+stops before feedback acquisition or review mutations. Duplicate-request receipts
+and timeline recovery use this requesting App identity separately from the
+requested review account. Existing human and
 configured service-account requests retain their routing. The legacy review
 publisher still uses its own bot credential; that credential never supplies
 human feedback authority.

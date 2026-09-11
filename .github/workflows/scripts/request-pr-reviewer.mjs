@@ -326,6 +326,7 @@ const main = async () => {
               readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
             ),
             eventName: process.env.GITHUB_EVENT_NAME,
+            requestActor: process.env.REVIEW_REQUEST_ACTOR,
           }
         : undefined,
   });
