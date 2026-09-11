@@ -152,6 +152,48 @@ PR is still open, so delayed events cannot restart it. Unchanged
 duplicate events may still cause another review. The reviewer reacquires
 current state; its outcome verifier rejects missing or stale-head reviews.
 
+### Advisory check and human handoff
+
+The reusable reviewer creates `Cadence review` using the configured Cadence
+App and its existing `checks:write` grant. Admission captures the actual PR head
+and publishes a queued check before entering the long review queue. Starting
+the review changes it to in-progress. A new accepted request gets a separate
+check, including feedback on the same head; the workflow run, attempt and PR
+identify it. Retrying the same admission does not reset a completed check.
+
+Publication requires a new Cadence verdict after this request started, at its
+accepted head. A clean approval yields `success`; findings or a review-loop
+stop yield `action_required`. Failed execution or a missing new verdict yields
+`failure`. Closed PRs, changed heads and requests superseded by newer accepted
+work are cancelled. Check summaries link the workflow and, when available, the
+review. Older requests cannot overwrite a newer request's pending check.
+
+A clean current-head verdict marks a draft PR ready for human review when no
+newer accepted request exists. Already-ready PRs need no transition; findings
+leave a draft unchanged. Admission and final publication share a short native
+per-PR concurrency group; review execution uses its existing separate queue.
+The final job mints a fresh App token and rechecks the head before readying a
+draft. GitHub does not offer a head-conditional draft-to-ready mutation, so a
+push concurrent with that last API call remains a platform race; its own check
+and review still belong to the new head.
+
+Admission uploads a small recovery pointer **before** creating the check. The
+`cadence-review-check-cleanup.yml` completion listener uses it to terminate any
+check left pending by cancellation, timeout or failed finalization, including
+cancelled queued jobs and heads removed by force-push. It never turns incomplete
+execution green or changes a completed verdict. Recovery needs the existing
+App credential and GitHub API availability; a failed cleanup run requires an
+operator rerun. Rerun all jobs to admit a fresh review attempt; rerunning only
+failed jobs does not reset a completed advisory check.
+
+This check is advisory. It is excluded from `CI Required`, repository required
+checks and automatic merge gates. Required CI and its Linear wakeups keep their
+existing configuration; human approval and merge remain separate decisions.
+The client Copier extraction/adoption must carry these reusable jobs, cleanup
+workflow and helper with the existing App credentials, without another question,
+secret or opt-in setting. The cleanup workflow must be active on the trusted
+default branch before claiming live cancellation recovery.
+
 Manual `cadence-ai-review.yml` accepts `pr_numbers` (comma/space separated),
 `review_label`, or both, then calls the reviewer once per selected PR. Direct
 single-PR dispatch and `review_requested` remain compatibility entry points.

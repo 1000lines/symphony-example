@@ -67,8 +67,8 @@ jobs:
     steps:
       - run: echo "PR closed; cancelling its Cadence review."
 
-  review:
-    name: "Review PR #${{ inputs.pr_number || github.event.pull_request.number }}"
+  accept:
+    name: "Accept PR #${{ inputs.pr_number || github.event.pull_request.number }}"
     if: >-
       ${{
         github.ref == 'refs/heads/main' &&
@@ -94,11 +94,14 @@ jobs:
       }}
     environment: cadence-controller
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     concurrency:
-      group: cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
+      group: cadence-check-publication-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
-      queue: max # Preserve distinct feedback while another review runs.
+      queue: max # Short admission/publication lock; never held during review.
+    outputs:
+      request: ${{ steps.prepare.outputs.request }}
+      check_id: ${{ steps.queued.outputs.check_id }}
     steps:
       - name: Validate PR number
         env:
@@ -125,6 +128,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-metadata: read
           permission-pull-requests: read
+          permission-checks: write
 
       # Token creation supplies the trusted App slug. Other App actors stop
       # here, before fetching feedback or performing review mutations.
@@ -141,6 +145,102 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Prepare durable check pointer
+        id: prepare
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { checkRequest } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
+            const number = Number(process.env.PR_NUMBER);
+            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: number });
+            if (pr.state !== 'open') return;
+            const request = checkRequest({ repo: context.repo, serverUrl: context.serverUrl,
+              runId: context.runId, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) }, number, pr.head.sha);
+            const json = JSON.stringify(request);
+            require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/cadence-check-${number}.json`, json);
+            core.setOutput('request', json);
+
+      # Save before creating: even cancellation between API creation and output
+      # publication leaves workflow_run enough information to finish the check.
+      - name: Save check recovery pointer
+        if: steps.prepare.outputs.request != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cadence-check-${{ github.run_attempt }}-${{ inputs.pr_number || github.event.pull_request.number }}
+          path: ${{ runner.temp }}/cadence-check-${{ inputs.pr_number || github.event.pull_request.number }}.json
+          if-no-files-found: error
+
+      - name: Publish queued Cadence check
+        id: queued
+        if: steps.prepare.outputs.request != ''
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          CHECK_REQUEST: ${{ steps.prepare.outputs.request }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { queueCheck } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
+            const check = await queueCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}');
+            core.setOutput('check_id', check.id);
+
+  review:
+    name: "Review PR #${{ inputs.pr_number || github.event.pull_request.number }}"
+    needs: accept
+    if: github.ref == 'refs/heads/main' && needs.accept.outputs.check_id != ''
+    environment: cadence-controller
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
+      cancel-in-progress: false
+      queue: max # Preserve distinct feedback while another review runs.
+    outputs:
+      ran_review: ${{ steps.plan.outputs.run_claude }}
+      baseline: ${{ steps.started.outputs.baseline }}
+    steps:
+      - name: Validate PR number
+        env:
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+        run: |
+          if ! printf '%s' "${PR_NUMBER}" | grep -Eq '^[0-9]+$'; then
+            echo "::error::pr_number must be a positive integer."
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Mint existing Cadence App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        with:
+          app-id: ${{ vars.CADENCE_APP_ID }}
+          private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-checks: write
+
+      - name: Start accepted check
+        id: started
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          CHECK_REQUEST: ${{ needs.accept.outputs.request }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { startCheck } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
+            const result = await startCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}');
+            core.setOutput('active', result.active);
+            core.setOutput('baseline', result.baseline);
 
       - name: Fetch PR review state
         id: review_state
@@ -203,7 +303,7 @@ jobs:
       # PR assignee for review, update the workpad when Linear credentials
       # exist, and skip the Claude review step.
       - name: Plan visible Cadence review decision
-        if: steps.pr.outputs.state == 'OPEN'
+        if: steps.started.outputs.active == 'true' && steps.pr.outputs.state == 'OPEN' && steps.pr.outputs.head_sha == fromJSON(needs.accept.outputs.request).head
         id: plan
         env:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
@@ -635,3 +735,47 @@ jobs:
         run: |
           echo "::error::${FAILED_COUNT} stale Cadence approval(s) could not be dismissed or re-requested. The check fails so stale approval state is visible."
           exit 1
+
+  finish:
+    name: "Publish Cadence result for PR #${{ inputs.pr_number || github.event.pull_request.number }}"
+    needs: [accept, review]
+    if: always() && needs.accept.outputs.check_id != ''
+    environment: cadence-controller
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: cadence-check-publication-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Check out trusted helpers
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Mint existing Cadence App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        with:
+          app-id: ${{ vars.CADENCE_APP_ID }}
+          private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
+          permission-checks: write
+      - name: Finish advisory check and hand clean drafts to humans
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          CHECK_REQUEST: ${{ needs.accept.outputs.request }}
+          REVIEW_RESULT: ${{ needs.review.result }}
+          RAN_REVIEW: ${{ needs.review.outputs.ran_review }}
+          REVIEW_BASELINE: ${{ needs.review.outputs.baseline }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { finishCheck } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
+            await finishCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}', {
+              result: process.env.REVIEW_RESULT, ranReview: process.env.RAN_REVIEW,
+              baseline: process.env.REVIEW_BASELINE === '' ? undefined : Number(process.env.REVIEW_BASELINE),
+              reviewer: process.env.CADENCE_REVIEWER,
+            });
