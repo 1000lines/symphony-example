@@ -1,7 +1,7 @@
 # CT-C owns this list after CT-I merges. Paths are relative to symphony-example.
 # Existing sources inspected at d5e9692b84c3f338014b964fd9713143fb723b55.
 # CT-V copies final accepted sources at the same paths. No participant output.
-# Common helpers/config reader, instructions, package metadata and license occur
+# Common helpers/config reader, reviewer instructions, package metadata and license occur
 # only in review-export.txt. Consume both lists together; see client-inventory.md.
 
 .github/workflows/symphony-linear-wakeups.yml
@@ -12,3 +12,24 @@ scripts/symphony/repository-config.test.mjs
 # PLANNED CT-C: absent at the inspected ref; add only after implementation/merge.
 .github/workflows/symphony-client-commands.yml
 .github/workflows/scripts/symphony-client-commands.test.mjs
+
+# Client-session skills: Jeremy's PR #46 comment 5638123815 selects these extras.
+# Existing at the inspected ref; CT-C preserves these rows, CT-V publishes them,
+# CT-O documents client-session loading and the external tooling dependencies.
+# Complete factory and Linear directories, plus replan and its relative templates.
+.agents/skills/symphony-project-factory/SKILL.md
+.agents/skills/symphony-project-factory/templates/project-description.md
+.agents/skills/symphony-project-factory/templates/tickets/requirements-and-design.md
+.agents/skills/symphony-project-factory/templates/tickets/plan-project.md
+.agents/skills/symphony-project-factory/templates/tickets/trigger-fan-out.md
+.agents/skills/symphony-project-factory/templates/tickets/broaden-fanout-integration.md
+.agents/skills/symphony-project-factory/templates/tickets/standup.md
+.agents/skills/linear-graphql/SKILL.md
+.agents/skills/linear-graphql/agents/openai.yaml
+.agents/skills/linear-graphql/scripts/linear-graphql.mjs
+scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md
+docs/engineering/symphony/replanning.md
+
+# Factory-required guidance and its linked examples; retain its MIT attribution.
+.agents/skills/karpathy-guidelines/SKILL.md
+.agents/skills/karpathy-guidelines/EXAMPLES.md
