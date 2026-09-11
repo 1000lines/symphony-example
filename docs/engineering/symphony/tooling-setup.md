@@ -42,12 +42,10 @@ Both globs are needed to include the nested standing-docs cases. CI also runs
 the workflow contract and host-rendering suites explicitly; the local invocation
 and source-selection smoke tests run through `npm test`. Other host suites require the host
 tools described in [host operations](../../operations/symphony-host.md).
-The label-repair host test and several review/wakeup tests import `js-yaml`,
-which is not declared directly in the tooling manifests. A transitive install
-may supply it, but that is not a stable dependency contract. Root TypeScript
-checking includes `scripts/**/*.ts`, not the new `.mjs` helpers. Dependency and
-compiler coverage corrections remain later setup work; no product compiler
-configuration is required by this snapshot.
+The root tooling manifest declares `js-yaml` directly for the host-rendering,
+label-repair and review/wakeup tests. Root TypeScript checking includes
+`scripts/**/*.ts`, not the `.mjs` helpers; no product compiler configuration is
+required by this snapshot.
 An adopter's reusable workflow caller can add those suites and product checks
 as separate jobs. These commands specify validation scope, not a guarantee that
 all retained tests and lint rules already pass in a new environment.
@@ -87,9 +85,9 @@ export SYMPHONY_TOOLING_ROOT="${SYMPHONY_TOOLING_ROOT:-$PWD}"
   "${SYMPHONY_WORKFLOW_SOURCE:-$SYMPHONY_TOOLING_ROOT/scripts/symphony/runtime-bundle/workflow/WORKFLOW.md}"
 ```
 
-Use an absolute tooling root when invoking from elsewhere. Replace old commands
-that pass the deleted root `WORKFLOW.md` or rely on implicit path discovery.
-Existing root-derived overrides need the [workflow migration](../../../scripts/symphony/runtime-bundle/README.md#workflow-source-migration).
+Use an absolute tooling root when invoking from elsewhere. Always pass the
+workflow path explicitly. See [workflow migration](../../../scripts/symphony/runtime-bundle/README.md#workflow-source-migration)
+when updating an existing installation or operator-owned override.
 The local smoke test uses a stub executable to verify argument/path selection;
 it does not establish compatibility or live worker behavior for your runtime.
 
@@ -116,7 +114,8 @@ standup documents. The project factory is for human sessions and is excluded
 from default unattended skill installation.
 
 Task branches and PRs use the project's `base-branch` (optional branch-name
-string, default `main`); the DAG manifest expresses it as `project.base_branch`
+string, default the target repository's GitHub default branch); the DAG manifest
+expresses the selected branch as `project.base_branch`
 with matching task branch/PR declarations. The parser rejects
 `project.integration_branch`, `defaults.frontier_blocked_label` and the old
 `defaults.integration_branch_policy`. No merge-build contract remains. The

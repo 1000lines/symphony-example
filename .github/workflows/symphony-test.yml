@@ -51,8 +51,10 @@ jobs:
       - name: Select tooling npm version
         run: npm install --global npm@11.13.0
       - name: Install tooling dependencies
+        id: tooling-dependencies
         run: npm install
       - name: Test Symphony tooling
         run: npm test
       - name: Test authoritative workflow and host rendering
+        if: ${{ !cancelled() && steps.tooling-dependencies.outcome == 'success' }}
         run: node --test scripts/symphony/runtime-bundle/runtime-bundle.integration.test.mjs scripts/symphony/host/reconcile.test.mjs

@@ -184,7 +184,10 @@ test("authoritative workflow requires target-scoped PR labels and leaves hooks t
     "after_run",
     "before_remove",
   ]) {
-    assert.ok(workflow.includes(`  ${hook}: |\n    true\n`));
+    assert.ok(
+      workflow.includes(`  ${hook}: |\n    true\n`),
+      `Bundled ${hook} must remain a no-op`
+    );
   }
   assert.match(workflow, /installed `symphony-repository` skill/);
   assert.match(workflow, /target's GitHub default branch/);

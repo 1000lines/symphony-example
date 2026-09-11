@@ -324,9 +324,8 @@ These gaps need resolution during later operational setup:
   the Linear states, wake label, server timer installation, runner and event
   setup described in tooling setup. Guardrail scope and actor
   classification have their own narrow overrides.
-- Retained tests may need correction before they pass. In particular,
-  host label-repair and review/wakeup tests import `js-yaml` without a direct
-  dependency declaration. The Node install step and its regression source now
+- Retained tests may need correction before they pass. The Node install step
+  and its regression source now
   agree on Codex `0.153.4` and a release-age bypass limited to the Codex install;
   `host/lib.sh:runtime_codex_version` reports the installed binary first but
   falls back to `SYMPHONY_CODEX_VERSION` or `0.147.0` if it cannot. That reporting
@@ -683,7 +682,7 @@ Runtime workflow — Supply tracker policy, workspace setup and worker launch se
 Setting: Set `SYMPHONY_WORKFLOW_SOURCE` in the installer environment to an
 operator-owned Markdown workflow. Optional default: the staged bundle's
 `workflow/WORKFLOW.md`, falling back to its source copy. Configure `tracker`
-team/state/maturity mappings, `workspace.root`, clone repository/branch, `hooks`,
+team/state/maturity mappings, `workspace.root`, optional environment `hooks`,
 `codex` command and `server` in that supplied file. Repository/team placeholders
 must be replaced with adopter settings before use.
 
@@ -852,11 +851,10 @@ Add product validation as separate jobs in the same adopter-owned file. Use `nee
 
 Setting location: root and tooling workspace `package.json` files, `.nvmrc`, `.npmrc`, and tooling TypeScript/ESLint configs define the tooling contract; put extra product jobs in an adopter-owned CI caller. Required for tooling CI: Node 20.20.0, npm 11.13.0, then `npm install`; exact commands are `npm run build`, `npm test`, and `npm run lint`. A derived root lockfile is not included. Installation resolves the declared ranges and generates a local lockfile by default; resolution can change between installs. An adopter can maintain that lock in their own repository before using `npm ci`. Optional product jobs default to none. The root test script selects tooling unit tests; host and runtime suites are separate commands documented in `docs/engineering/symphony/tooling-setup.md`. No product language is assumed.
 
-Known later setup gaps: the label-repair host test and review/wakeup tests
-import `js-yaml`, which the tooling manifests do not directly declare. Root
-TypeScript checking covers `scripts/**/*.ts`, not `.mjs` helpers. No direct
-dependency or broader compiler scope is added here; declaring the command
-selection does not establish a passing installation or suite.
+The root manifest declares `js-yaml` directly for host-rendering, label-repair
+and review/wakeup tests. Root TypeScript checking covers `scripts/**/*.ts`, not
+`.mjs` helpers; declaring the command selection does not establish a passing
+installation or suite.
 
 ### Manual setup steps
 
@@ -921,7 +919,8 @@ Required when using the described integration. The shipped `cadence@example.inva
 `DAG project settings` — declare task branches and PRs against the selected project base.
 
 Setting location: use `base-branch` in adopter-owned Linear project metadata
-(optional branch-name string, default `main`), and explicitly declare the
+(optional branch-name string, default the target repository's GitHub default
+branch), and explicitly declare the
 matching `project.base_branch`, task `branch.base` and `pr.base` in the
 `symphony-dag-manifest/v1` YAML plan. The manifest requires these declarations;
 its parser does not supply the metadata default. Use

@@ -85,7 +85,10 @@ test("renders service units with runtime paths and worker settings", async () =>
     assert.match(workflow, /codex-with-runtime-bundle\.sh --enable apps/);
     assert.match(workflow, /Only after the Codex workpad ID is pinned/);
     for (const hook of ["after_create", "before_run", "after_run", "before_remove"]) {
-      assert.ok(workflow.includes(`  ${hook}: |\n    true\n`));
+      assert.ok(
+        workflow.includes(`  ${hook}: |\n    true\n`),
+        `Rendered ${hook} must remain a no-op`
+      );
     }
     assert.ok(service.includes(` ${env.SYMPHONY_CONFIG_DIR}/WORKFLOW.md\n`));
     assert.doesNotMatch(workflow, /Worker slots:/);

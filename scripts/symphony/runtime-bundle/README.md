@@ -34,7 +34,8 @@ installation still renders `/etc/symphony/WORKFLOW.md` from the staged bundle,
 falling back to this bundle's source before staging; the rendered file and staged
 release are installation artifacts, not independently maintained profiles.
 The systemd service passes that rendered path explicitly. There is no fallback
-to a root workflow. Local callers must also pass the source path explicitly; use
+to a root workflow. Replace local commands that pass the deleted root
+`WORKFLOW.md` or rely on implicit path discovery with an explicit source path; use
 the [local invocation](../../../docs/engineering/symphony/tooling-setup.md#repository-workflow-and-guardrails).
 
 `SYMPHONY_WORKFLOW_SOURCE` selects a complete operator-owned override for the host
@@ -42,11 +43,17 @@ renderer and documented local invocation. It takes precedence over the default;
 no merging or automatic migration occurs. Remove an override that only selected
 the old root path, or update it to the nested source. For customized files,
 compare against the authoritative source and retain deliberate environment
-settings. In particular, migrate the old fixed clone/GitHub-token checks to
-repository discovery and bound credentials, install the repository skill, make
-shared tooling available through `SYMPHONY_TOOLING_ROOT`, and review the retained
-GPT-6 Astra command. Repository-specific hooks remain an operator choice.
+settings. The old `after_create` hook cloned a fixed repository and required
+`GITHUB_TOKEN`, `LINEAR_API_TOKEN`, and an executable `GIT_ASKPASS`. Move that setup
+to repository discovery and bound credentials, install the repository skill, and
+make shared tooling available through `SYMPHONY_TOOLING_ROOT`. Review the worker
+model change from GPT-5.5 to GPT-6 Astra, both with xhigh reasoning.
+Repository-specific hooks remain an operator choice.
 Default hooks are no-ops; required PR labels are verified during publication.
+
+If the selected source is missing, host rendering aborts with `workflow source
+is missing` before replacing `/etc/symphony/WORKFLOW.md`. The last rendered file
+remains intact; a failed render does not update or reload the running service.
 
 The retained CI profile uses `Unhappy` with `wake:15m`, dispatches `Evaluating`,
 and caps concurrent evaluations at one. Supply `Active`, `Inactive`, `Unhappy`,
