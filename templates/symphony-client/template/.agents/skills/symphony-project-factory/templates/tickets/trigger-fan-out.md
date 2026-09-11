@@ -43,7 +43,7 @@ parking tickets. Apply fresh human activation direction over older plan defaults
   image or justified skip, and required CI checks for the published commit.
   If relevant tests pass locally, skip Docker; use it only for local environment
   gaps. CI is the shared validation surface, mandatory even for small/docs-only changes;
-  follow `docs/engineering/symphony/proof-of-work.md#validation-order`.
+  follow `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/proof-of-work.md#validation-order`.
 - Generated tickets preserve confirmed decisions and material assumptions.
   Carry forward only questions whose answers change the task or an authorized
   next action; name that decision. Assign routine discovery and verification to

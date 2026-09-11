@@ -119,7 +119,7 @@ ordinary edits alone do not revoke it. An unmerged hard prerequisite still
 requires its accepted landed result. Source availability is not deployment.
 
 Treat daemon tickets according to the daemon lifecycle in
-`docs/engineering/symphony/project-workflow.md` and the daemon design handoff.
+`$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-workflow.md` and the daemon design handoff.
 A daemon may be blocked by a normal ticket; a daemon is never a blocker for a
 normal ticket. If a daemon appears as a blocker, log a lifecycle gap and do not
 make another ticket wait on it.
@@ -128,8 +128,8 @@ make another ticket wait on it.
 
 Use the existing lifecycles rather than inventing a third state model:
 
-- Normal tickets follow `docs/engineering/symphony/project-workflow.md` and
-  `docs/engineering/review/cadence-ai-review.md`: active work, CI, Cadence
+- Normal tickets follow `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-workflow.md` and
+  `$SYMPHONY_TOOLING_ROOT/docs/engineering/review/cadence-ai-review.md`: active work, CI, Cadence
   review, human review, merge, terminal states, and documented fallbacks.
 - Daemon tickets rest in daemon states, wake into the daemon dispatch state,
   evaluate, write a verdict, and return to `Happy` or `Unhappy`. Retry
@@ -162,7 +162,7 @@ The daemon may perform only these action classes.
 1. Correct the Linear status to the derived lifecycle truth.
 
    - Use the state names and fallbacks documented in
-     `docs/engineering/symphony/project-workflow.md`.
+     `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-workflow.md`.
    - If a correction would hide an unsafe transition or cannot be mapped to the
      documented lifecycle, decline it and record the gap.
    - Do not rewrite labels except where a documented status correction requires

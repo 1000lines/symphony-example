@@ -458,3 +458,29 @@ CT-R's review list is unchanged. The original CT-I/CT-C acceptances stay termina
 CT-L verifies the complete generated set and final exports before CT-U/V publication.
 CT-A/Z check both real consumers before seed-body retirement. This inventory
 records the authorized correction and exact copy; workflow implementation, rendering, installation and live proof remain with later owners.
+
+## CT-T initial conversion readback
+
+The initial conversion renders **21 paths**: the seven immediate ingress,
+config, attributes, guidance, manifest and answers paths plus all fourteen
+client skill/resources above. It consumes accepted CT-M/Q from main
+`baa646a45721713231a1801c2271f524ccfc37ce`. The five copied workflow bodies are
+removed; their exact CT-L caller additions and reviewed-source status are in
+[staging PROVENANCE](../../../templates/symphony-client/PROVENANCE.md#pending-ct-l-additions--publication-gate).
+No export list or frozen copy hash changes during conversion.
+
+App slugs replace only ingress login defaults, with native expressions and the
+`Cadence Review Ingress` name retained. Config uses serialized `bash -lc`
+commands, native mode by omission, `SYMPHONY.md` and explicitly unconfigured
+required checks. The eight answers remain unchanged; reviewer wiring is deferred
+to the actual CT-R interface. CT-C's #45 is merged, but CT-L retains caller/mode
+integration ownership. The initial cut is not publication/onboarding readiness.
+
+All skill/resource paths and licenses survive. Eight Markdown files adapt
+external tooling references or replan's local guide; six other resource files
+remain byte-identical. Skill helpers are unchanged. Generated guidance records
+the separate reviewed tooling checkout, client-relative loading paths and CT-O's
+pending setup procedure. Real Copier fixtures cover exact paths, both reviewer
+choices, branches/teams, quoted/multiline commands, native expressions, YAML/JSON,
+root-only exclusion, existing-file preservation and a reviewed attributes merge
+checked with `git check-attr`. Actual session loading remains CT-O/A evidence.

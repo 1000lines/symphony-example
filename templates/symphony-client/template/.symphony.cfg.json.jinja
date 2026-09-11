@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "symphony-repository/v1",
+  "linear": {"teamKey": [[ linear_team_key | to_json ]]},
+  "workingDirectory": ".",
+  "instructions": ["SYMPHONY.md"],
+  "commands": {
+    "build": [[ [["bash", "-lc", build_command]] | to_json ]],
+    "test": [[ [["bash", "-lc", test_command]] | to_json ]]
+  },
+  "ci": {"requiredChecks": []}
+}
