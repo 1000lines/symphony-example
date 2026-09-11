@@ -242,6 +242,7 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
   github,
   context,
   core,
+  reviewOutcome,
 }) {
   const { owner, repo } = context.repo;
   const bot = (await github.rest.users.getAuthenticated()).data.login;
@@ -280,7 +281,7 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
     }
   }
   // False-green guard: a successful run must leave a Cadence review at the
-  // current head. Its absence means the run reported success but did no review.
+  // current head. A failed Action must also fail when an older review exists.
   const validCurrentHeadReview = mine.some(
     (review) =>
       review.commit_id === pr.head.sha &&
@@ -292,11 +293,16 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
   }
 
   const problems = [];
+  if (reviewOutcome !== "success") {
+    problems.push(
+      `Cadence AI review Action outcome: ${reviewOutcome || "unknown"}. Review execution did not succeed; inspect the Run Cadence AI review step.`
+    );
+  }
   if (unreviewed.length > 0) {
     problems.push(
       `No Cadence review at current head for ${unreviewed.join(
         ", "
-      )} - the run reported success but did not review these PRs (e.g. tool denials or an erroneous skip).`
+      )} - no completed review was found.`
     );
   }
   if (dismissed.length > 0) {

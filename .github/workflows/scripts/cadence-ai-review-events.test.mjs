@@ -1,13 +1,88 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import test from "node:test";
+import yaml from "js-yaml";
+
+const require = createRequire(import.meta.url);
+const verifyCadenceAiReview = require("./verify-cadence-ai-review.cjs");
 
 const workflow = readFileSync(
   new URL("../cadence-ai-review-events.yml", import.meta.url),
   "utf8"
 );
 const trigger = readFileSync(new URL("../cadence-ai-review-trigger.yml", import.meta.url), "utf8");
+const triggerWorkflow = yaml.load(trigger);
+
+test("every trigger path uses the minted App allowlist without a caller permission bypass", () => {
+  assert.deepEqual(Object.keys(triggerWorkflow.on), [
+    "pull_request_target", "workflow_dispatch", "workflow_call",
+  ]);
+  const steps = triggerWorkflow.jobs.review.steps;
+  const review = steps.find((step) => step.id === "cadence_review");
+  assert.equal(review.uses, "anthropics/claude-code-action@30544b674398ee15c84819bd87caf8a87e8c7b55");
+  assert.equal(review.with.allowed_bots, "${{ steps.app-token.outputs.app-slug }}");
+  assert.equal(review.with.allowed_non_write_users, undefined);
+  assert.equal(review["continue-on-error"], undefined);
+  assert.equal(triggerWorkflow.jobs.review.environment, "cadence-controller");
+  assert.equal(steps.find((step) => step.id === "plan").env.TRIGGER_ACTOR, "${{ github.actor }}");
+});
+
+test("outcome verification preserves startup failure, current-head checks and review cleanup", async (t) => {
+  const step = triggerWorkflow.jobs.review.steps.find((entry) => entry.name.startsWith("Verify review outcomes"));
+  assert.equal(step.if, "always() && steps.plan.outputs.run_claude == 'true'");
+  assert.equal(step.env.CADENCE_REVIEW_OUTCOME, "${{ steps.cadence_review.outcome }}");
+  const AsyncFunction = Object.getPrototypeOf(async function () { return undefined; }).constructor;
+  const run = new AsyncFunction("require", "github", "context", "core", "process", step.with.script);
+  const previousPr = process.env.PR_NUMBER;
+  process.env.PR_NUMBER = "33";
+  t.after(() => {
+    if (previousPr === undefined) delete process.env.PR_NUMBER;
+    else process.env.PR_NUMBER = previousPr;
+  });
+
+  for (const [outcome, state, sha, fails, dismisses] of [
+    ["success", "APPROVED", "head", false, false],
+    ["success", "COMMENTED", "head", false, false],
+    ["success", "APPROVED", "stale", true, false],
+    ["failure", "APPROVED", "head", true, false],
+    ["failure", null, null, true, false],
+    ["skipped", null, null, true, false],
+    ["cancelled", null, null, true, false],
+    ["", null, null, true, false],
+    ["success", "CHANGES_REQUESTED", "head", true, true],
+    ["failure", "CHANGES_REQUESTED", "head", true, true],
+  ]) {
+    const errors = [];
+    const dismissed = [];
+    const github = {
+      rest: {
+        users: { getAuthenticated: async () => ({ data: { login: "cadence" } }) },
+        pulls: {
+          get: async () => ({ data: { head: { sha: "head" } } }),
+          listReviews: "reviews",
+          dismissReview: async (input) => dismissed.push(input.review_id),
+        },
+      },
+      paginate: async () => state ? [{ id: 1, user: { login: "cadence" }, state, commit_id: sha }] : [],
+    };
+    await run(
+      () => verifyCadenceAiReview, github, { repo: { owner: "owner", repo: "repo" } },
+      { setFailed: (message) => errors.push(message) },
+      { env: { CADENCE_REVIEW_OUTCOME: outcome } },
+    );
+    assert.equal(errors.length > 0, fails, `${outcome}: ${state} at ${sha}`);
+    assert.equal(dismissed.length > 0, dismisses);
+    if (outcome !== "success") {
+      assert.match(errors.join(" "), /Review execution did not succeed/);
+      assert.doesNotMatch(errors.join(" "), /reported success/);
+    }
+    if (state === null || sha === "stale") {
+      assert.match(errors.join(" "), /No Cadence review at current head/);
+    }
+  }
+});
 
 test("the review trigger uses the existing App for feedback permission reads", () => {
   const stateStep = trigger.match(/- name: Fetch PR review state\n[\s\S]*?(?=\n      - name:)/)?.[0];
