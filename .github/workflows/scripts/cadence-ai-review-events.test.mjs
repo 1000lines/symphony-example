@@ -121,7 +121,7 @@ test("events call review only after the existing author-permission router succee
   assert.equal(review.needs, 'route');
   assert.equal(review.if, "needs.route.outputs.should_request_review == 'true'");
   assert.equal(review.uses, './.github/workflows/cadence-ai-review-trigger.yml');
-  assert.deepEqual(Object.keys(review.secrets).sort(), Object.keys(triggerWorkflow.on.workflow_call.secrets).sort());
+  assert.equal(review.secrets, 'inherit');
   assert.equal(review.with.pr_number, '${{ needs.route.outputs.pr_number }}');
   assert.equal(route.outputs.should_request_review, '${{ steps.route.outputs.should_request_review }}');
   assert.equal(route.steps.find(step => step.id === 'route').run,
@@ -136,11 +136,8 @@ test("manual matrix and events reuse the same reviewer with sufficient inherited
   assert.equal(manual.jobs.review.uses, events.jobs.review.uses);
   assert.equal(manual.jobs.review.with.pr_number, '${{ matrix.pr_number }}');
   assert.deepEqual(manual.jobs.review.secrets, events.jobs.review.secrets);
-  assert.equal(Object.keys(manual.jobs.review.secrets).length, 4);
-  // Explicit naming admits the environment secret without forwarding a key or
-  // inheriting unrelated repository secrets. Only the protected job supplies it.
-  assert.equal(manual.jobs.review.secrets.CADENCE_APP_PRIVATE_KEY, "");
-  assert.equal(triggerWorkflow.on.workflow_call.secrets.CADENCE_APP_PRIVATE_KEY.required, false);
+  // Named/empty mappings lose environment secrets in reusable jobs (runner#4453).
+  assert.equal(manual.jobs.review.secrets, 'inherit');
   assert.equal(triggerWorkflow.jobs.review.environment, "cadence-controller");
   assert.equal(triggerWorkflow.jobs.review.steps.find(step => step.id === "app-token").with["private-key"],
     "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
