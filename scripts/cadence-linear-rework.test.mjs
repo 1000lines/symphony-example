@@ -862,6 +862,11 @@ test("a cancellation during workpad writes is re-read before the wakeup", async 
 test("verified human submitted/edited summaries wake the linked issue directly", async () => {
   for (const action of ["submitted", "edited"]) for (const review of [
     { state: "commented", body: "Fix the retry limit" },
+    {
+      // PR #12-style design feedback must wake work without verdict syntax.
+      state: "commented",
+      body: "Way too complicated. Use the server's wake:15m. Unhappy while CI is pending, Inactive on success, Active on failure.",
+    },
     { state: "changes_requested", body: "" },
   ]) {
     const fixture = harness();

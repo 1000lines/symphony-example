@@ -5,6 +5,7 @@ tracker:
   team_key: "100"
   active_states:
     - Active
+    - Evaluating
   terminal_states:
     - Done
     - Closed
@@ -15,8 +16,11 @@ tracker:
   maturity_gate_state_scope:
     - Todo
     - Active
-  daemon_states: []
-  daemon_dispatch_states: []
+  daemon_states:
+    - Unhappy
+  daemon_dispatch_states:
+    - Evaluating
+  daemon_default_wake: 15m
 polling:
   interval_ms: 30000
 workspace:
@@ -32,6 +36,8 @@ hooks:
     true
 agent:
   max_concurrent_agents: 3
+  max_concurrent_agents_by_state:
+    Evaluating: 1
   max_turns: 20
 codex:
   command: codex --enable apps --config shell_environment_policy.inherit=all --config 'model="gpt-6-astra"' --config model_reasoning_effort=xhigh app-server
@@ -149,7 +155,9 @@ Symphony uses these state meanings:
 
 - `Active`: the issue can be worked now. It covers implementation and rework.
 - `Inactive`: the issue is waiting for something outside the worker slot. It
-  covers CI, deploy, AI review, human review, and missing-input waits.
+  covers deploy, AI review, human review, and missing-input waits.
+- `Unhappy`: CI is pending; `wake:15m` schedules the next check.
+- `Evaluating`: the server has woken this ticket to check its current PR.
 - `Done`: accepted work is complete.
 - `Canceled`: work was intentionally stopped.
 - `Duplicate`: work is represented by another issue.
@@ -159,12 +167,13 @@ property derived from unfinished predecessor relations, not a workflow status.
 Active tickets wait on their blocker relations; completion of a predecessor
 satisfies its relation without changing the dependent ticket's status. Do not
 create `Blocked` or use the required but unused `Do Not Use` placeholder.
-Only `Active` is dispatched. Daemon tickets and the `Happy`, `Unhappy`, and
-`Evaluating` states are not supported in this deployment. The human lead manages
-follow-up and monitoring manually during the hackathon.
+`Active` and `Evaluating` are dispatched. The server's existing timer moves
+sleeping `Unhappy` tickets to `Evaluating` after approximately 15 minutes,
+subject to timer jitter, polling, dependencies, and worker capacity. At most
+one evaluation runs at a time. `Happy` is not enabled in this profile.
 
 Waiting on another ticket uses the accepted hard blocker relations. Waiting on
-CI, review, or input uses `Inactive`. Optional `waiting:ci`,
+CI uses `Unhappy` with `wake:15m`; review or input uses `Inactive`. Optional `waiting:ci`,
 `waiting:ai-review`, and `waiting:human` labels are hints that can become stale;
 they are not workflow states or prerequisites for a wakeup. Detailed state and
 event rules are in `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/project-workflow.md`.
@@ -178,11 +187,12 @@ comments. Clean Cadence approval and human-needed findings request review from
 eligible PR assignees; the bridge records a routing gap if none exists. Human
 approval with notes receives a Cadence re-look without directly waking Linear.
 
-The non-review bridge wakes issues for failed required checks on the current PR
-head, confirmed merge conflicts, and issue-scoped dispatched workflow
-completions. Successful ordinary CI checks do not cause this bridge to wake an
-issue. See the project workflow for scope and freshness checks before interpreting
-a completion as a wakeup.
+The GitHub wakeup workflow resolves the current PR's ticket from the repository
+team config. It gives an Active worker up to one minute to finish and otherwise
+leaves Active work alone. Inactive tickets with conflicts move to Active with a
+Cadence workpad instruction. Pending CI waits in Unhappy with wake:15m; current
+CI completion moves the ticket to Inactive on success or Active on failure.
+Current required external-check failures also move waiting tickets to Active.
 
 Review and non-review state bridges preserve terminal `Done`, `Canceled`
 (including `Cancelled`), and `Duplicate` issues and terminal Linear categories.
@@ -190,6 +200,29 @@ They record actual mutation results or skips in `## Cadence Workpad` and the
 workflow run summary. A failed, stale, or canceled workflow does not authorize
 reopening a terminal issue. Human or accepted merge automation owns final
 acceptance; a wakeup is not acceptance or proof that validation passed.
+
+## CI Timer Evaluation
+
+When dispatched in `Evaluating`, check only this ticket before implementing:
+
+1. Pin the Codex workpad, reread the issue, and resolve its repository and PR
+   from the issue/workpad. Verify the repository's `.symphony.cfg.json` team.
+   If another actor moved the issue out of Evaluating, preserve that state;
+   follow normal rework only if its current state is Active.
+2. Read the current PR head, mergeability, latest CI run, and required checks.
+   A merge conflict or failed CI/required check means Active. Successful CI
+   with all required checks satisfied means Inactive. Pending or missing checks
+   mean Unhappy with wake:15m. Record missing PRs, closed PRs, or unavailable
+   access in the workpad and use Inactive for that human follow-up.
+3. Record the current head, check/run links, result, and next action in the
+   Codex workpad. Reread the issue and PR before changing state; if the state
+   or head changed during evaluation, preserve the newer work and stop.
+   Add wake:15m when setting Unhappy; remove it for Active or Inactive, preserving
+   unrelated labels. Read back the update. Do not edit the engine's Symphony
+   Workpad; the runtime maintains its timer anchor when the worker finishes.
+4. End the turn for Unhappy or Inactive. If the issue becomes Active, continue
+   normal rework below, including on a continuation turn. Do not sleep or scan
+   other tickets during evaluation; the server schedules the next CI check.
 
 ## Project Branching Model
 
@@ -298,8 +331,10 @@ For coding tickets spawned from a DAG plan:
   Linear/GitHub identity is known.
 - Treat Linear states as the execution contract:
   - `Active`: implementation or rework may run now.
-  - `Inactive`: CI, deploy, review, human input, or another external event is
+  - `Inactive`: deploy, review, human input, or another external event is
     pending and the issue should not consume a worker slot.
+  - `Unhappy`: pending CI sleeps with `wake:15m`.
+  - `Evaluating`: check the current PR using the CI Timer Evaluation steps.
   - Blocking is derived from unfinished predecessor relations, not a status.
   - `Done`, `Canceled`, and `Duplicate`: terminal states.
 - Treat legacy waiting states such as `Waiting for CI`, `In Review`, and
@@ -340,10 +375,18 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   reviewer-facing clarity improvements.
 - Before returning to review, update the Codex workpad review-comment ledger so
   incoming, addressed, deferred, and blocked comments are each accounted for.
+- For changed plans, use `symphony-replan`: do small node additions, deletions,
+  or splits directly, adding a Linear ticket if needed. For larger changes,
+  create a replanning ticket from the planning template and a dependent fan-out
+  ticket. Preserve unresolved feedback.
+- A clear design instruction from a human with repository write access is an
+  authorized decision. Minute it, amend affected plan/ticket text, and implement
+  and commit. Do not wait for a named design owner, the original author, or
+  Cadence to ratify it; AI disagreement alone is not missing human input.
 - On rework, take the smallest appropriate action:
   - if review feedback or failed checks are mechanical or clearly actionable,
     implement the fix or update the PR/workpad, push if code changed, and move
-    to `Inactive` when checks are pending;
+    to `Unhappy` with `wake:15m` when checks are pending;
   - if the rework was metadata-only and required checks are already passing,
     update the workpad and move back to waiting review;
   - if review feedback requires product judgment, credentials, environment
@@ -367,29 +410,15 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   continue. Record the exact source and failure in the workpad, ask for access
   or a pasted copy, move the Linear issue to `Inactive`, and stop
   unless the issue explicitly marks that source as optional.
-- If the issue is already waiting on CI or review, do not resume feature
-  implementation. Inspect the linked PR and GitHub checks, then take the
-  smallest appropriate action:
-  - first inspect the linked PR `createdAt`, the current Linear issue priority,
-    and whether other issues are available in `Active` or legacy workable
-    states;
-  - if checks are still running, the PR was created less than 20 minutes ago,
-    the issue priority is neither `Urgent` nor `High`, and other eligible work
-    is available, do not sleep in this turn. Update the workpad with the
-    pending check names and the decision to defer CI polling, keep the issue in
-    `Inactive`, and stop so the worker slot can be used for other work;
-  - if checks are still running, sleep for 5 minutes in this same turn, then
-    check GitHub again;
-  - if checks are still running after the 5 minute sleep, update the workpad
-    with the latest pending check names, keep the issue in `Inactive`, and stop;
-  - if checks failed and the fix is mechanical or clearly implied by the
-    failure, move the issue to `Active`, make the fix, push it, update the
-    workpad, and then move the issue back to `Inactive`;
-  - if checks failed but the fix requires product judgment, credentials,
-    environment access, or ambiguous decisions, ask the specific question in
-    the workpad, move the issue to `Inactive`, and stop;
-  - if all required checks are passing, update the workpad and move the issue
-    to waiting review.
+- If the issue is already waiting on CI or review, inspect its current PR:
+  - pending or missing checks: record them, set `Unhappy` with `wake:15m`, and
+    stop; the server owns the wait;
+  - failed checks or a merge conflict: set `Active`, remove `wake:15m`, and do
+    normal rework; after pushing, use `Unhappy` with `wake:15m` while CI runs;
+  - successful CI and required checks: remove `wake:15m`, update the workpad,
+    and move to `Inactive` for review;
+  - a missing decision or access: record the specific question, remove the
+    wake label, move to `Inactive`, and stop.
 - Make surgical changes only. Do not refactor adjacent code unless required.
 - Prefer targeted validation over broad monorepo validation.
 - If writing, reviewing, or refactoring code, apply the karpathy-guidelines skill.
@@ -465,8 +494,9 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   empty sections. The human reviews the suggestion and decides whether to
   commission it, for example by requesting a Misc ticket. A proposal is advisory,
   not a new acceptance gate, and does not block otherwise valid assigned work.
-- After opening or updating a PR, move the Linear issue to `Inactive` while
-  checks are pending.
+- After opening or updating a PR, use `Unhappy` with `wake:15m` while CI is
+  pending. After CI succeeds, remove the wake label and use `Inactive` for
+  review. Record the current PR head and pending checks in the Codex workpad.
 - After required checks pass, keep the issue waiting while Cadence or another
   configured AI review gate runs.
 - Keep the Linear issue waiting for human review only after the PR is linked,

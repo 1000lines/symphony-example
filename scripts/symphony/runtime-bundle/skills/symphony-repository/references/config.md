@@ -4,11 +4,13 @@
 commit and record that SHA. Changes on a task branch are proposals until merged.
 It contains repository development settings, never secrets, App installation
 IDs, Linear IDs, repository allowlists, or controller dispatch destinations.
-Discover identities through GitHub and the assigned Linear project at runtime.
+The required `linear.teamKey` selects the repository's Linear team. Discover
+numeric and UUID identities through GitHub and Linear at runtime.
 
 ```json
 {
   "schemaVersion": "symphony-repository/v1",
+  "linear": { "teamKey": "ENG" },
   "workingDirectory": ".",
   "instructions": ["AGENTS.md"],
   "commands": {
@@ -30,6 +32,11 @@ Discover identities through GitHub and the assigned Linear project at runtime.
 ```
 
 This is an illustrative Node configuration, not a default for other repositories.
+Every repository must specify its own `linear.teamKey` as an uppercase string
+(for example, `"100"` or `"ENG"`). Ticket routing reads the file at that checkout's
+Git root, even when the helper lives in another repository or runs from a
+subdirectory. Missing or invalid configuration is an error; there is no fallback
+to a controller's `WORKFLOW.md`, another checkout, or an inferred team.
 Only include instruction files that exist. Each command is an executable and
 its arguments; multiple commands run in order. These are instructions for the
 worker, not shell expressions executed by the config reader. Use the target's

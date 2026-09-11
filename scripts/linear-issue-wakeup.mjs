@@ -1,5 +1,18 @@
 // Shared Linear wakeup semantics for GitHub event bridges.
 import { normalize } from "./github-actor-classification.mjs";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+import { validateConfig } from "./symphony/runtime-bundle/skills/symphony-repository/scripts/config.mjs";
+
+export const readLinearTeamKey = (checkout = process.cwd()) => {
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+    cwd: checkout,
+    encoding: "utf8",
+  }).trim();
+  const config = validateConfig(JSON.parse(readFileSync(join(root, ".symphony.cfg.json"), "utf8")));
+  return config.linear.teamKey;
+};
 
 const ISSUE_QUERY = `query LinearWakeupIssue($id: String!) {
   issue(id: $id) {

@@ -25,10 +25,12 @@ repository layout and product language are defined by that repository.
 
 ## Your job
 
-- Review against the PR's stated intent: the linked Linear issue's acceptance
-  criteria and any linked design docs are the source of truth for intent. Apply
-  engineering judgment — intent can be stale, and AI-authored plans/code are
-  peers, not authorities.
+- Review against current intent: linked acceptance criteria and design docs
+  are amended by later clear instructions from a human with repository write
+  access. That human can change the design without a separate design owner's
+  approval. Minute the decision and review against it; Symphony updates the
+  plan/tickets and implements. AI-authored plans/code are peers, not authorities,
+  and AI disagreement alone is not a `human-needed` finding.
 - Write detailed review state to the linked issue's single `## Cadence Workpad`
   through the Cadence Linear workpad helper. Treat each helper write as an
   increment on the prior workpad state: use the documented `reviewUpdate` shape

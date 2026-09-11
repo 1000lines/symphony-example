@@ -255,7 +255,7 @@ import { createReviewGeneration, feedbackWatermark, queueReviewGeneration,
 
 const page = (nodes, more = false, cursor = null) => ({ nodes, pageInfo: { hasNextPage: more, endCursor: cursor } });
 const record = (id, body = "Human feedback") => ({ id, body, updatedAt: "2026-09-10T00:00:00Z", author: { login: "human" } });
-const emptySources = () => Object.fromEntries(["reviews", "comments", "threads", "linearComments"]
+const emptySources = () => Object.fromEntries(["reviews", "comments", "threads", "linearComments", "commits"]
   .map(key => [key, { nodes: [], complete: true }]));
 
 test("acquires all review/comment/thread/reply and Linear pages, including feedback past 100", async () => {
@@ -263,6 +263,7 @@ test("acquires all review/comment/thread/reply and Linear pages, including feedb
   const sources = await fetchReviewFeedback({ owner: "fixture", repo: "repository", number: 1, issueIdentifier: "TEST-1",
     githubQuery: async (query, vars) => {
       calls.push({ query, vars });
+      if (query.includes("commits(first")) return { data: { repository: { pullRequest: { commits: page([]) } } } };
       if (query.includes("ThreadReplies")) {
         assert.equal(vars.id, "thread1"); assert.equal(vars.after, "reply100");
         return { data: { node: { comments: page([record("late-inline-reply")]) } } };
@@ -288,7 +289,7 @@ test("acquires all review/comment/thread/reply and Linear pages, including feedb
   assert.equal(sources.threads.nodes[100].id, "late-inline-reply");
   assert.equal(sources.threads.nodes[101].isResolved, true);
   assert.equal(feedbackWatermark(sources).records.length, 405);
-  assert.equal(calls.length, 7);
+  assert.equal(calls.length, 8);
 });
 
 test("missing, denied and cyclic feedback connections remain explicitly incomplete", async () => {

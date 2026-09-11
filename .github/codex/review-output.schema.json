@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repositoryId",
+    "prNumber",
+    "headSha",
+    "generationId",
+    "evidenceDigest",
+    "sourcesComplete",
+    "execution",
+    "summary",
+    "axes",
+    "requirements",
+    "findings",
+    "humanFeedback"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cadence-review/v1",
+      "type": "string"
+    },
+    "repositoryId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "prNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "headSha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "generationId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidenceDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourcesComplete": {
+      "description": "Every supplied source and feedback item is accounted for, including unavailable required documents with mandatory human-needed findings. False is rejected as incomplete output.",
+      "type": "boolean"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "cli",
+        "model",
+        "effort",
+        "sandbox",
+        "safetyStrategy",
+        "apiProxy"
+      ],
+      "properties": {
+        "action": {
+          "const": "86365089eb2b84e0a8fb0717b304f8bdcb13b20e",
+          "type": "string"
+        },
+        "cli": {
+          "const": "0.153.4",
+          "type": "string"
+        },
+        "model": {
+          "const": "gpt-6-astra",
+          "type": "string"
+        },
+        "effort": {
+          "const": "xhigh",
+          "type": "string"
+        },
+        "sandbox": {
+          "const": "read-only",
+          "type": "string"
+        },
+        "safetyStrategy": {
+          "const": "drop-sudo",
+          "type": "string"
+        },
+        "apiProxy": {
+          "const": true,
+          "type": "boolean"
+        }
+      }
+    },
+    "summary": {
+      "description": "One short, conversational paragraph for the PR comment. Detailed evidence belongs in the structured fields stored in Linear.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "summary", "evidence"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 500
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "summary",
+          "status",
+          "coverage",
+          "owners",
+          "evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["satisfied", "unsatisfied", "human-needed"]
+          },
+          "coverage": {
+            "type": "string",
+            "enum": ["covered", "partial", "unassigned"]
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "minItems": 0,
+            "maxItems": 500
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 500
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "summary",
+          "class",
+          "status",
+          "mandatory",
+          "evidence",
+          "action"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "class": {
+            "type": "string",
+            "enum": ["blocker", "human-needed", "should-fix", "suggestion"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved", "dismissed"]
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "minItems": 1,
+            "maxItems": 500
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 500
+    },
+    "humanFeedback": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "updatedAt",
+          "summary",
+          "status",
+          "mandatory",
+          "evidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "reviews",
+              "comments",
+              "threads",
+              "linearComments",
+              "commits"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["addressed", "deferred", "blocked"]
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 500
+    }
+  }
+}

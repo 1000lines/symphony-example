@@ -43,10 +43,10 @@ async function main() {
 
 const HELP_TEXT = `
 Usage:
-  node scripts/symphony/route-misc-project-on-ticket-start.mjs --issue DEMO-123 --apply
+  node scripts/symphony/route-misc-project-on-ticket-start.mjs --issue TEAM-123 --apply
 
 Runs from the Symphony ticket-start hook. Issues that already have a Linear
-project are skipped; no-project DEMO issues invoke the misc project router in
+project are skipped; no-project configured-team issues invoke the misc project router in
 apply mode.
 `.trim();
 
