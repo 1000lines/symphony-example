@@ -24,6 +24,9 @@ on:
         type: string
   workflow_call:
     secrets:
+      CADENCE_APP_PRIVATE_KEY:
+        description: "Loaded by the review job from the protected cadence-controller environment."
+        required: false
       CADENCE_BOT_GITHUB_TOKEN:
         required: true
       CADENCE_AI_REVIEW_ANTHROPIC_API_KEY:

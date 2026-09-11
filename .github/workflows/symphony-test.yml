@@ -57,4 +57,4 @@ jobs:
         run: npm test
       - name: Test authoritative workflow and host rendering
         if: ${{ !cancelled() && steps.tooling-dependencies.outcome == 'success' }}
-        run: node --test scripts/symphony/runtime-bundle/runtime-bundle.integration.test.mjs scripts/symphony/host/reconcile.test.mjs
+        run: node --test scripts/symphony/runtime-bundle/runtime-bundle.integration.test.mjs scripts/symphony/host/reconcile.test.mjs scripts/symphony/host/hosted-runtime-integration.test.mjs

@@ -81,6 +81,8 @@ jobs:
       trigger_source: ${{ needs.route.outputs.trigger_source }}
       trigger_actor: ${{ needs.route.outputs.trigger_actor }}
     secrets:
+      # Name the secret at the call boundary; the review job's environment supplies it.
+      CADENCE_APP_PRIVATE_KEY: ""
       CADENCE_BOT_GITHUB_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
       CADENCE_AI_REVIEW_ANTHROPIC_API_KEY: ${{ secrets.CADENCE_AI_REVIEW_ANTHROPIC_API_KEY }}
       CADENCE_LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
