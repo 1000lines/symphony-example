@@ -62,10 +62,12 @@ docs/engineering/review/cadence-ai-review.md
 docs/engineering/review/cadence-linear-workpad.md
 docs/engineering/review/github-actor-classification.md
 
-# Shared source attribution and Node version; no host installation payload.
+# Shared source attribution, Node version and repository review metadata.
+# .gitattributes preserves bookkeeping collapse and visible Mermaid diagrams at CT-V's root.
 LICENSE
 NOTICE
 .nvmrc
+.gitattributes
 
 # PLANNED CT-R: absent at the inspected ref; add only after implementation/merge.
 scripts/cadence-provider-result.mjs

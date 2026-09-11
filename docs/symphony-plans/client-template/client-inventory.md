@@ -199,6 +199,13 @@ check/workflow/App provenance. The seed tooling build/lint/test reusables stay
 seed-only; they require the excluded tooling workspaces. No publication CI or
 required-check name is claimed observed by CT-I.
 
+CT-V also copies `.gitattributes` to the workflow repository root from the shared
+section of review-export. Its GitHub Linguist rules collapse per-project planning
+bookkeeping while keeping Mermaid diagrams and top-level plans/designs visible.
+This preserves review presentation for both review and CI work; list it once in
+review-export. It is publication metadata, outside `template/` and the CT-M copy
+manifest, and must not overwrite an adopter's `.gitattributes`.
+
 Source attribution is Apache-2.0 `LICENSE` plus `NOTICE`: “Orchestra Bio
 symphony-example / Copyright 2026 Orchestra Bio, Inc.” CT-Q includes the license
 and NOTICE attribution in its owned PROVENANCE; CT-U preserves them. CT-V carries
