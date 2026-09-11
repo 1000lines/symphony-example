@@ -306,6 +306,7 @@ test("does not queue non-push Symphony bot activity", async () => {
       action: "created",
       sender: { login: "example-symphony-bot" },
       issue: issue(),
+      comment: { id: 22, body: "Automated update", user: { id: 42, type: "User", login: "example-symphony-bot" } },
     },
   });
 
@@ -332,6 +333,7 @@ test("known bots, dependency bots, and generic bot actors do not queue review", 
           action: "created",
           sender: { login: actor },
           issue: issue(),
+          comment: { id: 22, body: "Automated update", user: { id: 42, type: "User", login: actor } },
         },
       });
 

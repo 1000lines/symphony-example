@@ -294,7 +294,9 @@ export const verifyReviewEventAuthority = async ({
     if (current?.id !== feedback.id || parent !== expectedParent ||
         !humanAccount(current.user) || current.user.id !== feedback.user.id ||
         normalize(current.user.login) !== normalize(feedback.user.login)) return untrusted("feedback-author-or-target-mismatch");
-    if (typeof current.body !== "string" || current.body !== feedback.body ||
+    if ((current.body !== null && typeof current.body !== "string") ||
+        (feedback.body !== null && typeof feedback.body !== "string") ||
+        (current.body ?? "") !== (feedback.body ?? "") ||
         (isReview && normalize(current.state) !== normalize(feedback.state)) ||
         (feedback.updated_at && current.updated_at !== feedback.updated_at)) return untrusted("stale-feedback-event");
     return verifyGitHubHumanWriteAccess({ author: current.user, repository, token, fetchImpl });

@@ -6,7 +6,7 @@
 // changed since — so a re-review can skip untouched PRs and otherwise review
 // only the delta. The PR itself is the ledger; no external state is stored.
 //
-// Auth:  GH_TOKEN (a GitHub token; classic or fine-grained with PR read).
+// Auth:  GH_TOKEN (existing App installation token with Metadata/PR read).
 // Repo:  defaults to example-org/example-repo; override with REPO_SLUG=owner/name.
 // Who:   the reviewer identity defaults to example-cadence-bot; override with
 //        CADENCE_REVIEWER_LOGIN.
@@ -292,14 +292,15 @@ async function collectPages(read, firstPage) {
 }
 
 export async function markFeedbackAuthority(nodes, { repository, token, fetchImpl } = {}) {
-  // No persistent allow cache: every acquisition observes current access.
-  return Promise.all(nodes.map(async node => ({
-    ...node,
-    authority: await verifyGitHubHumanWriteAccess({
-      author: { login: node.author?.login, type: node.author?.__typename, id: node.author?.databaseId },
-      repository, token, fetchImpl,
-    }),
-  })));
+  // Share duplicate author reads within this acquisition only. The next event
+  // or acquisition gets a new map and observes revoked access.
+  const authors = new Map();
+  return Promise.all(nodes.map(async node => {
+    const author = { login: node.author?.login, type: node.author?.__typename, id: node.author?.databaseId };
+    const key = JSON.stringify([normalize(author.login), author.type, author.id]);
+    if (!authors.has(key)) authors.set(key, verifyGitHubHumanWriteAccess({ author, repository, token, fetchImpl }));
+    return { ...node, authority: await authors.get(key) };
+  }));
 }
 
 export async function fetchReviewFeedback({ owner, repo, number, issueIdentifier, githubQuery, linearQuery,

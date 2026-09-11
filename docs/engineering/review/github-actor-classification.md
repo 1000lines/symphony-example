@@ -152,12 +152,13 @@ other text in the PR.
 
 ### App Installation And Rollout
 
-The two event workflows check out the trusted default branch and mint a
-repository-scoped token for the existing Cadence App using
+The two event workflows and the single-PR review trigger check out the trusted
+default branch and mint a repository-scoped token for the existing Cadence App using
 `cadence-controller` Environment values `CADENCE_APP_ID` and
-`CADENCE_APP_PRIVATE_KEY`. They do not use the legacy bot-token secret or a PAT
-fallback. Tokens request `Metadata: read` and `Pull requests: write` for
-feedback reads and existing review-request writes;
+`CADENCE_APP_PRIVATE_KEY`. Feedback permission reads do not use the legacy
+bot-token secret or a PAT fallback. Tokens request `Metadata: read` and
+`Pull requests: write` in the event routes, and `Pull requests: read` in the
+review trigger;
 no organization Members or repository Administration permission is needed.
 The [GitHub endpoint documentation](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user)
 specifies App installation token support and `Metadata: read` for permission
@@ -166,15 +167,16 @@ also accept Pull requests permission, so no Issues grant is added to the App
 token. The existing workflow token still handles review-request deletion to
 preserve the current event-loop behavior.
 
-On 2026-09-11 a read-only host-credential diagnostic reported Jeremy Carroll's
-current `admin` permission on `1000lines/symphony-example`. The same host's lookup of
-`repos/1000lines/symphony-example/environments/cadence-controller` returned
-HTTP 404. The available CLI token did not meet the App installation-token
-requirement, and the host App broker was unavailable for a live verifier probe.
-Environment visibility, Cadence signing-key availability, and live Cadence
-installation permissions are unverified. Before rollout, Jeremy must
-confirm the existing protected Environment, App identity/installation, and
-secret names. Do not move the key into an unprotected repository secret or
-introduce a PAT to bypass this setup gap. Fixture/CI success is not live Cadence
-credential evidence. These workflow changes take effect when merged to the
-trusted default branch.
+The review trigger admits App-originated review requests to a guard that checks
+the requesting bot against the slug returned by token minting. An unrelated App
+stops before feedback acquisition or review mutations. Existing human and
+configured service-account requests retain their routing. The legacy review
+publisher still uses its own bot credential; that credential never supplies
+human feedback authority.
+
+The protected Environment must contain the existing App identity and signing
+key, and its installation must grant the requested permissions. A missing
+Environment, key, or installation grant stops routing. Do not move the key into
+an unprotected repository secret or introduce a PAT to bypass a setup gap.
+Fixture/CI success is not live Cadence credential evidence. Workflow changes
+take effect when merged to the trusted default branch.

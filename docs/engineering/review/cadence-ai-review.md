@@ -243,12 +243,18 @@ Set these values in Settings → Secrets and variables → Actions → Secrets.
 Required when using the workflow that consumes them; there are no credential
 defaults. All values come from adopter-owned accounts. Never commit them.
 
+Human feedback routing and the single-PR review trigger require the protected
+`cadence-controller` Environment's `CADENCE_APP_ID` variable and
+`CADENCE_APP_PRIVATE_KEY` secret. See the
+[App permission requirements](./github-actor-classification.md#app-installation-and-rollout).
+
 Repository secrets:
 
 - `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key for the review.
 - `CADENCE_BOT_GITHUB_TOKEN`: the legacy reviewer/trigger bot's GitHub token (classic, `repo`
-  scope). Used both for the action's `github_token` and as `GH_TOKEN` for the
-  bot's `gh` calls and actor/team lookups. The bot account has **Triage**
+  scope). Used for the legacy review action's `github_token` and its publishing
+  calls. Human feedback acquisition and permission checks use the existing
+  Cadence App installation token instead. The bot account has **Triage**
   repository access, so its approvals do not count toward required reviews.
 - `CADENCE_LINEAR_API_TOKEN`: Linear API token used by
   `scripts/fetch-linear-issue.mjs` to read issue context, by

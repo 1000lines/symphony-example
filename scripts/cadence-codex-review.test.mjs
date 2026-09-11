@@ -58,6 +58,7 @@ function fixture() {
       project: { id: "project", description: "Project review scope", content: "R01 applies across the related plan nodes." } },
     associations: ["issue"], configuration: { status: "configured", repository, revision: base, baseBranch: "main", config: {
       schemaVersion: "symphony-repository/v1", workingDirectory: ".", instructions: ["SYMPHONY.md"], commands: { test: [["npm", "test"]] },
+      linear: { teamKey: "100" },
       ci: { requiredChecks: [{ name: "CI Required", appId: 15368, workflow: ".github/workflows/ci.yml" }] } } },
     hostRevision: controller, controllerRevision: controller, host: { revision: controller,
       controller: { full_name: "control/reviews", base_branch: "main", workflow: ".github/workflows/review.yml" },

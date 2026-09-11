@@ -71,10 +71,12 @@ jobs:
           (
             github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot') ||
             github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
+            github.event.sender.type == 'Bot' ||
             !endsWith(github.actor, '[bot]')
           )
         )
       }}
+    environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 60
     concurrency:
@@ -92,12 +94,42 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Mint existing Cadence App token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        with:
+          app-id: ${{ vars.CADENCE_APP_ID }}
+          private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-metadata: read
+          permission-pull-requests: read
+
+      # Token creation supplies the trusted App slug. Other App actors stop
+      # here, before fetching feedback or performing review mutations.
+      - name: Verify App review requester
+        if: github.event_name == 'pull_request_target'
+        env:
+          REQUEST_ACTOR: ${{ github.actor }}
+          REQUEST_ACTOR_TYPE: ${{ github.event.sender.type }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          if [[ "${REQUEST_ACTOR_TYPE}" == "Bot" || "${REQUEST_ACTOR}" == *'[bot]' ]]; then
+            if [[ -z "${APP_SLUG}" || "${REQUEST_ACTOR}" != "${APP_SLUG}[bot]" ]]; then
+              echo "::error::Review request is not from the configured Cadence App."
+              exit 1
+            fi
+          fi
 
       - name: Fetch PR review state
         id: review_state
         env:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 

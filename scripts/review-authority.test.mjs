@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { routeReviewHandoff } from "./cadence-linear-rework.mjs";
 import { routeCadenceReviewEvent } from "../.github/workflows/scripts/cadence-ai-review-route-event.mjs";
 import { verifyGitHubHumanWriteAccess, verifyReviewEventAuthority } from "./github-actor-classification.mjs";
-import { markFeedbackAuthority } from "./fetch-pr-review-state.mjs";
+import { classifyPrReviewState, markFeedbackAuthority } from "./fetch-pr-review-state.mjs";
 
 const repository = "example-org/example-repo";
 const root = `https://api.github.com/repos/${repository}`;
@@ -157,6 +157,51 @@ test("later review context preserves untrusted content and rechecks access", asy
   assert.equal(denied.body, nodes[0].body);
   assert.equal(denied.authority.contentTrust, "untrusted");
   assert.equal((await markFeedbackAuthority(nodes, { repository }))[0].authority.allowed, false);
+});
+
+test("current App-authorized writer feedback starts incremental review and resets human activity", async () => {
+  const api = fixture(event("pull_request_review", "submitted"));
+  const nodes = [
+    { __typename: "PullRequestReview", author: { login: "example-cadence-bot" },
+      state: "APPROVED", submittedAt: "2026-09-10T00:00:00Z", commit: { oid: "head" } },
+    { __typename: "IssueComment", author: { login: "writer", __typename: "User", databaseId: 42 },
+      createdAt: "2026-09-10T01:00:00Z" },
+  ];
+  for (const [credential, decision, count] of [[token, "incremental", 1], ["ghp_legacy", "skip", 0]]) {
+    const result = classifyPrReviewState({ headRefOid: "head", isDraft: false,
+      timelineItems: { pageInfo: { hasPreviousPage: false }, nodes: await markFeedbackAuthority(nodes, {
+        repository, token: credential, fetchImpl: api.fetchImpl,
+      }) } }, "example-cadence-bot");
+    assert.equal(result.decision, decision);
+    assert.equal(result.humanGroundedSince.length, count);
+  }
+});
+
+test("timeline permission reads share identical authors only within one acquisition", async () => {
+  const api = fixture(event("pull_request_review", "submitted"));
+  const nodes = Array.from({ length: 60 }, () => ({ author: { login: "writer", __typename: "User", databaseId: 42 } }));
+  const args = { repository, token, fetchImpl: api.fetchImpl };
+  assert.ok((await markFeedbackAuthority(nodes, args)).every(node => node.authority.allowed));
+  assert.equal(api.calls.length, 1);
+  const changedId = { author: { ...nodes[0].author, databaseId: 999 } };
+  assert.equal((await markFeedbackAuthority([nodes[0], changedId], args))[1].authority.allowed, false);
+  assert.equal(api.calls.length, 3);
+  api.permission = { permission: "read", user: author };
+  assert.ok((await markFeedbackAuthority(nodes, args)).every(node => !node.authority.allowed));
+  assert.equal(api.calls.length, 4);
+});
+
+test("bodyless changes-requested reviews accept GitHub null bodies but reject malformed bodies", async () => {
+  for (const [body, currentBody, allowed] of [[null, null, true], ["", null, true], [null, "", true],
+    ["Change design", null, false], [undefined, null, false], [null, {}, false]]) {
+    const payload = event("pull_request_review", "submitted");
+    payload.review.body = body;
+    payload.review.state = "changes_requested";
+    const api = fixture(payload);
+    api.current.body = currentBody;
+    const result = await routeCadenceReviewEvent({ payload, eventName: "pull_request_review", repository, token, fetchImpl: api.fetchImpl });
+    assert.equal(result.shouldRequestReview, allowed);
+  }
 });
 
 test("feedback workflows use trusted checkout and the existing App without a PAT fallback", () => {
