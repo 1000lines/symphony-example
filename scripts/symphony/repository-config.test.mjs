@@ -26,6 +26,45 @@ const config = () => ({
   },
 });
 
+test("optional modes preserve existing configs and reject project binding", () => {
+  const old = config();
+  assert.equal(validateConfig(old), old);
+  assert.equal(Object.hasOwn(old.ci, "mode"), false);
+  for (const mode of ["native", "docker", "remote"]) {
+    const value = config();
+    value.ci.mode = mode;
+    assert.deepEqual(validateConfig(value), value);
+  }
+  for (const mode of [null, "", "Docker", "cloud", true, 1]) {
+    const value = config();
+    value.ci.mode = mode;
+    assert.throws(() => validateConfig(value), /ci.mode/);
+  }
+  for (const projectKey of [
+    "projectKey",
+    "projectId",
+    "project",
+    "project_key",
+  ]) {
+    const value = config();
+    value.linear[projectKey] = "project-a";
+    assert.throws(() => validateConfig(value), /configuration fields/);
+  }
+});
+
+test("one selected-base config serves independent issue projects without rewriting", () => {
+  const serialized = JSON.stringify(config());
+  for (const issue of [
+    { identifier: "ENG-1", project: "alpha" },
+    { identifier: "ENG-2", project: "beta" },
+  ]) {
+    const value = validateConfig(JSON.parse(serialized));
+    assert.equal(issue.identifier.split("-")[0], value.linear.teamKey);
+    assert.equal(JSON.stringify(value), serialized);
+    assert.deepEqual(Object.keys(value.linear), ["teamKey"]);
+  }
+});
+
 test("repo-owned config specifies the team and development settings without credentials", () => {
   assert.deepEqual(validateConfig(config()), config());
   for (const change of [

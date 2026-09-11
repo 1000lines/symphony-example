@@ -9,13 +9,24 @@ import {
   resolveWorkpadInput,
 } from "../../../scripts/cadence-linear-workpad.mjs";
 import {
-  applyWakeup,
+  applyWakeup as applyWakeupImpl,
   createGitHubClient,
-  planWakeups,
-  resolveIssue,
-  runBridge,
-  workflowTicket,
+  planWakeups as planWakeupsImpl,
+  requiredCi,
+  resolveIssue as resolveIssueImpl,
+  runBridge as runBridgeImpl,
+  workflowTicket as workflowTicketImpl,
 } from "./symphony-linear-wakeups.mjs";
+
+// Fixture team is explicit; exported tests do not depend on publication-root config.
+const applyWakeup = (options) =>
+  applyWakeupImpl({ teamKey: "100", ...options });
+const planWakeups = (options) =>
+  planWakeupsImpl({ teamKey: "100", ...options });
+const resolveIssue = (options) =>
+  resolveIssueImpl({ teamKey: "100", ...options });
+const runBridge = (options) => runBridgeImpl({ teamKey: "100", ...options });
+const workflowTicket = (run) => workflowTicketImpl(run, "100");
 
 const repo = "example-org/example-repo";
 const head = "a".repeat(40);
@@ -87,6 +98,170 @@ const plan = (overrides = {}) =>
     ...overrides,
   });
 
+const ciRule = {
+  name: "tooling-check",
+  workflow: ".github/workflows/checks.yml",
+  appId: 15368,
+};
+const passedCheck = (overrides = {}) =>
+  check({
+    status: "COMPLETED",
+    conclusion: "SUCCESS",
+    checkSuite: {
+      app: { databaseId: 15368 },
+      workflowRun: {
+        databaseId: 123,
+        file: { path: ciRule.workflow },
+        workflow: { id: "workflow-1" },
+      },
+    },
+    ...overrides,
+  });
+
+for (const [name, checks, run, rules, expected] of [
+  ["passed", [passedCheck()], {}, [ciRule], "Inactive"],
+  ["missing", [], {}, [ciRule], "Unhappy"],
+  ["no contract", [passedCheck()], {}, [], "Unhappy"],
+  [
+    "multiple requirements",
+    [passedCheck()],
+    {},
+    [ciRule, { ...ciRule, name: "second" }],
+    "Unhappy",
+  ],
+  [
+    "all requirements",
+    [passedCheck(), passedCheck({ name: "second", databaseId: 100 })],
+    {},
+    [ciRule, { ...ciRule, name: "second" }],
+    "Inactive",
+  ],
+  [
+    "pending check",
+    [passedCheck({ status: "IN_PROGRESS", conclusion: null })],
+    {},
+    [ciRule],
+    "Unhappy",
+  ],
+  [
+    "pending rerun supersedes old failed check",
+    [passedCheck({ conclusion: "FAILURE" })],
+    { status: "in_progress", conclusion: null, run_attempt: 2 },
+    [ciRule],
+    "Unhappy",
+  ],
+  [
+    "stale run",
+    [passedCheck()],
+    { head_sha: "c".repeat(40) },
+    [ciRule],
+    "Unhappy",
+  ],
+  [
+    "skipped",
+    [passedCheck({ conclusion: "SKIPPED" })],
+    {},
+    [ciRule],
+    "Unhappy",
+  ],
+  [
+    "canceled",
+    [passedCheck()],
+    { conclusion: "cancelled" },
+    [ciRule],
+    "Active",
+  ],
+  [
+    "failed check",
+    [passedCheck({ conclusion: "FAILURE" })],
+    {},
+    [ciRule],
+    "Active",
+  ],
+  [
+    "unrelated advisory failure",
+    [
+      passedCheck(),
+      passedCheck({
+        name: "Cadence Review",
+        conclusion: "FAILURE",
+        databaseId: 101,
+      }),
+    ],
+    {},
+    [ciRule],
+    "Inactive",
+  ],
+  [
+    "advisory alone",
+    [passedCheck({ name: "Cadence Review" })],
+    {},
+    [{ ...ciRule, name: "Cadence Review" }],
+    "Unhappy",
+  ],
+  ["push completion", [passedCheck()], { event: "push" }, [ciRule], "Inactive"],
+  [
+    "generic dispatch completion",
+    [passedCheck()],
+    { event: "workflow_dispatch" },
+    [ciRule],
+    "Inactive",
+  ],
+]) {
+  test(`required CI: ${name}`, async () => {
+    const result = await requiredCi({
+      number: 42,
+      headSha: head,
+      requiredChecks: rules,
+      github: github({
+        checks: async () => checks,
+        getRun: async () => workflow({ conclusion: "success", ...run }),
+      }),
+    });
+    assert.equal(result.state, expected);
+  });
+}
+
+test("same-name checks require their actual workflow and emitting App", async () => {
+  for (const suite of [
+    {
+      app: { databaseId: 42 },
+      workflowRun: { databaseId: 123, file: { path: ciRule.workflow } },
+    },
+    {
+      app: { databaseId: 15368 },
+      workflowRun: {
+        databaseId: 123,
+        file: { path: ".github/workflows/other.yml" },
+      },
+    },
+    { app: { databaseId: 15368 } },
+  ]) {
+    const result = await requiredCi({
+      number: 42,
+      headSha: head,
+      requiredChecks: [ciRule],
+      github: github({
+        checks: async () => [passedCheck({ checkSuite: suite })],
+      }),
+    });
+    assert.equal(result.state, "Unhappy");
+  }
+});
+
+test("incomplete check pagination cannot establish success", async () => {
+  const result = await requiredCi({
+    number: 42,
+    headSha: head,
+    requiredChecks: [ciRule],
+    github: github({
+      checks: async () => Object.assign([passedCheck()], { complete: false }),
+      getRun: async () => workflow({ conclusion: "success" }),
+    }),
+  });
+  assert.equal(result.state, "Unhappy");
+});
+
 const active = { id: "active", name: "Active", type: "started" };
 const inactive = { id: "inactive", name: "Inactive", type: "unstarted" };
 const fixtureIssue = () => ({
@@ -138,7 +313,10 @@ function linearFixture(options = {}) {
       calls.push({ query, variables });
       if (query.includes("WakeupViewer"))
         return response({
-          viewer: options.viewer || { id: "cadence-bot", name: "Example Review Bot" },
+          viewer: options.viewer || {
+            id: "cadence-bot",
+            name: "Example Review Bot",
+          },
         });
       if (query.includes("CadenceWorkpadIssue"))
         return response({
@@ -458,7 +636,10 @@ test("fixture proof: failed check, conflict and Symphony workflow completion wak
     {
       name: "merge-conflict",
       eventName: "pull_request_target",
-      payload: { pull_request: pr(), sender: { login: "example-symphony-bot" } },
+      payload: {
+        pull_request: pr(),
+        sender: { login: "example-symphony-bot" },
+      },
     },
     {
       name: "validation-completion",
@@ -1156,17 +1337,48 @@ test("GitHub adapter paginates current-head checks and newer reruns supersede fa
   assert.equal(checks[1].conclusion, "FAILURE");
 });
 
-const wakeWorkflow = yaml.load(readFileSync(new URL('../symphony-linear-wakeups.yml', import.meta.url), 'utf8'));
-const AsyncFunction = Object.getPrototypeOf(async function () { return; }).constructor;
+const wakeWorkflow = yaml.load(
+  readFileSync(
+    new URL("../symphony-linear-wakeups.yml", import.meta.url),
+    "utf8"
+  )
+);
+const AsyncFunction = Object.getPrototypeOf(async function () {
+  return;
+}).constructor;
 
-async function runWorkflowFixture(t, {
-  eventName = 'pull_request_target', currentState = 'Inactive', conflict = false,
-  ci = null, changedState = '', changedHead = false, required = true,
-  prTitle = '[100-502]: fix CI', prBranch = branch, releaseAfter = 0,
-  labelIds = currentState === 'Unhappy' ? ['yellow', 'wake'] : ['yellow'],
-  beforeMutation = () => undefined, afterMutation = () => undefined, audit = {}, duplicate = false,
-  incompleteLabels = false,
-} = {}) {
+async function runWorkflowFixture(
+  t,
+  {
+    eventName = "pull_request_target",
+    currentState = "Inactive",
+    conflict = false,
+    ci = null,
+    changedState = "",
+    changedHead = false,
+    required = true,
+    prTitle = "[100-502]: fix CI",
+    prBranch = branch,
+    releaseAfter = 0,
+    labelIds = currentState === "Unhappy" ? ["yellow", "wake"] : ["yellow"],
+    beforeMutation = () => undefined,
+    afterMutation = () => undefined,
+    audit = {},
+    duplicate = false,
+    incompleteLabels = false,
+    forwarded = false,
+    checksOverride,
+    runOverride = {},
+    defaultBranch = "trunk",
+    requirements = [
+      {
+        name: "tooling-check",
+        workflow: ".github/workflows/checks.yml",
+        appId: 15368,
+      },
+    ],
+  } = {}
+) {
   const originalEnv = { ...process.env };
   const originalFetch = globalThis.fetch;
   const outputs = {};
@@ -1175,47 +1387,198 @@ async function runWorkflowFixture(t, {
   const snapshots = [];
   Object.assign(audit, { writes, infos, snapshots });
   let reads = 0;
-  const currentPr = pr({ title: prTitle, head: { ...pr().head, ref: prBranch }, mergeable: conflict });
+  const currentPr = pr({
+    title: prTitle,
+    head: { ...pr().head, ref: prBranch },
+    mergeable: conflict,
+  });
   currentPr.mergeable = !conflict;
-  const states = ['Active', 'Inactive', 'Unhappy', 'Done', 'Backlog'].map(name => ({ id: name, name }));
-  const live = { state: currentState, labels: new Set(labelIds), pr: currentPr };
-  const issue = () => ({ id: 'issue-502', identifier: '100-502',
-    state: states.find(s => s.name === live.state), team: { states: { nodes: states } },
-    labels: { nodes: [...live.labels].map(id => ({ id })), pageInfo: { hasNextPage: incompleteLabels } } });
-  process.env.GITHUB_WORKSPACE = new URL('../../../', import.meta.url).pathname.replace(/\/$/, '');
-  process.env.LINEAR_API_TOKEN = 'fixture-token';
-  process.env.GH_TOKEN = 'fixture-github-token';
+  const states = ["Active", "Inactive", "Unhappy", "Done", "Backlog"].map(
+    (name) => ({ id: name, name })
+  );
+  const live = {
+    state: currentState,
+    labels: new Set(labelIds),
+    pr: currentPr,
+  };
+  const issue = () => ({
+    id: "issue-502",
+    identifier: "100-502",
+    state: states.find((s) => s.name === live.state),
+    team: { states: { nodes: states } },
+    labels: {
+      nodes: [...live.labels].map((id) => ({ id })),
+      pageInfo: { hasNextPage: incompleteLabels },
+    },
+  });
+  process.env.HELPER_ROOT = new URL(
+    "../../../",
+    import.meta.url
+  ).pathname.replace(/\/$/, "");
+  process.env.LINEAR_API_TOKEN = "fixture-token";
+  process.env.GH_TOKEN = "fixture-github-token";
   globalThis.fetch = async (url, options) => {
+    if (url.startsWith("https://api.github.com/repos/")) {
+      const config = {
+        schemaVersion: "symphony-repository/v1",
+        linear: { teamKey: "100" },
+        workingDirectory: ".",
+        instructions: [],
+        commands: {},
+        ci: { requiredChecks: requirements },
+      };
+      const root = `https://api.github.com/repos/${repo}`;
+      let data;
+      if (url === root)
+        data = {
+          id: 1,
+          full_name: repo,
+          owner: { login: "example-org" },
+          default_branch: defaultBranch,
+        };
+      else if (url === `${root}/branches/${defaultBranch}`)
+        data = { name: defaultBranch, commit: { sha: base } };
+      else if (url === `${root}/git/trees/${base}`)
+        data = {
+          truncated: false,
+          tree: [
+            {
+              path: ".symphony.cfg.json",
+              type: "blob",
+              mode: "100644",
+              sha: head,
+            },
+          ],
+        };
+      else if (url === `${root}/git/blobs/${head}`)
+        data = {
+          sha: head,
+          encoding: "base64",
+          content: Buffer.from(JSON.stringify(config)).toString("base64"),
+        };
+      else if (url === `${root}/actions/runs/123`)
+        data = workflow({ conclusion: ci || "failure", ...runOverride });
+      else throw new Error(`Unexpected GitHub request: ${url}`);
+      return { ok: true, status: 200, json: async () => data };
+    }
     const { query, variables } = JSON.parse(options.body);
     let data;
-    if (url === 'https://api.github.com/graphql') {
-      data = { repository: { pullRequest: { headRefOid: head, commits: { nodes: [{ commit: {
-        statusCheckRollup: { contexts: { nodes: [check({ isRequired: required })], pageInfo: { hasNextPage: false } } }
-      } }] } } } };
-    } else if (query.includes('query LinearWakeupIssue')) {
+    if (url === "https://api.github.com/graphql") {
+      data = {
+        repository: {
+          pullRequest: {
+            headRefOid: head,
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      contexts: {
+                        nodes:
+                          checksOverride ||
+                          (ci || ["check_run", "status"].includes(eventName)
+                            ? [
+                                check({
+                                  isRequired: required,
+                                  status: "COMPLETED",
+                                  conclusion:
+                                    ci === "success" ? "SUCCESS" : "FAILURE",
+                                  name: ["check_run", "status"].includes(
+                                    eventName
+                                  )
+                                    ? "external"
+                                    : "tooling-check",
+                                  checkSuite: {
+                                    app: { databaseId: 15368 },
+                                    workflowRun: {
+                                      databaseId: 123,
+                                      runAttempt: 1,
+                                      file: {
+                                        path: ["check_run", "status"].includes(
+                                          eventName
+                                        )
+                                          ? ".github/workflows/external.yml"
+                                          : ".github/workflows/checks.yml",
+                                      },
+                                      workflow: { id: "workflow-1" },
+                                    },
+                                  },
+                                }),
+                              ]
+                            : []),
+                        pageInfo: { hasNextPage: false },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      };
+    } else if (query.includes("query LinearWakeupIssue")) {
       reads++;
-      if (releaseAfter && reads === releaseAfter + 1) live.state = 'Inactive';
+      if (releaseAfter && reads === releaseAfter + 1) live.state = "Inactive";
       snapshots.push(issue());
       data = { issue: issue() };
-      if (!query.includes('labels(')) delete data.issue.labels;
-    } else if (query.includes('CadenceWorkpadIssue')) {
-      data = { issue: { ...issue(), comments: { nodes: [{ id: 'workpad', body: renderCadenceWorkpad({ status: 'reviewing' }) }],
-        pageInfo: { hasNextPage: false } } } };
-    } else if (query.includes('commentUpdate')) {
-      writes.push({ kind: 'workpad', body: variables.body });
+      if (!query.includes("labels(")) delete data.issue.labels;
+    } else if (query.includes("CadenceWorkpadIssue")) {
+      data = {
+        issue: {
+          ...issue(),
+          comments: {
+            nodes: [
+              {
+                id: "workpad",
+                body: renderCadenceWorkpad({ status: "reviewing" }),
+              },
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      };
+    } else if (query.includes("commentUpdate")) {
+      writes.push({ kind: "workpad", body: variables.body });
       data = { commentUpdate: { success: true } };
-    } else if (query.includes('team{labels')) {
-      data = { issue: { team: { labels: { nodes: [{ id: 'wake', name: 'wake:15m' }], pageInfo: { hasNextPage: false } } } } };
-    } else if (query.includes('issueUpdate')) {
+    } else if (query.includes("team{labels")) {
+      data = {
+        issue: {
+          team: {
+            labels: {
+              nodes: [{ id: "wake", name: "wake:15m" }],
+              pageInfo: { hasNextPage: false },
+            },
+          },
+        },
+      };
+    } else if (query.includes("issueUpdate")) {
       const input = variables.input;
-      const attempt = writes.filter(write => write.kind === 'state').length + 1;
+      const attempt =
+        writes.filter((write) => write.kind === "state").length + 1;
       const failure = beforeMutation(live, input, attempt);
-      writes.push({ kind: 'state', input, previousState: live.state });
+      writes.push({ kind: "state", input, previousState: live.state });
       if (failure) return { ok: true, status: 200, json: async () => failure };
-      const rejection = input.removedLabelIds?.some(id => !live.labels.has(id)) ? 'Label not on issue' :
-        input.addedLabelIds?.some(id => live.labels.has(id)) ? 'Label already on issue' : '';
-      if (rejection) return { ok: true, status: 200,
-        json: async () => ({ errors: [{ message: rejection, path: ['issueUpdate'], extensions: { code: 'INPUT_ERROR' } }] }) };
+      const rejection = input.removedLabelIds?.some(
+        (id) => !live.labels.has(id)
+      )
+        ? "Label not on issue"
+        : input.addedLabelIds?.some((id) => live.labels.has(id))
+        ? "Label already on issue"
+        : "";
+      if (rejection)
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            errors: [
+              {
+                message: rejection,
+                path: ["issueUpdate"],
+                extensions: { code: "INPUT_ERROR" },
+              },
+            ],
+          }),
+        };
       for (const id of input.removedLabelIds || []) live.labels.delete(id);
       for (const id of input.addedLabelIds || []) live.labels.add(id);
       live.state = input.stateId;
@@ -1226,208 +1589,429 @@ async function runWorkflowFixture(t, {
   };
   t.after(() => {
     globalThis.fetch = originalFetch;
-    for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
+    for (const key of Object.keys(process.env))
+      if (!(key in originalEnv)) delete process.env[key];
     Object.assign(process.env, originalEnv);
   });
-  const context = { eventName, repo: { owner: 'example-org', repo: 'example-repo' }, payload: {
-    ...(eventName === 'pull_request_target' ? { pull_request: currentPr } : {}),
-    ...(eventName === 'workflow_run' ? { workflow_run: workflow() } : {}),
-    ...(eventName === 'check_run' ? { check_run: { id: 99, head_sha: head } } : {}),
-    ...(eventName === 'status' ? { sha: head, context: 'tooling-check' } : {}),
-  } };
-  const github = { rest: { pulls: { get: async () => ({ data: currentPr }) },
-    repos: { listPullRequestsAssociatedWithCommit: 'prs' }, actions: { listWorkflowRuns: 'runs' } },
-    paginate: async method => method === 'prs' ? [currentPr] : ci ? [{ status: 'completed', conclusion: ci, run_number: 1, html_url: runUrl }] : [] };
+  const context = {
+    eventName,
+    repo: { owner: "example-org", repo: "example-repo" },
+    payload: {
+      ...(eventName === "pull_request_target"
+        ? { pull_request: currentPr }
+        : {}),
+      ...(eventName === "workflow_run"
+        ? { action: "completed", workflow_run: workflow(runOverride) }
+        : {}),
+      ...(eventName === "check_run"
+        ? {
+            action: "completed",
+            check_run: { id: 99, head_sha: head, status: "completed" },
+          }
+        : {}),
+      ...(eventName === "status"
+        ? { sha: head, context: "tooling-check" }
+        : {}),
+    },
+  };
+  Object.assign(process.env, {
+    TARGET_REPOSITORY: repo,
+    TARGET_DEFAULT_BRANCH: defaultBranch,
+    EVENT_NAME: eventName,
+    EVENT_PAYLOAD: JSON.stringify(context.payload),
+  });
+  // Reusable calls forward the original payload; the wrapper event itself is unrelated.
+  if (forwarded) {
+    context.eventName = "workflow_call";
+    context.payload = { repository: { full_name: "workflow-source/helpers" } };
+  }
+  const github = {
+    rest: {
+      pulls: { get: async () => ({ data: currentPr }) },
+      repos: { listPullRequestsAssociatedWithCommit: "prs" },
+      actions: { listWorkflowRuns: "runs" },
+    },
+    paginate: async (method) =>
+      method === "prs"
+        ? [currentPr]
+        : ci
+        ? [
+            {
+              status: "completed",
+              conclusion: ci,
+              run_number: 1,
+              html_url: runUrl,
+            },
+          ]
+        : [],
+  };
   let waits = 0;
   const run = async (name, env = {}) => {
     Object.assign(process.env, env);
-    const step = wakeWorkflow.jobs.wake.steps.find(step => step.id === name || step.name === name);
+    const step = wakeWorkflow.jobs.wake.steps.find(
+      (step) => step.id === name || step.name === name
+    );
     const result = {};
-    const core = { info: message => infos.push(message), setOutput: (key, value) => { result[key] = String(value); } };
-    await new AsyncFunction('github', 'context', 'core', 'setTimeout', step.with.script)(
-      github, context, core, (resolve, ms) => { assert.equal(ms, 10000); waits++; resolve(); });
+    const core = {
+      summary: { addRaw: () => ({ write: async () => undefined }) },
+      info: (message) => infos.push(message),
+      setOutput: (key, value) => {
+        result[key] = String(value);
+      },
+    };
+    await new AsyncFunction(
+      "github",
+      "context",
+      "core",
+      "setTimeout",
+      step.with.script
+    )(github, context, core, (resolve, ms) => {
+      assert.equal(ms, 10000);
+      waits++;
+      resolve();
+    });
     outputs[name] = result;
     return result;
   };
-  const ticket = await run('ticket');
+  const ticket = await run("ticket");
   if (!ticket.issue) return { writes, waits, outputs };
-  const state = await run('ticket_state', { ISSUE: ticket.issue });
+  const state = await run("ticket_state", { ISSUE: ticket.issue });
   if (!state.state) return { writes, waits, outputs };
-  const outcome = await run('outcome', { PR_NUMBER: ticket.pr, HEAD_SHA: ticket.sha, ISSUE_STATE: state.state });
-  if (outcome.conflict) await run('Record conflict resolution in the Cadence workpad', { REASON: outcome.reason });
+  const outcome = await run("outcome", {
+    PR_NUMBER: ticket.pr,
+    HEAD_SHA: ticket.sha,
+    ISSUE_STATE: state.state,
+    TARGET_CONFIG: ticket.config,
+  });
+  if (outcome.conflict)
+    await run("Record conflict resolution in the Cadence workpad", {
+      REASON: outcome.reason,
+    });
   if (changedState) live.state = changedState;
-  if (changedHead) currentPr.head.sha = 'new-head';
-  for (let attempt = 0; outcome.state && attempt < (duplicate ? 2 : 1); attempt++) {
-    await run('Set the ticket state and wake label', {
-      PREVIOUS_STATE: state.state, TARGET_STATE: outcome.state, REASON: outcome.reason,
+  if (changedHead) currentPr.head.sha = "new-head";
+  for (
+    let attempt = 0;
+    outcome.state && attempt < (duplicate ? 2 : 1);
+    attempt++
+  ) {
+    await run("Set the ticket state and wake label", {
+      PREVIOUS_STATE: state.state,
+      TARGET_STATE: outcome.state,
+      REASON: outcome.reason,
     });
   }
   return { writes, waits, outputs, infos, snapshots, issue: issue() };
 }
 
 for (const [name, options, expected] of [
-  ['pending CI sleeps', {}, 'Unhappy'],
-  ['successful CI parks for review', { eventName: 'workflow_run', ci: 'success', currentState: 'Unhappy' }, 'Inactive'],
-  ['failed CI activates', { eventName: 'workflow_run', ci: 'failure', currentState: 'Unhappy' }, 'Active'],
-  ['late PR event preserves completed CI', { ci: 'success' }, 'Inactive'],
-  ['required external check failure activates', { eventName: 'check_run' }, 'Active'],
-  ['optional external check failure is ignored', { eventName: 'check_run', required: false }, undefined],
-  ['active worker keeps control', { currentState: 'Active' }, undefined],
-  ['worker releases during wait', { currentState: 'Active', releaseAfter: 2 }, 'Unhappy'],
-  ['terminal ticket is left alone', { currentState: 'Done' }, undefined],
-  ['backlog ticket is left alone', { currentState: 'Backlog' }, undefined],
-  ['concurrent activation is preserved', { changedState: 'Active' }, undefined],
-  ['new head prevents transition', { changedHead: true }, undefined],
-  ['another team is ignored', { prTitle: '[ENG-502]: fix CI', prBranch: 'symphony/eng-502/fix' }, undefined],
-  ['lowercase branch identifies configured team', { prTitle: 'Fix CI', prBranch: 'symphony/100-502/fix' }, 'Unhappy'],
+  ["pending CI sleeps", {}, "Unhappy"],
+  [
+    "successful CI parks for review",
+    { eventName: "workflow_run", ci: "success", currentState: "Unhappy" },
+    "Inactive",
+  ],
+  [
+    "failed CI activates",
+    { eventName: "workflow_run", ci: "failure", currentState: "Unhappy" },
+    "Active",
+  ],
+  ["late PR event preserves completed CI", { ci: "success" }, "Inactive"],
+  [
+    "required external check failure activates",
+    { eventName: "check_run" },
+    "Active",
+  ],
+  [
+    "optional external check failure cannot pass missing required CI",
+    { eventName: "check_run", required: false },
+    "Unhappy",
+  ],
+  ["active worker keeps control", { currentState: "Active" }, undefined],
+  [
+    "worker releases during wait",
+    { currentState: "Active", releaseAfter: 2 },
+    "Unhappy",
+  ],
+  ["terminal ticket is left alone", { currentState: "Done" }, undefined],
+  ["backlog ticket is left alone", { currentState: "Backlog" }, undefined],
+  ["concurrent activation is preserved", { changedState: "Active" }, undefined],
+  ["new head prevents transition", { changedHead: true }, undefined],
+  [
+    "another team is ignored",
+    { prTitle: "[ENG-502]: fix CI", prBranch: "symphony/eng-502/fix" },
+    undefined,
+  ],
+  [
+    "lowercase branch identifies configured team",
+    { prTitle: "Fix CI", prBranch: "symphony/100-502/fix" },
+    "Unhappy",
+  ],
 ]) {
-  test(`YAML workflow: ${name}`, async t => {
+  test(`YAML workflow: ${name}`, async (t) => {
     const { writes, waits } = await runWorkflowFixture(t, options);
-    const update = writes.find(write => write.kind === 'state');
+    const update = writes.find((write) => write.kind === "state");
     assert.equal(update?.input.stateId, expected);
     if (update) {
       const input = { stateId: expected };
-      if (expected === 'Unhappy') input.addedLabelIds = ['wake'];
-      else if (options.currentState === 'Unhappy') input.removedLabelIds = ['wake'];
+      if (expected === "Unhappy") input.addedLabelIds = ["wake"];
+      else if (options.currentState === "Unhappy")
+        input.removedLabelIds = ["wake"];
       assert.deepEqual(update.input, input);
     }
-    if (options.currentState === 'Active') assert.equal(waits, options.releaseAfter || 6);
+    if (options.currentState === "Active")
+      assert.equal(waits, options.releaseAfter || 6);
   });
 }
 
-test('YAML workflow: conflict instruction preserves the Cadence workpad before activation', async t => {
+test("YAML workflow: conflict instruction preserves the Cadence workpad before activation", async (t) => {
   const { writes } = await runWorkflowFixture(t, { conflict: true });
-  assert.deepEqual(writes.map(write => write.kind), ['workpad', 'state']);
+  assert.deepEqual(
+    writes.map((write) => write.kind),
+    ["workpad", "state"]
+  );
   const workpad = parseCadenceWorkpad(writes[0].body);
-  assert.equal(workpad.status, 'reviewing');
-  assert.match(workpad.coordination.lastNonReviewWakeup.reason, /Resolve the merge conflict/);
-  assert.equal(writes[1].input.stateId, 'Active');
+  assert.equal(workpad.status, "reviewing");
+  assert.match(
+    workpad.coordination.lastNonReviewWakeup.reason,
+    /Resolve the merge conflict/
+  );
+  assert.equal(writes[1].input.stateId, "Active");
 });
 
-test('workflow configuration runs CI once per PR update and handles CI completions', () => {
-  const ci = yaml.load(readFileSync(new URL('../ci.yml', import.meta.url), 'utf8'));
-  assert.deepEqual(ci.on.push, { branches: ['main'] });
-  assert.ok(ci.on.pull_request.types.includes('synchronize'));
-  assert.deepEqual(wakeWorkflow.on.workflow_run, { workflows: ['CI'], types: ['completed'] });
+test("workflow boundary supports native and reusable CI without reviewer secrets", () => {
+  assert.deepEqual(wakeWorkflow.on.workflow_run, {
+    workflows: ["*"],
+    types: ["completed"],
+  });
   assert.equal(wakeWorkflow.on.schedule, undefined);
-  assert.match(wakeWorkflow.jobs.wake.steps[0].with.ref, /repository.default_branch/);
-  for (const step of wakeWorkflow.jobs.wake.steps.filter(step => step.with?.script)) {
-    assert.doesNotThrow(() => new AsyncFunction('github', 'context', 'core', step.with.script));
-    assert.ok(!step.with.script.includes('${{'), 'event values must be passed as data');
+  assert.deepEqual(Object.keys(wakeWorkflow.on.workflow_call.secrets), [
+    "CADENCE_LINEAR_API_TOKEN",
+  ]);
+  assert.match(wakeWorkflow.jobs.wake.steps[0].with.ref, /inputs.helpers-ref/);
+  assert.match(
+    wakeWorkflow.jobs.wake.steps[0].with.repository,
+    /inputs.helpers-repository/
+  );
+  for (const step of wakeWorkflow.jobs.wake.steps.filter(
+    (step) => step.with?.script
+  )) {
+    assert.doesNotThrow(
+      () => new AsyncFunction("github", "context", "core", step.with.script)
+    );
+    assert.ok(
+      !step.with.script.includes("${{"),
+      "event values must be passed as data"
+    );
+    assert.match(step.uses, /@[a-f0-9]{40}/);
   }
 });
 
-for (const currentState of ['Inactive', 'Unhappy']) {
-  for (const ci of ['failure', 'success', null]) {
-    for (const present of [false, true]) {
-      test(`YAML label update: ${currentState}, CI ${ci}, wake present ${present}`, async t => {
-        const target = ci === 'failure' ? 'Active' : ci === 'success' ? 'Inactive' : 'Unhappy';
-        const desired = target === 'Unhappy';
-        const { writes, issue, snapshots, infos } = await runWorkflowFixture(t, {
-          eventName: 'workflow_run', currentState, ci,
-          labelIds: present ? ['yellow', 'wake'] : ['yellow'],
+for (const eventName of [
+  "pull_request_target",
+  "workflow_run",
+  "check_run",
+  "status",
+]) {
+  for (const ci of ["success", "failure"]) {
+    test(`reusable/native parity: ${eventName} ${ci}`, async (t) => {
+      for (const forwarded of [false, true]) {
+        const { writes } = await runWorkflowFixture(t, {
+          eventName,
+          ci,
+          forwarded,
         });
+        assert.equal(
+          writes.find((write) => write.kind === "state")?.input.stateId,
+          ci === "success" && !["check_run", "status"].includes(eventName)
+            ? "Inactive"
+            : ci === "failure"
+            ? "Active"
+            : "Unhappy"
+        );
+      }
+    });
+  }
+}
+
+for (const currentState of ["Inactive", "Unhappy"]) {
+  for (const ci of ["failure", "success", null]) {
+    for (const present of [false, true]) {
+      test(`YAML label update: ${currentState}, CI ${ci}, wake present ${present}`, async (t) => {
+        const target =
+          ci === "failure"
+            ? "Active"
+            : ci === "success"
+            ? "Inactive"
+            : "Unhappy";
+        const desired = target === "Unhappy";
+        const { writes, issue, snapshots, infos } = await runWorkflowFixture(
+          t,
+          {
+            eventName: "workflow_run",
+            currentState,
+            ci,
+            labelIds: present ? ["yellow", "wake"] : ["yellow"],
+          }
+        );
         const input = { stateId: target };
-        if (present !== desired) input[desired ? 'addedLabelIds' : 'removedLabelIds'] = ['wake'];
-        assert.deepEqual(writes.map(write => write.input), [input]);
+        if (present !== desired)
+          input[desired ? "addedLabelIds" : "removedLabelIds"] = ["wake"];
+        assert.deepEqual(
+          writes.map((write) => write.input),
+          [input]
+        );
         assert.equal(issue.state.name, target);
-        assert.deepEqual(issue.labels.nodes.map(label => label.id).sort(), desired ? ['wake', 'yellow'] : ['yellow']);
-        assert.deepEqual(snapshots.at(-1), issue, 'success requires a persisted state/label readback');
-        assert.ok(infos.some(message => message.includes(`-> ${target}.`)));
+        assert.deepEqual(
+          issue.labels.nodes.map((label) => label.id).sort(),
+          desired ? ["wake", "yellow"] : ["yellow"]
+        );
+        assert.deepEqual(
+          snapshots.at(-1),
+          issue,
+          "success requires a persisted state/label readback"
+        );
+        assert.ok(infos.some((message) => message.includes(`-> ${target}.`)));
       });
     }
   }
 }
 
 for (const adding of [false, true]) {
-  test(`YAML label race: concurrent ${adding ? 'add' : 'remove'} retries the state transition`, async t => {
+  test(`YAML label race: concurrent ${
+    adding ? "add" : "remove"
+  } retries the state transition`, async (t) => {
     const { writes, issue } = await runWorkflowFixture(t, {
-      ci: adding ? null : 'failure', labelIds: adding ? ['yellow'] : ['yellow', 'wake'],
+      ci: adding ? null : "failure",
+      labelIds: adding ? ["yellow"] : ["yellow", "wake"],
       beforeMutation(live, _input, attempt) {
         if (attempt !== 1) return;
-        live.labels[adding ? 'add' : 'delete']('wake');
-        live.labels.add('concurrent-label');
+        live.labels[adding ? "add" : "delete"]("wake");
+        live.labels.add("concurrent-label");
       },
     });
-    const target = adding ? 'Unhappy' : 'Active';
+    const target = adding ? "Unhappy" : "Active";
     assert.equal(writes.length, 2);
-    assert.deepEqual(writes[1], { kind: 'state', input: { stateId: target }, previousState: 'Inactive' });
+    assert.deepEqual(writes[1], {
+      kind: "state",
+      input: { stateId: target },
+      previousState: "Inactive",
+    });
     assert.equal(issue.state.name, target);
-    assert.deepEqual(issue.labels.nodes.map(label => label.id).sort(),
-      adding ? ['concurrent-label', 'wake', 'yellow'] : ['concurrent-label', 'yellow']);
+    assert.deepEqual(
+      issue.labels.nodes.map((label) => label.id).sort(),
+      adding
+        ? ["concurrent-label", "wake", "yellow"]
+        : ["concurrent-label", "yellow"]
+    );
   });
 }
 
-for (const change of ['Active', 'Done', 'head', 'closed']) {
-  test(`YAML label race: retry preserves newer ${change} decision`, async t => {
+for (const change of ["Active", "Done", "head", "closed"]) {
+  test(`YAML label race: retry preserves newer ${change} decision`, async (t) => {
     const { writes, issue, infos } = await runWorkflowFixture(t, {
-      ci: 'failure', labelIds: ['yellow', 'wake'],
+      ci: "failure",
+      labelIds: ["yellow", "wake"],
       beforeMutation(live) {
-        live.labels.delete('wake');
-        if (change === 'head') live.pr.head.sha = 'new-head';
-        else if (change === 'closed') live.pr.state = 'closed';
+        live.labels.delete("wake");
+        if (change === "head") live.pr.head.sha = "new-head";
+        else if (change === "closed") live.pr.state = "closed";
         else live.state = change;
       },
     });
     assert.equal(writes.length, 1);
-    assert.equal(issue.state.name, ['head', 'closed'].includes(change) ? 'Inactive' : change);
-    assert.ok(infos.some(message => message.includes('Ticket or PR changed')));
-    assert.ok(infos.every(message => !message.includes('->')));
+    assert.equal(
+      issue.state.name,
+      ["head", "closed"].includes(change) ? "Inactive" : change
+    );
+    assert.ok(
+      infos.some((message) => message.includes("Ticket or PR changed"))
+    );
+    assert.ok(infos.every((message) => !message.includes("->")));
   });
 }
 
-test('YAML label update: duplicate failure does not mutate an activated ticket again', async t => {
-  const { writes, issue } = await runWorkflowFixture(t, { ci: 'failure', duplicate: true });
+test("YAML label update: duplicate failure does not mutate an activated ticket again", async (t) => {
+  const { writes, issue } = await runWorkflowFixture(t, {
+    ci: "failure",
+    duplicate: true,
+  });
   assert.equal(writes.length, 1);
-  assert.equal(issue.state.name, 'Active');
+  assert.equal(issue.state.name, "Active");
 });
 
 for (const failure of [
-  { errors: [{ message: 'Permission denied' }] },
-  { errors: [{ message: 'Label not on issue' }] },
+  { errors: [{ message: "Permission denied" }] },
+  { errors: [{ message: "Label not on issue" }] },
   { data: { issueUpdate: { success: false } } },
-  { data: { issueUpdate: { success: true, issue: { state: { id: 'wrong' } } } } },
+  {
+    data: { issueUpdate: { success: true, issue: { state: { id: "wrong" } } } },
+  },
 ]) {
-  test(`YAML label update: genuine failure stays visible ${JSON.stringify(failure)}`, async t => {
+  test(`YAML label update: genuine failure stays visible ${JSON.stringify(
+    failure
+  )}`, async (t) => {
     const audit = {};
-    await assert.rejects(runWorkflowFixture(t, {
-      ci: 'failure', labelIds: ['yellow', 'wake'], audit, beforeMutation: () => failure,
-    }), /Permission denied|Label not on issue|Ticket state update failed/);
-    assert.equal(audit.writes.length, 1, 'no retry without an observed membership change');
-    assert.ok(audit.infos.every(message => !message.includes('->')));
+    await assert.rejects(
+      runWorkflowFixture(t, {
+        ci: "failure",
+        labelIds: ["yellow", "wake"],
+        audit,
+        beforeMutation: () => failure,
+      }),
+      /Permission denied|Label not on issue|Ticket state update failed/
+    );
+    assert.equal(
+      audit.writes.length,
+      1,
+      "no retry without an observed membership change"
+    );
+    assert.ok(audit.infos.every((message) => !message.includes("->")));
   });
 }
 
-test('YAML label race: a second mutation failure is not retried or swallowed', async t => {
+test("YAML label race: a second mutation failure is not retried or swallowed", async (t) => {
   const audit = {};
-  await assert.rejects(runWorkflowFixture(t, {
-    ci: 'failure', labelIds: ['yellow', 'wake'], audit,
-    beforeMutation(live, _input, attempt) {
-      live.labels.delete('wake');
-      if (attempt === 2) return { errors: [{ message: 'Permission denied' }] };
-    },
-  }), /Permission denied/);
+  await assert.rejects(
+    runWorkflowFixture(t, {
+      ci: "failure",
+      labelIds: ["yellow", "wake"],
+      audit,
+      beforeMutation(live, _input, attempt) {
+        live.labels.delete("wake");
+        if (attempt === 2)
+          return { errors: [{ message: "Permission denied" }] };
+      },
+    }),
+    /Permission denied/
+  );
   assert.equal(audit.writes.length, 2);
-  assert.ok(audit.infos.every(message => !message.includes('->')));
+  assert.ok(audit.infos.every((message) => !message.includes("->")));
 });
 
-for (const change of ['state', 'label']) {
-  test(`YAML label update: mismatched ${change} readback cannot report success`, async t => {
+for (const change of ["state", "label"]) {
+  test(`YAML label update: mismatched ${change} readback cannot report success`, async (t) => {
     const audit = {};
-    await assert.rejects(runWorkflowFixture(t, {
-      ci: 'failure', audit,
-      afterMutation(live) {
-        if (change === 'state') live.state = 'Done';
-        else live.labels.add('wake');
-      },
-    }), /readback/);
+    await assert.rejects(
+      runWorkflowFixture(t, {
+        ci: "failure",
+        audit,
+        afterMutation(live) {
+          if (change === "state") live.state = "Done";
+          else live.labels.add("wake");
+        },
+      }),
+      /readback/
+    );
     assert.equal(audit.writes.length, 1);
-    assert.ok(audit.infos.every(message => !message.includes('->')));
+    assert.ok(audit.infos.every((message) => !message.includes("->")));
   });
 }
 
-test('YAML label update: incomplete membership fails before mutation', async t => {
+test("YAML label update: incomplete membership fails before mutation", async (t) => {
   const audit = {};
-  await assert.rejects(runWorkflowFixture(t, { ci: 'failure', incompleteLabels: true, audit }), /incomplete/);
+  await assert.rejects(
+    runWorkflowFixture(t, { ci: "failure", incompleteLabels: true, audit }),
+    /incomplete/
+  );
   assert.equal(audit.writes.length, 0);
 });
