@@ -1,5 +1,5 @@
 # CT-C owns this list after CT-I merges. Paths are relative to symphony-example.
-# Existing sources inspected at 873f511aea3e1d858e216d1a890ed1cd9a709d61.
+# Existing sources inspected at d5e9692b84c3f338014b964fd9713143fb723b55.
 # CT-V copies final accepted sources at the same paths. No participant output.
 # Common helpers/config reader, instructions, package metadata and license occur
 # only in review-export.txt. Consume both lists together; see client-inventory.md.

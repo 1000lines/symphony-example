@@ -4,12 +4,39 @@ CT-I selection, September 11, 2026. The [accepted plan](../fan-out-plan-100-39-c
 and [design D1–D9](../client-template-design.md) govern this inventory. This is
 preparation for copying and conversion, not a usable client or evidence of live
 review. Source repository: `1000lines/symphony-example`; branch and PR base: `main`.
-Freeze existing copy inputs at **`873f511aea3e1d858e216d1a890ed1cd9a709d61`**,
-the human-accepted PR #34 merge. That ref includes 100-43's cleanup from
+Freeze existing copy inputs and audit exports at
+**`d5e9692b84c3f338014b964fd9713143fb723b55`**, the human-merged PR #43 on main.
+The accepted plan remains PR #34 at `873f511aea3e1d858e216d1a890ed1cd9a709d61`.
+The selected source includes 100-43's cleanup from
 [PR #31](https://github.com/1000lines/symphony-example/pull/31), merged as
 `ca5c37344df600468ee69e73c04c54197a5b062c`; no predecessor branch is imported.
 The older required baseline `3de96c9f739d732cc7efd498225b4444b547cc57` is context,
 not the copy ref. CT-R must separately verify 100-43's initial live proof.
+
+### Human revision and recent merges
+
+[Jeremy's September 11, 16:24 UTC comment](https://github.com/1000lines/symphony-example/pull/41#issuecomment-5637447356)
+requires `.gitattributes` in every generated client and inspection of recent
+merges. This supersedes its earlier publication-only disposition and the old
+copy/source pin. It adds one D1 client artifact for readable planning diffs;
+the seven answers, workflow interfaces and task ownership remain as planned.
+
+The complete `873f511..d5e9692` diff contains 16 paths, including two new files.
+All eleven changed export paths were already selected. No new runtime helper,
+test, instruction file or package dependency needs adding to either export list.
+
+| Merged change                                                                                                                                | Inventory consequence                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [#39](https://github.com/1000lines/symphony-example/pull/39), fan-out record                                                                 | `fan-out-100-40.md` is new seed-only planning evidence; the changed plan `.md`/`.mmd` remain source references. No client or workflow export.                                                                                                                                                      |
+| [#40](https://github.com/1000lines/symphony-example/pull/40) and [#38](https://github.com/1000lines/symphony-example/pull/38), draft handoff | Already-listed events, trigger and manual workflows, advisory helper and its test, event boundary test and standing review guide carry the fixes. Preserve separate repository-token readiness and explicit failure reporting during extraction.                                                   |
+| [#43](https://github.com/1000lines/symphony-example/pull/43), App identity                                                                   | Already-listed trigger/manual/handoff workflows, verifier, handoff helper, event boundary test, Cadence skill and standing guide carry the fix. `early-review-evidence.md` is new seed-only evidence; the changed `implementation-items.md` is a plan reference. Neither belongs in either export. |
+
+The events and handoff copy blobs change at this pin; the other six copy inputs
+retain their existing bytes, including the newly selected `.gitattributes`.
+Re-expand imports at this ref; do not copy predecessor branch work. PR #43
+implements native App identity only: its merge/100-49 Done state does not prove
+the remaining CT-R reusable interfaces, provider selection or live proof.
+Those planned additions below remain absent and required before CT-L integration.
 
 ## Generated paths and copy boundary
 
@@ -19,11 +46,11 @@ publishes them as `template/<path>` and renders the **same paths** at its own
 repository root. Template filenames may gain Copier's `.jinja` suffix during
 conversion; the generated names below remain unchanged.
 
-[client-copy.txt](client-copy.txt) is the complete CT-M input: seven existing
-regular files, 668 lines, with per-row commit, Git mode, Git blob SHA-1, source
+[client-copy.txt](client-copy.txt) is the complete CT-M input: eight existing
+regular files, 678 lines, with per-row commit, Git mode, Git blob SHA-1, source
 and destination. Hashes describe Git objects, not raw-file SHA-1 digests. CT-M
 copies every byte/mode, including raw GitHub expressions, without substitutions
-or formatting. All seven staging destinations are absent at the selected ref.
+or formatting. All eight staging destinations are absent at the selected ref.
 
 | Generated path                                         | Existing copy source or planned origin                             | Why local; conversion owner                                                                                                                                                                                                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,12 +61,13 @@ or formatting. All seven staging destinations are absent at the selected ref.
 | `.github/workflows/symphony-client-wakeups.yml`        | `.github/workflows/symphony-linear-wakeups.yml`                    | Target check/status/CI/conflict events and configured completion filters. CT-T deletes the body; CT-L calls CT-C's reusable wakeup with Linear token only.                                                                                                          |
 | `.github/workflows/symphony-client-ci.yml`             | `.github/workflows/ci.yml`                                         | Optional target command CI when existing application CI does not cover it. CT-T deletes the tooling-specific body; CT-L calls CT-C's new command runner without reviewer secrets. Omit when existing CI suffices; no eighth answer.                                 |
 | `.symphony.cfg.json`                                   | Same source path                                                   | Target commands, instruction paths, Linear team and observed required-check provenance. CT-T converts immediately, defaults to native by omitting mode, replaces seed npm commands and never invents required checks. CT-L adds the accepted optional mode support. |
+| `.gitattributes`                                       | Same source path                                                   | GitHub reads attributes in the target to collapse per-project AI bookkeeping while keeping Mermaid and top-level plans visible. CT-T retains these generic rules immediately; existing target attributes require a reviewed merge preserving unrelated rules.       |
 | `SYMPHONY.md`                                          | New in CT-T; no suitable short existing client file                | Target worker instructions referenced by config, including commands, review context and usage/source/license links. Preserve existing AGENTS/CLAUDE content; do not copy the hosted runtime instructions.                                                           |
 | `.github/symphony/REVIEW.md`                           | New in CT-T                                                        | Target review context for both providers. Keep generic reviewer implementation/instructions central.                                                                                                                                                                |
 | `.github/symphony/cadence-app-manifest.json`           | New in CT-T; no App registration manifest exists at the source ref | Inert direct-path registration document: metadata/contents/actions read, pull_requests/issues/checks write; no host or org-admin grant. Forks use the accepted existing App. CT-O verifies actual grants/IDs separately.                                            |
 | `.copier-answers.yml`                                  | New Copier metadata supplied by CT-Q's package, consumed by CT-T/L | Local source/version and the seven nonsecret answers; preserve `_src_path`/`_commit`. No copy row, fabricated source, credential, project key or extra question.                                                                                                    |
 
-Only ingress and config can be converted from these snapshots immediately.
+Ingress, config and `.gitattributes` can be converted from these snapshots immediately.
 The five other copied workflows are inert **only while staged**: CT-T must
 remove them before rendering its initial client. They contain source bodies,
 seed assumptions or unavailable interfaces and must never leak into output.
@@ -69,15 +97,23 @@ a consumer. Retain the seed's three-name listener until CT-A/Z's migration censu
 
 Review explicitly maps App, Linear and optional OpenAI/Anthropic secrets;
 handoff maps App/Linear; cleanup App only; wakeup Linear only; CI/ingress none.
-App IDs/slugs and target identity are nonsecret inputs. The existing bot-PAT,
-`secrets: inherit` and protected-environment assumptions are source defects for
-CT-R to remove at the reusable boundary, not adopter requirements. Helpers must
-come from trusted workflow-source commits, separately from the target PR/config.
+App IDs/slugs and target identity are nonsecret inputs. Native review source at
+the selected ref uses the minted App; no legacy bot PAT is required.
+CT-R preserves trusted App-login verification in outcome checks and handoff.
+The remaining `secrets: inherit` and protected-environment assumptions require
+conversion at the reusable boundary; they are not adopter requirements. Review
+callers must permit the trusted finish job's repository `GITHUB_TOKEN`
+`contents: write` and `pull-requests: write` for draft readiness, with narrow
+permissions elsewhere. CT-R/L preserve the separate App check/review identity,
+current-head guards and failed-readiness diagnostic; do not expand App grants.
+Helpers must come from trusted workflow-source commits, separately from the
+target PR/config.
 
 ## Collisions and exclusions
 
 At the frozen source ref, generated-path collisions in `symphony-example` are
-exactly `.github/workflows/cadence-review-ingress.yml` and `.symphony.cfg.json`.
+exactly `.github/workflows/cadence-review-ingress.yml`, `.symphony.cfg.json`
+and `.gitattributes`.
 The other nine generated paths are absent. Existing `.github/workflows/ci.yml`
 already covers seed CI: adoption should omit the optional client CI caller,
 preserve that workflow and its observed check provenance, and merge config
@@ -85,6 +121,14 @@ instruction/command changes. The differently named native review, trigger,
 manual, handoff, cleanup and wakeup sources are **behavioral collisions** even
 without filename collisions: CT-A/Z retire or forward duplicate triggers only
 after replacement runs and consumer inspection. Historical refs stay available.
+
+The seed `.gitattributes` already contains the selected rules, so CT-A retains
+them without duplication. For another target, CT-T/O preserve existing
+attributes and add the two generic Linguist rules through an ordinary reviewed
+merge. Keep `docs/symphony-plans/**/*.mmd -linguist-generated` after the broader
+bookkeeping rule, leave top-level plans visible, and retain unrelated target
+attributes. CT-T render fixtures cover both a new file and an existing file
+with unrelated rules; no merge hook or application-wide attributes are added.
 
 New targets are not assumed empty. CT-T/L render fixtures preserve unrelated
 application files and existing instructions, config, answers and license. CT-O/U/A
@@ -118,17 +162,17 @@ regular blobs). Every file has a disposition below. Existing adopter dotfiles
 are preserved unless the generated-path table explicitly calls for a reviewed
 merge; publication metadata is not an additional participant artifact.
 
-| Source dotfile       | Publication / staging disposition                                                                                                                                                                                                              | Participant disposition and reason                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `.eslintrc.agent.js` | Excluded: imports the seed ESLint config and requires the excluded agent guardrail rule.                                                                                                                                                       | Preserve target lint policy; no client runtime dependency.                                                              |
-| `.eslintrc.js`       | Excluded: depends on the seed TypeScript/ESLint stack, absent from the minimal publication package.                                                                                                                                            | Preserve target lint policy; remote workflows do not require this config locally.                                       |
-| `.gitattributes`     | Copy once through review-export to CT-V's root; preserves planning-diff presentation.                                                                                                                                                          | Excluded from rendering; preserve adopter attributes.                                                                   |
-| `.gitignore`         | CT-V adaptation in review-export: retain ignores for `node_modules/`, `.env`, `.env.*` and `.local/`; omit seed Terraform, TypeScript and build-output patterns unless its actual package needs them.                                          | Excluded from rendering; preserve application ignore rules. CT-O inspects target hygiene before enabling workflows.     |
-| `.npmrc`             | Excluded: seed engine/save/release-age policy is not required by the exported helpers. CT-V uses the reviewed Node pin, minimal lock and `npm ci`.                                                                                             | Preserve target package-manager policy; a client can use another language.                                              |
-| `.nvmrc`             | Copy once through review-export for CT-V's Node 20.20.0 helper/test toolchain.                                                                                                                                                                 | Excluded from rendering; the application's runtime is target-owned.                                                     |
-| `.prettierignore`    | Seed file excluded: its blanket `.claude/` skip is unsuitable for exported reviewer guidance. CT-Q generates its owned package-root ignore file for raw `template/`; CT-V formats explicit exported paths through its minimal package scripts. | Excluded from rendering; preserve application formatter scope. Dedicated template render tests remain required.         |
-| `.prettierrc`        | Excluded: loads the intentionally excluded organize-imports plugin. CT-V uses locked Prettier defaults on its explicit path selection.                                                                                                         | Preserve application formatting policy; no client dependency.                                                           |
-| `.symphony.cfg.json` | CT-M copies the frozen source; CT-T converts it. CT-U renders its root instance; CT-V creates its reviewed publication config.                                                                                                                 | Generated and merged as specified above: target-owned commands, team and required-check provenance replace seed values. |
+| Source dotfile       | Publication / staging disposition                                                                                                                                                                                                              | Participant disposition and reason                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `.eslintrc.agent.js` | Excluded: imports the seed ESLint config and requires the excluded agent guardrail rule.                                                                                                                                                       | Preserve target lint policy; no client runtime dependency.                                                                  |
+| `.eslintrc.js`       | Excluded: depends on the seed TypeScript/ESLint stack, absent from the minimal publication package.                                                                                                                                            | Preserve target lint policy; remote workflows do not require this config locally.                                           |
+| `.gitattributes`     | CT-M copies into `template/`; CT-T retains its generic rules and CT-U renders the root instance. Also listed once in review-export for CT-V's root.                                                                                            | Generated for every client to collapse AI bookkeeping in planning diffs; merge with existing attributes as specified above. |
+| `.gitignore`         | CT-V adaptation in review-export: retain ignores for `node_modules/`, `.env`, `.env.*` and `.local/`; omit seed Terraform, TypeScript and build-output patterns unless its actual package needs them.                                          | Excluded from rendering; preserve application ignore rules. CT-O inspects target hygiene before enabling workflows.         |
+| `.npmrc`             | Excluded: seed engine/save/release-age policy is not required by the exported helpers. CT-V uses the reviewed Node pin, minimal lock and `npm ci`.                                                                                             | Preserve target package-manager policy; a client can use another language.                                                  |
+| `.nvmrc`             | Copy once through review-export for CT-V's Node 20.20.0 helper/test toolchain.                                                                                                                                                                 | Excluded from rendering; the application's runtime is target-owned.                                                         |
+| `.prettierignore`    | Seed file excluded: its blanket `.claude/` skip is unsuitable for exported reviewer guidance. CT-Q generates its owned package-root ignore file for raw `template/`; CT-V formats explicit exported paths through its minimal package scripts. | Excluded from rendering; preserve application formatter scope. Dedicated template render tests remain required.             |
+| `.prettierrc`        | Excluded: loads the intentionally excluded organize-imports plugin. CT-V uses locked Prettier defaults on its explicit path selection.                                                                                                         | Preserve application formatting policy; no client dependency.                                                               |
+| `.symphony.cfg.json` | CT-M copies the frozen source; CT-T converts it. CT-U renders its root instance; CT-V creates its reviewed publication config.                                                                                                                 | Generated and merged as specified above: target-owned commands, team and required-check provenance replace seed values.     |
 
 The four root dot-directories are not wholesale copy units: `.agents/` and
 `.codex/` remain excluded, while `.claude/` reviewer resources and `.github/`
@@ -225,11 +269,12 @@ seed-only; they require the excluded tooling workspaces. No publication CI or
 required-check name is claimed observed by CT-I.
 
 CT-V also copies `.gitattributes` to the workflow repository root from the shared
-section of review-export. Its GitHub Linguist rules collapse per-project planning
-bookkeeping while keeping Mermaid diagrams and top-level plans/designs visible.
-This preserves review presentation for both review and CI work; list it once in
-review-export. It is publication metadata, outside `template/` and the CT-M copy
-manifest, and must not overwrite an adopter's `.gitattributes`.
+section of review-export, once for both review and CI work. This is distinct
+from the client-copy mapping into `template/.gitattributes`: CT-U renders that
+file at its own root and participants receive the same generated path. Both
+repositories and every client retain readable planning diffs; existing adopter
+rules survive a reviewed merge. Root-only files still remain outside participant
+output.
 
 Source attribution is Apache-2.0 `LICENSE` plus `NOTICE`: “Orchestra Bio
 symphony-example / Copyright 2026 Orchestra Bio, Inc.” CT-Q includes the license

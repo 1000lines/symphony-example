@@ -1,7 +1,8 @@
 # CT-R owns this list after CT-I merges. Paths are relative to symphony-example.
-# Existing sources inspected at 873f511aea3e1d858e216d1a890ed1cd9a709d61.
+# Existing sources inspected at d5e9692b84c3f338014b964fd9713143fb723b55.
 # CT-V copies the final accepted list at its recorded source refs, at the same paths.
-# No participant output. See client-inventory.md for adaptations and exclusions.
+# These mappings publish workflow-source assets, not participant output.
+# Separate client-copy mappings can select the same sources; see client-inventory.md.
 
 # Native/reusable review entry points and ingress contract fixture.
 .github/workflows/cadence-review-ingress.yml
@@ -63,7 +64,7 @@ docs/engineering/review/cadence-linear-workpad.md
 docs/engineering/review/github-actor-classification.md
 
 # Shared source attribution, Node version and repository review metadata.
-# .gitattributes preserves bookkeeping collapse and visible Mermaid diagrams at CT-V's root.
+# .gitattributes goes to CT-V's root here, and separately to clients via client-copy.txt.
 LICENSE
 NOTICE
 .nvmrc
