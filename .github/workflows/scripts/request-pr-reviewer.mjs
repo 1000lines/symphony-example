@@ -323,9 +323,9 @@ const main = async () => {
       process.env.COALESCE_REVIEW_EVENT === "true"
         ? {
             payload: JSON.parse(
-              readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+              readFileSync(process.env.CADENCE_EVENT_PATH || process.env.GITHUB_EVENT_PATH, "utf8")
             ),
-            eventName: process.env.GITHUB_EVENT_NAME,
+            eventName: process.env.CADENCE_EVENT_NAME || process.env.GITHUB_EVENT_NAME,
             requestActor: process.env.REVIEW_REQUEST_ACTOR,
           }
         : undefined,

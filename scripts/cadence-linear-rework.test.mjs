@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { authorityFetch, repository, token as appToken } from "./test-fixtures/review-authority.mjs";
+import { resolveCadenceEvent } from "../.github/workflows/scripts/cadence-forwarded-event.mjs";
 import { routeCadenceReviewEvent } from "../.github/workflows/scripts/cadence-ai-review-route-event.mjs";
 import {
   parseCadenceWorkpad,
@@ -899,3 +900,35 @@ test("handoff evidence preserves Cadence's current review and Symphony-owned wor
     "## Codex Workpad\nSymphony agent notes"
   );
 });
+
+for (const eventName of ["pull_request_review", "issue_comment"]) {
+  test(`forwarded ${eventName} completes the existing review route and Linear handoff`, async () => {
+    const event = eventName === "issue_comment" ? commentPayload() : payload({ review: {
+      user: { id: 42, type: "User", login: "example-lead" }, body: "Please fix routing" } });
+    const pr = { ...payload().pull_request, base: { repo: { full_name: repository } },
+      head: { ...payload().pull_request.head, sha: "a".repeat(40) } };
+    const feedback = { ...(event.review || event.comment), commit_id: pr.head.sha,
+      submitted_at: "2026-09-11T01:00:00Z", pull_request_url: `https://api.github.com/repos/${repository}/pulls/${pr.number}`,
+      issue_url: `https://api.github.com/repos/${repository}/issues/${pr.number}` };
+    const source = { id: 10, event: eventName, repository: { full_name: repository },
+      path: ".github/workflows/cadence-review-ingress.yml", name: "Cadence Review Ingress",
+      status: "completed", conclusion: "success", actor: feedback.user,
+      display_title: JSON.stringify({ event: eventName, action: event.action, number: pr.number, id: feedback.id, head: pr.head.sha }) };
+    const [owner, repo] = repository.split("/");
+    const resolved = await resolveCadenceEvent({
+      context: { ref: "refs/heads/main", repo: { owner, repo }, payload: { workflow_run: source } },
+      github: { request: async path => ({ data: path.endsWith(`/pulls/${pr.number}`) ? pr : feedback }) } });
+    const fixture = harness();
+    const fetchImpl = authorityFetch(resolved.payload, eventName, fixture.fetchImpl);
+    const review = await routeCadenceReviewEvent({ ...resolved, repository, token: appToken, fetchImpl });
+    assert.equal(review.shouldRequestReview, true);
+    assert.equal(review.triggerActor, feedback.user.login);
+    const handoff = await routeReviewHandoff({ ...resolved, repository, token: "linear-token", githubToken: appToken, runUrl, fetchImpl });
+    assert.equal(handoff.operation, "updated");
+    assert.equal(handoff.state, "Active");
+    assert.equal(handoff.authority.authorId, feedback.user.id);
+    assert.equal(fixture.requests.filter(r => r.query?.includes("issueUpdate")).length, 1);
+    const workpad = parseCadenceWorkpad(fixture.comments.find(c => c.id === "cadence-pad").body);
+    assert.equal(workpad.coordination.reviewHandoff.operation, "updated");
+  });
+}

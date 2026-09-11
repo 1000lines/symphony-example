@@ -148,18 +148,12 @@ test("route job serializes all receipt checks and mutations for a PR", () => {
   assert.match(workflow, /concurrency:/);
   assert.match(
     workflow,
-    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ github.event.pull_request.number \|\| github.event.issue.number \|\| 'no-pr' \}\}\n/
+    /group: >-\n +cadence-ai-review-events-\$\{\{ github.repository \}\}-\$\{\{ fromJSON\(github.event.workflow_run.display_title\).number \}\}\n/
   );
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /queue: max/);
 });
 
-test("receipt writes do not enqueue more event-router jobs", () => {
-  assert.match(
-    workflow,
-    /github.event_name == 'issue_comment' &&\s+github.actor == \(vars.CADENCE_REVIEWER \|\| 'example-cadence-bot'\) &&\s+startsWith\(github.event.comment.body, '<!-- cadence-review-request-receipts:v1'\)/
-  );
-});
 
 test("event route fetches current head and last reviewed SHA for workpad evidence", () => {
   assert.match(workflow, /Fetch current PR review state for event/);

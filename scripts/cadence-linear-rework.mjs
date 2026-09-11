@@ -521,11 +521,11 @@ export const routeReviewHandoff = async ({
 
 const main = async () => {
   const payload = JSON.parse(
-    readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+    readFileSync(process.env.CADENCE_EVENT_PATH || process.env.GITHUB_EVENT_PATH, "utf8")
   );
   const result = await routeReviewHandoff({
     payload,
-    eventName: process.env.GITHUB_EVENT_NAME,
+    eventName: process.env.CADENCE_EVENT_NAME || process.env.GITHUB_EVENT_NAME,
     token: process.env.LINEAR_API_TOKEN || process.env.LINEAR_API_KEY,
     githubToken: process.env.GH_TOKEN,
     cadenceReviewerLogin: process.env.CADENCE_REVIEWER_LOGIN,

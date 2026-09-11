@@ -1,23 +1,12 @@
 name: Cadence AI Review Events
 
-# PR opens, Symphony commits, and human feedback create a visible
-# request/re-request for `example-cadence-bot`. The follow-on Cadence review-request
-# event is owned by `cadence-ai-review-trigger.yml`. Human comments/reviews are
-# filtered with the actor-classification helper so Cadence/Symphony bot activity
-# does not create review loops. Linear-linked events are either queued or
-# recorded as explicit skips in the Cadence Workpad when Linear credentials are
-# available. Per-PR concurrency serializes receipt checks and reviewer mutations;
-# a versioned GitHub receipt coalesces duplicates without using Linear as a lock.
+# workflow_run executes the default branch, so no second dispatch is needed.
+# Only current GitHub API data reaches the existing authority and receipt checks.
 
 on:
-  pull_request_target:
-    types: [opened, ready_for_review, synchronize]
-  issue_comment:
-    types: [created, edited]
-  pull_request_review:
-    types: [submitted, edited]
-  pull_request_review_comment:
-    types: [created, edited]
+  workflow_run:
+    workflows: [Cadence Review Ingress]
+    types: [completed]
 
 permissions:
   contents: read
@@ -32,30 +21,15 @@ env:
 jobs:
   route:
     name: Route review-causing event
-    # Coarse gate before a runner is claimed, so unrelated events skip silently
-    # instead of failing (e.g. during a GitHub outage) on the checkout + API call
-    # the route script would otherwise make. The script still does the full
-    # classification. `issue.labels` covers issue_comment; `pull_request.labels`
-    # the rest — the `.*` filter is an empty, safe no-op when that object is absent.
     if: >-
-      ${{
-        !(
-          github.event_name == 'issue_comment' &&
-          github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot') &&
-          startsWith(github.event.comment.body, '<!-- cadence-review-request-receipts:v1')
-        ) && (
-        contains(github.event.pull_request.labels.*.name, 'symphony') ||
-        contains(github.event.issue.labels.*.name, 'symphony') ||
-        github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
-        github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot')
-        )
-      }}
+      github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' &&
+      fromJSON(github.event.workflow_run.display_title).eligible
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
       group: >-
-        cadence-ai-review-events-${{ github.repository }}-${{ github.event.pull_request.number || github.event.issue.number || 'no-pr' }}
+        cadence-ai-review-events-${{ github.repository }}-${{ fromJSON(github.event.workflow_run.display_title).number }}
       cancel-in-progress: false
       # Keep distinct feedback queued; the default single pending slot can
       # discard a new context when a duplicate delivery arrives after it.
@@ -80,8 +54,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: main
           persist-credentials: false
+
+      - name: Read current event from GitHub
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { resolveCadenceEvent } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-forwarded-event.mjs`);
+            const { payload, eventName } = await resolveCadenceEvent({ github, context });
+            const path = `${process.env.RUNNER_TEMP}/cadence-event.json`;
+            require('node:fs').writeFileSync(path, JSON.stringify(payload));
+            core.exportVariable('CADENCE_EVENT_PATH', path);
+            core.exportVariable('CADENCE_EVENT_NAME', eventName);
 
       - name: Mint existing Cadence App token
         id: app-token

@@ -419,11 +419,11 @@ export const writeRouteResult = (result, env = process.env) => {
 
 const main = async () => {
   const payload = JSON.parse(
-    readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+    readFileSync(process.env.CADENCE_EVENT_PATH || process.env.GITHUB_EVENT_PATH, "utf8")
   );
   const result = await routeCadenceReviewEvent({
     payload,
-    eventName: process.env.GITHUB_EVENT_NAME,
+    eventName: process.env.CADENCE_EVENT_NAME || process.env.GITHUB_EVENT_NAME,
     actor: process.env.GITHUB_ACTOR,
     token: process.env.GH_TOKEN,
   });

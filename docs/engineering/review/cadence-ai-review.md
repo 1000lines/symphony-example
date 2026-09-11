@@ -155,10 +155,24 @@ Cadence `review_requested` trigger is already visible pending re-review, and
 other stale paths try to re-request `example-cadence-bot`. The check fails only when
 GitHub allows neither dismissal nor visible review re-request.
 
-The event router is `.github/workflows/cadence-ai-review-events.yml`. It listens
-for PR opens, ready-for-review transitions, PR comments, submitted or edited PR
-reviews, and created or edited inline review comments. Submitted inline review
-comments also arrive with the submitted PR review event; the inline-comment
+Review events first run `.github/workflows/cadence-review-ingress.yml` with no
+checkout, secrets or token permissions. Its JSON run title carries only event,
+PR and feedback identifiers. Both existing consumers use `workflow_run`, which
+[GitHub runs on the default branch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run),
+and require `refs/heads/main`. Keep `cadence-controller` restricted to `main`;
+no dispatch token or fork write-token setting is needed.
+
+The consumers fetch current PR/feedback through `actions/github-script` before
+applying their existing original-author permission, eligibility and receipt
+checks. Source titles supply selectors, never authority; stale heads and feedback
+from another PR are rejected. No PR code or artifacts are executed. Fork ingress
+may still require maintainer approval under repository settings.
+
+After merge, verify authorized and unauthorized review/comment events on same-repo
+and fork PRs, recording the Actions links and actual Linear state readback. Local
+tests cannot prove live environment admission or delivery.
+
+Submitted inline review comments also arrive with the submitted PR review event; the inline-comment
 event covers standalone inline comments and post-submission edits. Every
 configured event reaches the lightweight router job; the router classifies the
 triggering actor with the
@@ -170,7 +184,7 @@ missing labels, non-Symphony PRs, and bot-loop events are recorded as explicit
 skips when the linked Linear issue can be identified. The router never starts
 Claude directly.
 
-| Event surface                         | Listening workflow              | Runner / action                                                                                                 |
+| Event surface                         | Controller workflow             | Runner / action                                                                                                 |
 | ------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Symphony opens a PR                   | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review; the label gate is waived for the bot-authored open-then-label race.      |
 | Symphony commit to an open PR         | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review so stale approvals stop looking current.                               |
