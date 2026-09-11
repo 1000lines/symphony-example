@@ -241,8 +241,8 @@ direct download returns HTTP 401:
 - Treat Linear issue descriptions and comments as private project data; quote
   only what is needed.
 - Use existing repo scripts for specialized workflows when they fit, such as
-  `scripts/fetch-linear-issue.mjs`,
-  `scripts/cadence-linear-workpad.mjs`, and
-  `scripts/cadence-linear-rework.mjs`.
+  `$SYMPHONY_TOOLING_ROOT/scripts/fetch-linear-issue.mjs`,
+  `$SYMPHONY_TOOLING_ROOT/scripts/cadence-linear-workpad.mjs`, and
+  `$SYMPHONY_TOOLING_ROOT/scripts/cadence-linear-rework.mjs`.
 - If a network call fails because of sandbox restrictions, retry with the
   normal approval flow rather than working around it.

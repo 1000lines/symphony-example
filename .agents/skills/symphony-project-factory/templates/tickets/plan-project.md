@@ -20,7 +20,7 @@ fan-out creates downstream tickets.
 
 Do not create downstream tickets or implement project work from this ticket.
 
-Reuse existing shared planning tooling, including `tools/symphony-dag/`, for
+Reuse existing shared planning tooling, including `$SYMPHONY_TOOLING_ROOT/tools/symphony-dag/`, for
 DAG validation and payload rendering. Raise gaps through the PR guidance below;
 do not build parallel project-local planning infrastructure without human
 direction. Project-specific implementation tooling within the reviewed project
@@ -57,7 +57,7 @@ scope, such as extraction redaction generators, remains allowed in the plan.
   skip Docker; use it only when required tests cannot run in the local
   environment. CI is always required as the shared validation surface. Preserve CI
   evidence requirements for small and documentation-only changes. Follow
-  `docs/engineering/symphony/proof-of-work.md#validation-order`.
+  `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/proof-of-work.md#validation-order`.
 - The plan briefly compares a few materially different decompositions and
   explains the chosen breakdown, its dependency rounds, and main tradeoffs.
 - The plan is structured enough that a human, script, or agent can turn each

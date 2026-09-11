@@ -63,8 +63,7 @@ set of required sources:
   prior PR, or other source material the human names.
 - Prior fan-out examples relevant to the request, including committed plans in
   `docs/symphony-plans/` and old project plans the current issue names.
-- `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`.
-- `.agents/skills/karpathy-guidelines/SKILL.md`.
+- `$SYMPHONY_TOOLING_ROOT/scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`.
 - Existing `.agents/skills/*/SKILL.md` frontmatter conventions and any local
   Symphony skills that the new project's starter tickets will reference.
 - The project color helper output from the accepted color-helper implementation.
@@ -257,7 +256,7 @@ Before writing, resolve:
 - F2-002 color helper output proving the selected project color is available,
   or a human-supplied verified equivalent.
 - The project icon color: the hex for `project-color` from
-  `SYMPHONY_PROJECT_COLOR_HEX` (`scripts/symphony/project-colors.ts`), passed as
+  `SYMPHONY_PROJECT_COLOR_HEX` (`$SYMPHONY_TOOLING_ROOT/scripts/symphony/project-colors.ts`), passed as
   the project `color` so the Linear project icon matches its lane.
 
 For a new project, use `projectCreate`, then `issueCreate` for the three planning
@@ -340,7 +339,7 @@ project_mutation:
       - "<demo-team-id>"
     name: "<project-name>"
     description: "<rendered templates/project-description.md>"
-    color: "<hex for project-color from SYMPHONY_PROJECT_COLOR_HEX in scripts/symphony/project-colors.ts>"
+    color: "<hex for project-color from SYMPHONY_PROJECT_COLOR_HEX in $SYMPHONY_TOOLING_ROOT/scripts/symphony/project-colors.ts>"
 
 starter_issue_mutations:
   - operation: issueCreate

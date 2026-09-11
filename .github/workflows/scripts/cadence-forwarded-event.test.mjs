@@ -127,7 +127,7 @@ test("bot editing a human's feedback cannot supply that human's authority", asyn
   assert.equal(result.skipReason, "non-human-feedback-editor");
 });
 
-test("workflow boundaries keep PR ingress secret-free and every privileged job on main", () => {
+test("workflow boundaries keep ingress secret-free and delegate privileged feedback to pinned code", () => {
   const read = name => yaml.load(readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8"));
   const ingress = read("cadence-review-ingress");
   assert.deepEqual(ingress.permissions, {});
@@ -142,16 +142,11 @@ test("workflow boundaries keep PR ingress secret-free and every privileged job o
   assert.equal(events.on.workflow_dispatch, undefined);
   assert.equal(events.jobs.forward, undefined);
   assert.deepEqual(handoff.on.workflow_run.workflows, ["Cadence Review Ingress"]);
-  for (const job of [events.jobs.route, handoff.jobs["review-handoff"]]) {
-    assert.match(job.if, /refs\/heads\/main.*workflow_run.conclusion/);
-    assert.match(job.if, /fromJSON\(github.event.workflow_run.display_title\).eligible/);
-    assert.equal(job.environment, "cadence-controller");
-    assert.equal(job.steps[0].with.ref, "main");
-    assert.equal(job.steps[0].with["persist-credentials"], false);
-    assert.match(job.steps[1].uses, /^actions\/github-script@/);
-    assert.match(job.steps[1].with.script, /cadence-forwarded-event.mjs/);
+  for (const job of [events.jobs.review, handoff.jobs.handoff]) {
+    assert.match(job.uses, /^1000lines\/symphony-client-workflows\/\.github\/workflows\/.*@[a-f0-9]{40}$/);
+    assert.equal(job.with["helpers-ref"], job.uses.split("@")[1]);
+    assert.equal(job.steps, undefined);
+    assert.equal(job.secrets.CADENCE_APP_PRIVATE_KEY, "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
   }
-  assert.equal(events.jobs.route.permissions['pull-requests'], 'read');
-  assert.match(handoff.jobs['review-handoff'].concurrency.group, /fromJSON\(github.event.workflow_run.display_title\).number/);
-  assert.equal(handoff.jobs['review-handoff'].concurrency.queue, "max");
+  assert.equal(handoff.permissions["pull-requests"], "read");
 });

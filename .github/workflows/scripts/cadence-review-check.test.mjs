@@ -368,67 +368,23 @@ test("completion recovery handles queued cancellation, timeout and lost finaliza
   }
 });
 
-test("workflow puts recoverable admission before review queue and serializes only publication", () => {
+test("review and recovery delegate to the same revision and stay outside required application CI", () => {
   const load = (name) =>
     yaml.load(readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8"));
-  const { accept, review, finish } = load("cadence-ai-review-trigger").jobs;
-  assert.equal(review.needs, "accept");
-  assert.deepEqual(finish.needs, ["accept", "review"]);
-  assert.equal(accept.concurrency.group, finish.concurrency.group);
-  assert.notEqual(accept.concurrency.group, review.concurrency.group);
-  assert.equal(accept.concurrency.queue, "max");
-  assert.ok(
-    accept.steps.findIndex(
-      (step) => step.name === "Save check recovery pointer"
-    ) < accept.steps.findIndex((step) => step.id === "queued")
-  );
-  for (const job of [accept, review, finish])
-    assert.equal(
-      job.steps.find((step) => step.id === "app-token").with[
-        "permission-checks"
-      ],
-      "write"
-    );
-  assert.match(accept.if, /github.ref == 'refs\/heads\/main'/);
-  assert.match(finish.if, /github.ref == 'refs\/heads\/main'/);
-  assert.deepEqual(finish.permissions, {
-    contents: "write",
-    "pull-requests": "write",
-  });
-  const appToken = finish.steps.find((step) => step.id === "app-token").with;
-  assert.equal(appToken["permission-pull-requests"], "read");
-  assert.equal(appToken["permission-contents"], undefined);
-  assert.equal(appToken["permission-workflows"], undefined);
-  const publication = finish.steps.find((step) => step.env?.CHECK_REQUEST);
-  assert.equal(
-    publication.with["github-token"],
-    "${{ steps.app-token.outputs.token }}"
-  );
-  assert.equal(publication.env.HANDOFF_TOKEN, "${{ github.token }}");
-  assert.match(
-    publication.with.script,
-    /new github.constructor\(\{ auth: process.env.HANDOFF_TOKEN/
-  );
-  assert.match(publication.with.script, /readyGraphql: handoffGithub.graphql/);
-  assert.match(
-    publication.with.script,
-    /core.setFailed\(outcome.handoffError\)/
-  );
-  for (const name of ["cadence-ai-review-events", "cadence-ai-review"]) {
-    const caller = load(name);
-    assert.equal(caller.jobs.review.permissions.contents, "write");
-    assert.equal(caller.jobs.review.permissions["pull-requests"], "write");
-    assert.equal(caller.permissions.contents, "read");
-  }
-  assert.equal(load("cadence-ai-review-trigger").permissions.contents, "read");
+  const review = load("cadence-ai-review-trigger");
   const cleanup = load("cadence-review-check-cleanup");
+  assert.equal(review.jobs.review.concurrency, undefined);
+  assert.equal(review.concurrency, undefined);
+  assert.equal(cleanup.jobs.cleanup.with["helpers-ref"], review.jobs.review.with["helpers-ref"]);
+  assert.equal(cleanup.jobs.cleanup.uses.split("@")[1], review.jobs.review.uses.split("@")[1]);
   assert.deepEqual(cleanup.on.workflow_run.types, ["completed"]);
-  assert.equal(
-    cleanup.jobs.cleanup.steps.find(
-      (step) => step.name === "Download recovery pointers as data"
-    ).with["run-id"],
-    "${{ github.event.workflow_run.id }}"
-  );
+  assert.deepEqual(cleanup.on.workflow_run.workflows, ["Cadence AI Review Events", "Cadence AI Review Trigger", "Cadence AI Review"]);
+  for (const name of ["cadence-ai-review-trigger", "cadence-ai-review-events", "cadence-ai-review"]) {
+    const caller = load(name);
+    assert.equal(caller.permissions.contents, "write");
+    assert.equal(caller.permissions["pull-requests"], "write");
+    assert.equal(caller.jobs.review.steps, undefined);
+  }
   const ci = load("ci");
   assert.deepEqual(ci.jobs.required.needs, [
     "build",

@@ -1779,11 +1779,17 @@ test("YAML workflow: conflict instruction preserves the Cadence workpad before a
 });
 
 test("workflow boundary supports native and reusable CI without reviewer secrets", () => {
-  assert.deepEqual(wakeWorkflow.on.workflow_run, {
+  const caller = yaml.load(readFileSync(new URL("../symphony-client-wakeups.yml", import.meta.url), "utf8"));
+  assert.deepEqual(Object.keys(wakeWorkflow.on), ["workflow_call"]);
+  assert.deepEqual(caller.on.workflow_run, {
     workflows: ["*"],
     types: ["completed"],
   });
-  assert.equal(wakeWorkflow.on.schedule, undefined);
+  assert.equal(caller.on.schedule, undefined);
+  assert.deepEqual(Object.keys(caller.jobs.wake.secrets), ["CADENCE_LINEAR_API_TOKEN"]);
+  assert.equal(caller.jobs.wake.with["target-repository"], "1000lines/symphony-example");
+  assert.equal(caller.jobs.wake.with["target-default-branch"], "main");
+  assert.equal(caller.jobs.wake.with["helpers-ref"], caller.jobs.wake.uses.split("@")[1]);
   assert.deepEqual(Object.keys(wakeWorkflow.on.workflow_call.secrets), [
     "CADENCE_LINEAR_API_TOKEN",
   ]);

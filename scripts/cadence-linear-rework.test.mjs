@@ -313,7 +313,7 @@ test("Cadence human-review workflows do not request broad teams", () => {
     assert.doesNotMatch(workflow, /CADENCE_HUMAN_REVIEW_TEAM/);
     assert.match(
       workflow,
-      /ASSIGNEES_JSON|assignees|node scripts\/cadence-linear-rework.mjs/
+      /uses: 1000lines\/symphony-client-workflows\/\.github\/workflows\/cadence-(?:linear-rework|ai-review-trigger)\.yml@[a-f0-9]{40}/
     );
   }
 });
@@ -328,11 +328,8 @@ test("Cadence review-request trigger stays wired for Cadence self requests", () 
   );
 
   assert.match(workflow, /types:\s*\[[^\]]*\breview_requested\b[^\]]*\]/);
-  assert.match(
-    workflow,
-    /github\.event\.requested_reviewer\.login == \(vars\.CADENCE_REVIEWER \|\| 'example-cadence-bot'\)/
-  );
-  assert.match(workflow, /github\.actor == \(vars\.CADENCE_REVIEWER \|\| 'example-cadence-bot'\)/);
+  assert.match(workflow, /uses: 1000lines\/symphony-client-workflows\/\.github\/workflows\/cadence-ai-review-trigger\.yml@[a-f0-9]{40}/);
+  assert.match(workflow, /pr_number: \$\{\{ inputs.pr_number \|\| format/);
 });
 
 const runUrl = "https://github.com/example-org/example-repo/actions/runs/123";
