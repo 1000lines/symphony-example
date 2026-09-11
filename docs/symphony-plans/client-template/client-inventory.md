@@ -111,6 +111,31 @@ instruction reference and are excluded. `design-review/SKILL.md` and the old
 `design-DEMO-247-process-hardening.md` string are exclusion/fixture labels in
 the verifier, not files it reads. Operator onboarding skills remain seed-only.
 
+### Root dotfile census
+
+`git ls-tree` at the frozen ref contains exactly these nine root dotfiles (all
+regular blobs). Every file has a disposition below. Existing adopter dotfiles
+are preserved unless the generated-path table explicitly calls for a reviewed
+merge; publication metadata is not an additional participant artifact.
+
+| Source dotfile       | Publication / staging disposition                                                                                                                                                                                                              | Participant disposition and reason                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `.eslintrc.agent.js` | Excluded: imports the seed ESLint config and requires the excluded agent guardrail rule.                                                                                                                                                       | Preserve target lint policy; no client runtime dependency.                                                              |
+| `.eslintrc.js`       | Excluded: depends on the seed TypeScript/ESLint stack, absent from the minimal publication package.                                                                                                                                            | Preserve target lint policy; remote workflows do not require this config locally.                                       |
+| `.gitattributes`     | Copy once through review-export to CT-V's root; preserves planning-diff presentation.                                                                                                                                                          | Excluded from rendering; preserve adopter attributes.                                                                   |
+| `.gitignore`         | CT-V adaptation in review-export: retain ignores for `node_modules/`, `.env`, `.env.*` and `.local/`; omit seed Terraform, TypeScript and build-output patterns unless its actual package needs them.                                          | Excluded from rendering; preserve application ignore rules. CT-O inspects target hygiene before enabling workflows.     |
+| `.npmrc`             | Excluded: seed engine/save/release-age policy is not required by the exported helpers. CT-V uses the reviewed Node pin, minimal lock and `npm ci`.                                                                                             | Preserve target package-manager policy; a client can use another language.                                              |
+| `.nvmrc`             | Copy once through review-export for CT-V's Node 20.20.0 helper/test toolchain.                                                                                                                                                                 | Excluded from rendering; the application's runtime is target-owned.                                                     |
+| `.prettierignore`    | Seed file excluded: its blanket `.claude/` skip is unsuitable for exported reviewer guidance. CT-Q generates its owned package-root ignore file for raw `template/`; CT-V formats explicit exported paths through its minimal package scripts. | Excluded from rendering; preserve application formatter scope. Dedicated template render tests remain required.         |
+| `.prettierrc`        | Excluded: loads the intentionally excluded organize-imports plugin. CT-V uses locked Prettier defaults on its explicit path selection.                                                                                                         | Preserve application formatting policy; no client dependency.                                                           |
+| `.symphony.cfg.json` | CT-M copies the frozen source; CT-T converts it. CT-U renders its root instance; CT-V creates its reviewed publication config.                                                                                                                 | Generated and merged as specified above: target-owned commands, team and required-check provenance replace seed values. |
+
+The four root dot-directories are not wholesale copy units: `.agents/` and
+`.codex/` remain excluded, while `.claude/` reviewer resources and `.github/`
+workflows/instructions use only the individually enumerated paths. New
+`.copier-answers.yml` is absent at this ref and remains CT-Q metadata, not an
+omitted source dotfile.
+
 ## Review and CI export closure
 
 [review-export.txt](review-export.txt) and [ci-export.txt](ci-export.txt) contain

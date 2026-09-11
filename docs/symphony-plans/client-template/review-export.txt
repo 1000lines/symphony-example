@@ -74,7 +74,9 @@ scripts/cadence-provider-result.mjs
 scripts/cadence-provider-result.test.mjs
 .github/symphony/cadence-provider-review.md
 
-# CT-V publication adaptations at existing root paths, not verbatim package copies.
+# CT-V publication adaptations at existing root paths, not verbatim copies.
+# Keep only the publication ignores described in the inventory's root dotfile census.
+.gitignore
 # Use only the dependencies specified in client-inventory.md; regenerate the lock.
 package.json
 package-lock.json
