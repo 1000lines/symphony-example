@@ -170,21 +170,21 @@ missing labels, non-Symphony PRs, and bot-loop events are recorded as explicit
 skips when the linked Linear issue can be identified. The router never starts
 Claude directly.
 
-| Event surface                         | Listening workflow              | Runner / action                                                                                              |
-| ------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Symphony opens a PR                   | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review; the label gate is waived for the bot-authored open-then-label race.       |
-| Symphony commit to an open PR         | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review so stale approvals stop looking current.                                |
-| Human PR comment                      | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; human feedback resets the Cadence loop count in the review run.        |
-| Human PR review summary               | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; submitted review summaries cover submitted inline comments.            |
-| Inline review comment                 | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review for standalone created comments and post-submission edits.              |
-| Ready-for-review event                | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review.                                                                           |
-| Cadence review request or re-request  | `cadence-ai-review-trigger.yml` | Runs the single-PR Cadence review; explicit re-requests force a current-head review.                         |
-| Manual PR list or label sweep         | `cadence-ai-review.yml`         | Resolves PRs and requests or re-requests `example-cadence-bot`; the review request starts the trigger workflow.  |
-| Cadence review with actionable output | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`, which is the machine-readable wakeup for Symphony.                |
-| Cadence review needing human input    | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                    |
-| Clean Cadence approval                | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                    |
-| Human review with actionable summary  | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`; direct human review feedback does not need Cadence to restate it. |
-| Human PR conversation comment         | `cadence-linear-rework.yml`     | Wakes `Active` for nonempty human comments on eligible PRs; Cadence re-review is requested separately.       |
+| Event surface                         | Listening workflow              | Runner / action                                                                                                 |
+| ------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Symphony opens a PR                   | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review; the label gate is waived for the bot-authored open-then-label race.      |
+| Symphony commit to an open PR         | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review so stale approvals stop looking current.                               |
+| Human PR comment                      | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; human feedback resets the Cadence loop count in the review run.       |
+| Human PR review summary               | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; submitted review summaries cover submitted inline comments.           |
+| Inline review comment                 | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review for standalone created comments and post-submission edits.             |
+| Ready-for-review event                | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review.                                                                          |
+| Cadence review request or re-request  | `cadence-ai-review-trigger.yml` | Runs the single-PR Cadence review; explicit re-requests force a current-head review.                            |
+| Manual PR list or label sweep         | `cadence-ai-review.yml`         | Resolves PRs and requests or re-requests `example-cadence-bot`; the review request starts the trigger workflow. |
+| Cadence review with actionable output | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`, which is the machine-readable wakeup for Symphony.                   |
+| Cadence review needing human input    | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                       |
+| Clean Cadence approval                | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                       |
+| Human review with actionable summary  | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`; direct human review feedback does not need Cadence to restate it.    |
+| Human PR conversation comment         | `cadence-linear-rework.yml`     | Wakes `Active` for nonempty human comments on eligible PRs; Cadence re-review is requested separately.          |
 
 Manual group review remains available through
 `.github/workflows/cadence-ai-review.yml`. It runs through `workflow_dispatch`,
