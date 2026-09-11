@@ -6,18 +6,28 @@ deployment progress. Configuration changes are not proof of a working deployment
 
 ## Deployment preflight — 2026-09-11
 
-100-19 inspected accepted `main@a3b7428a9e0298592e119a57923854b75a9b61a0` and
-the existing host. The host still runs the September 9 bundle at
-`f670040be4e524fbaf7c360dcf0e62945ca8e50b`, dispatching Active only. The accepted
-per-ticket Unhappy/15m/Evaluating profile has not been deployed. The accepted
-bundle's repository CLI fails its installation check; root installation is
-unavailable to the worker under `no new privileges`.
+At 11:55 UTC, 100-19 read back the operator-refreshed host bundle at accepted
+`main@a3b7428a9e0298592e119a57923854b75a9b61a0`, installed at 11:40:46 UTC.
+The service is active since 11:40:53 UTC, PID 303853. Its per-ticket
+Unhappy/15m/Evaluating configuration is present and will be retained. The bundle's
+repository CLI still fails through its installed symlink; worker-side root
+installation remains unavailable under `no new privileges`.
 
 GitHub CI/review/wakeup workflows now read back active. A real CI completion
-moved 100-18 from Unhappy to Inactive. Native Claude routing succeeds, but the
-called reviewer fails to receive its App key. Symphony's installation still
-denies Actions write. App-only implementation, successful current-head review,
-host reload and dropped-event recovery remain incomplete.
+moved 100-18 from Unhappy to Inactive. PR #25's first exact-head CI run passed
+all required jobs, but its native reviewer failed to receive its App key.
+[100-35 / PR #26](https://github.com/1000lines/symphony-example/pull/26) owns the
+helper and key-delivery repairs and their real ticket review proof. The last
+Symphony installation preflight denied Actions write. App-only implementation
+and the complete current-head CI/review/human handoff remain unverified.
+
+[Jeremy's September 11 decision](https://github.com/1000lines/symphony-example/pull/25#issuecomment-5634002190)
+drops the separate timer/dropped-event rehearsal and its anchor/due/jitter/
+forced-drop measurements from acceptance. Keep the installed configuration;
+Jeremy will handle recovery manually for the next couple of days. A real ticket
+run through viable Cadence remains required, along with other accepted rollout
+work. This decision supersedes the older timer-proof checklist, without claiming
+that App rollout or delivery rehearsal passed.
 
 The [deployment evidence and operator handoff](docs/symphony-plans/hackathon-ready/deployment-evidence.md)
 records exact observations, run links, a read-only smoke command and remaining
@@ -25,7 +35,8 @@ rehearsal cases. Current accepted source uses target-owned configuration and
 per-ticket timers; central mapping and scanning monitors were superseded.
 The 100-34 amendment preserves Claude review and leaves Codex migration and
 App-owned acceptance checks as unimplemented outcomes. Existing credentials
-remain in place; no deployment or retirement is claimed by this checkpoint.
+remain in place. The recorded host refresh does not prove App rollout, deployment
+of the pending repairs, or retirement.
 
 ## Decisions — 2026-09-09
 
