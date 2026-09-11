@@ -247,140 +247,16 @@ test("paged-out prior Cadence review remains a full review", () => {
   assert.deepEqual(state.since, []);
 });
 
-// These exercise the new check-mode API independently of the temporary legacy
-// timeline path above, which remains selected until the authorized cutover.
-import { fetchReviewFeedback, classifyCheckReviewState } from "./fetch-pr-review-state.mjs";
-import { createReviewGeneration, feedbackWatermark, queueReviewGeneration,
-  completeReviewGeneration, reviewExternalId } from "./symphony/review-contract.mjs";
-
-const page = (nodes, more = false, cursor = null) => ({ nodes, pageInfo: { hasNextPage: more, endCursor: cursor } });
-const record = (id, body = "Human feedback") => ({ id, body, updatedAt: "2026-09-10T00:00:00Z", author: { login: "human" } });
-const emptySources = () => Object.fromEntries(["reviews", "comments", "threads", "linearComments", "commits"]
-  .map(key => [key, { nodes: [], complete: true }]));
-
-test("acquires all review/comment/thread/reply and Linear pages, including feedback past 100", async () => {
-  const calls = [];
-  const sources = await fetchReviewFeedback({ owner: "fixture", repo: "repository", number: 1, issueIdentifier: "TEST-1",
-    githubQuery: async (query, vars) => {
-      calls.push({ query, vars });
-      if (query.includes("commits(first")) return { data: { repository: { pullRequest: { commits: page([]) } } } };
-      if (query.includes("ThreadReplies")) {
-        assert.equal(vars.id, "thread1"); assert.equal(vars.after, "reply100");
-        return { data: { node: { comments: page([record("late-inline-reply")]) } } };
-      }
-      const connection = ["reviews", "reviewThreads", "comments"].find(name => query.includes(`${name}(first:100,after:`));
-      let result;
-      if (connection === "reviewThreads") result = vars.after
-        ? page([{ id: "thread2", isResolved: true, isOutdated: true, comments: page([record("old-inline")]) }])
-        : page([{ id: "thread1", isResolved: false, isOutdated: false,
-          comments: page(Array.from({ length: 100 }, (_, i) => record(`reply${i}`)), true, "reply100") }], true, "thread1");
-      else result = vars.after ? page([record(`${connection}-late`)])
-        : page(Array.from({ length: 100 }, (_, i) => record(`${connection}-${i}`)), true, "100");
-      return { data: { repository: { pullRequest: { [connection]: result } } } };
-    },
-    linearQuery: async (_, vars) => ({ data: { issue: { comments: vars.after
-      ? page([record("linear-late")]) : page(Array.from({ length: 100 }, (_, i) => record(`linear-${i}`)), true, "100") } } }),
-  });
-  assert.ok(Object.values(sources).every(source => source.complete));
-  assert.equal(sources.reviews.nodes.length, 101);
-  assert.equal(sources.comments.nodes.length, 101);
-  assert.equal(sources.threads.nodes.length, 102);
-  assert.equal(sources.linearComments.nodes.length, 101);
-  assert.equal(sources.threads.nodes[100].id, "late-inline-reply");
-  assert.equal(sources.threads.nodes[101].isResolved, true);
-  assert.equal(feedbackWatermark(sources).records.length, 405);
-  assert.equal(calls.length, 8);
-});
-
-test("missing, denied and cyclic feedback connections remain explicitly incomplete", async () => {
-  for (const mode of ["missing-cursor", "cycle", "graphql-denied", "http-denied", "missing-source"]) {
-    const sources = await fetchReviewFeedback({ owner: "fixture", repo: "repo", number: 1, issueIdentifier: "TEST-1",
-      githubQuery: async query => {
-        if (mode === "http-denied") throw new Error("HTTP 403");
-        if (mode === "graphql-denied") return { errors: [{ message: "forbidden" }] };
-        const connection = ["reviews", "reviewThreads", "comments"].find(name => query.includes(`${name}(first:100,after:`));
-        return { data: { repository: { pullRequest: { [connection]: mode === "missing-source" ? null
-          : page([], true, mode === "cycle" ? "same" : null) } } } };
-      }, linearQuery: async () => { throw new Error("HTTP 403"); },
-    });
-    assert.ok(Object.values(sources).every(source => source.complete === false), mode);
-    assert.equal(feedbackWatermark(sources).complete, false);
-  }
-});
-
-function checkStateFixture() {
-  const headSha = "a".repeat(40), baseSha = "b".repeat(40), configRevision = "c".repeat(40);
-  const feedback = emptySources();
-  const gen = createReviewGeneration({ repositoryId: 1, prNumber: 1, headSha, baseSha, configRevision,
-    feedback: feedbackWatermark(feedback) });
-  const output = { schema: "cadence-review/v1", repositoryId: 1, prNumber: 1, headSha,
-    generationId: gen.id, summary: "Reviewed", sourcesComplete: true,
-    requirements: [{ id: "R05", summary: "gate", status: "satisfied", evidence: [] }], findings: [], humanFeedback: [] };
-  const state = completeReviewGeneration(queueReviewGeneration(null, gen, { checkId: 10 }),
-    { generationId: gen.id, attempt: 1, checkId: 10, phase: "completed", output }, gen);
-  return { target: { repository_id: 1, prNumber: 1, headSha, configRevision, issueId: "issue",
-    apps: { cadence: { app_id: 4866513 } }, labels: ["pink", "symphony"] },
-    pullRequest: { number: 1, state: "open", head: { sha: headSha }, base: { sha: baseSha, repo: { id: 1 } },
-      labels: [{ name: "pink" }, { name: "symphony" }], draft: true }, feedback,
-    checks: [{ id: 10, name: "Cadence Review", app: { id: 4866513 }, head_sha: headSha,
-      status: "completed", conclusion: "success", external_id: reviewExternalId(state) }],
-    workpad: { commentId: "comment", issueId: "issue", reviewContract: state }, complete: true };
-}
-
-test("check-mode entry point rejects bot approval and stale same-head human feedback", () => {
-  const context = checkStateFixture();
-  const fresh = classifyPrReviewState(context.pullRequest, reviewer, { acceptance: context });
-  assert.equal(fresh.decision, "skip"); assert.equal(fresh.reviewStatus, "fresh-check");
-  context.feedback.linearComments.nodes = [record("progress", "## Codex Workpad\nNew timestamp")];
-  assert.equal(classifyCheckReviewState(context).generation.id, fresh.generation.id);
-  context.feedback.threads.nodes = [record("human-reply")];
-  assert.equal(classifyCheckReviewState(context).decision, "incremental");
-  assert.equal(classifyCheckReviewState(context).acceptance.passes, false);
-  context.feedback.threads.complete = false;
-  assert.equal(classifyCheckReviewState(context).decision, "full-review-paged-out");
-  const approvalOnly = checkStateFixture(); approvalOnly.checks = [];
-  approvalOnly.pullRequest.timelineItems = { nodes: [cadenceReview(undefined, { state: "APPROVED" })] };
-  assert.equal(classifyCheckReviewState(approvalOnly).acceptance.passes, false);
-});
-
-test("check-mode preserves incremental and force-push full review decisions", () => {
-  const context = checkStateFixture();
-  context.pullRequest.head.sha = "d".repeat(40); context.target.headSha = context.pullRequest.head.sha;
-  assert.equal(classifyCheckReviewState({ ...context, ancestry: "ahead" }).decision, "incremental");
-  assert.equal(classifyCheckReviewState({ ...context, ancestry: "diverged" }).decision, "full-review-rebased");
-  assert.equal(classifyCheckReviewState(context).decision, "full-review-rebased");
-});
-
-test("same-head base and controller configuration changes require fresh assessment", () => {
-  for (const field of ["configRevision", "controllerRevision"]) {
-    const context = checkStateFixture();
-    const previous = classifyCheckReviewState(context);
-    context.target[field] = "d".repeat(40);
-    const result = classifyCheckReviewState(context);
-    assert.equal(result.decision, "full-review-context-changed");
-    assert.equal(result.acceptance.passes, false);
-    assert.notEqual(result.generation.id, previous.generation.id);
-    assert.equal(result.generation.resetKey, previous.generation.resetKey);
-  }
-});
-
-test("bootstrap CLI uses host review mode without a repository registry", () => {
+test("CLI reads the live timeline without a repository registry", () => {
   const cli = new URL("./fetch-pr-review-state.mjs", import.meta.url);
   const pr = { headRefOid: "a".repeat(40), isDraft: true,
     timelineItems: { nodes: [], pageInfo: { hasPreviousPage: false } } };
   const script = `process.argv = [process.execPath, ${JSON.stringify(fileURLToPath(cli))}, "6"];
     globalThis.fetch = async () => ({ ok: true, json: async () => (${JSON.stringify({ data: { repository: { pullRequest: pr } } })}) });
     await import(${JSON.stringify(cli.href)});`;
-  for (const mode of ["", "HACKATHON_LEGACY_REVIEW", "checks", "unknown"]) {
-    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-      encoding: "utf8", env: { ...process.env, GH_TOKEN: "fixture", REPO_SLUG: "unseen-owner/repo", CADENCE_REVIEW_MODE: mode },
-    });
-    if (!mode || mode === "HACKATHON_LEGACY_REVIEW") {
-      assert.equal(result.status, 0, result.stderr);
-      assert.equal(JSON.parse(result.stdout).decision, "first-review");
-    } else {
-      assert.equal(result.status, 1);
-      assert.match(result.stderr, /Legacy review disabled/);
-    }
-  }
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    encoding: "utf8", env: { ...process.env, GH_TOKEN: "fixture", REPO_SLUG: "unseen-owner/repo" },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).decision, "first-review");
 });

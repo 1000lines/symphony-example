@@ -1,5 +1,12 @@
 # Hackathon readiness: integration items
 
+**Review amendment — 2026-09-11:** apply the
+[native review hooks decision](../../engineering/review/native-review-hooks.md)
+before copying these historical fields. CODEX's controller has been removed;
+ROUTE uses native hooks and GUIDE documents that working path. Their old
+controller file lists, tests and acceptance-check integration instructions are
+superseded, not implementation prerequisites.
+
 These are the required item fields for the identically named nodes in the
 [100-7 plan](../fan-out-plan-100-7-hackathon-ready.md). Copy fields verbatim into
 tickets, together with their manifest branch/PR/state policy and the

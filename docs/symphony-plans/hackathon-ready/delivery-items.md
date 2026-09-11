@@ -1,5 +1,12 @@
 # Hackathon readiness: delivery items
 
+**Review amendment — 2026-09-11:** apply the
+[native review hooks decision](../../engineering/review/native-review-hooks.md)
+before copying these historical fields. DEPLOY rehearses the implemented review
+path; downstream delivery must not recreate the removed Codex controller or
+retire credentials still required by Claude. Provider migration and App-owned
+acceptance-check cutover are not implicit deployment work.
+
 These are the required item fields for the identically named nodes in the
 [100-7 plan](../fan-out-plan-100-7-hackathon-ready.md). Copy fields verbatim into
 tickets, together with their manifest branch/PR/state policy and the

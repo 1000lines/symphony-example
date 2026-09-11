@@ -1,5 +1,11 @@
 # Symphony hackathon readiness: requirements and design
 
+**Review amendment — 2026-09-11:** the
+[native review hooks decision](../engineering/review/native-review-hooks.md)
+supersedes this design's controller acquisition/assessment/publication machinery.
+Keep the original design as decision history; GUIDE/DEPLOY use the implemented
+native hooks around Claude and do not recreate the removed controller.
+
 Date: 2026-09-09. Status: proposed design for human review, not a deployment
 record. Canonical requirements artifact for [100-6](https://linear.app/1000lines/issue/100-6/create-requirements-and-design-doc).
 

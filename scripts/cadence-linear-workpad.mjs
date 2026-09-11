@@ -7,7 +7,6 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { completeReviewGeneration, queueReviewGeneration, startReviewGeneration, reviewDigest } from "./symphony/review-contract.mjs";
 
 const API_URL = "https://api.linear.app/graphql";
 
@@ -211,8 +210,6 @@ const normalizeLearnFromHumanItem = (item) => {
 };
 
 export const normalizeCadenceWorkpad = (workpad = {}) => ({
-  ...(workpad.reviewContract ? { reviewContract: workpad.reviewContract,
-    reviewContractHistory: workpad.reviewContractHistory || [] } : {}),
   schemaVersion: field(
     workpad,
     ["schemaVersion", "schema"],
@@ -538,10 +535,6 @@ export const renderCadenceWorkpadForLinear = (
     return { body: canonicalBody, compacted: false, workpad: normalized };
   }
 
-  if (normalized.reviewContract) {
-    throw new Error("Review contract/history exceeds Linear comment-size budget; durable evidence cannot be truncated.");
-  }
-
   const compacted = compactCadenceWorkpadForCommentLimit(workpad);
   const compactedBody = renderCadenceWorkpad(compacted);
   if (compactedBody.length <= maxCommentChars) {
@@ -621,7 +614,6 @@ export const parseCadenceWorkpad = (body) => {
 
   const headings = [...body.matchAll(new RegExp(`^${escapeRegExp(REVIEW_OBJECT_HEADING)}[ \t]*\r?$`, "gm"))];
   if (!headings.length) {
-    if (body.includes('"reviewContract"')) throw new Error("Unreadable Cadence review contract");
     return parseLegacyWorkpad(body);
   }
   const last = headings[headings.length - 1];
@@ -783,7 +775,6 @@ export const resolveWorkpadInput = ({
   incomingWorkpad = {},
   existingBody,
   now = new Date(),
-  liveGeneration,
 } = {}) => {
   const { reviewUpdate, ...currentFields } = incomingWorkpad;
   let existingWorkpad = {};
@@ -792,7 +783,6 @@ export const resolveWorkpadInput = ({
     try {
       existingWorkpad = parseCadenceWorkpad(existingBody);
     } catch (error) {
-      if (existingBody.includes('"reviewContract"')) throw error;
       // A complete snapshot can repair malformed canonical JSON. Recover the
       // bridge ledger from its duplicate display section first; incremental
       // updates still require readable canonical review history.
@@ -806,7 +796,7 @@ export const resolveWorkpadInput = ({
         "Replaced malformed review JSON from a full snapshot; recovered bridge coordination from the display section when present.";
     }
   }
-  let resolved = reviewUpdate
+  const resolved = reviewUpdate
     ? applyReviewUpdate(
         { ...existingWorkpad, ...currentFields },
         reviewUpdate,
@@ -818,9 +808,6 @@ export const resolveWorkpadInput = ({
         other: [...asArray(incomingWorkpad.other), recoveryNote],
       }
     : incomingWorkpad;
-  if (existingWorkpad.reviewContract || resolved.reviewContract) {
-    resolved = preserveReviewContract(existingWorkpad, resolved, liveGeneration);
-  }
   // Event-gate payloads replace review fields wholesale. The non-review bridge
   // owns these two fields; preserve the latest stored values even when a
   // reviewer supplies an older snapshot or a string coordination summary.
@@ -836,35 +823,6 @@ export const resolveWorkpadInput = ({
     },
   };
 };
-
-// Serialized publishers re-read the pinned record before writing. This rejects
-// stale snapshots; Linear has no CAS, so callers must still serialize per PR and
-// recheck live head/feedback immediately before invoking a completion write.
-function preserveReviewContract(existing, incoming, liveGeneration) {
-  const current = existing.reviewContract;
-  const next = incoming.reviewContract || current;
-  if (reviewDigest(next) !== reviewDigest(current || null)) {
-    let expected;
-    if (next.phase === "queued") {
-      expected = queueReviewGeneration(current, next.generation, { checkId: next.checkId,
-        operationalRetry: Boolean(current && next.operationalRetries > current.operationalRetries) });
-    } else if (next.phase === "in_progress") {
-      expected = startReviewGeneration(current, liveGeneration);
-    } else {
-      expected = completeReviewGeneration(current, { ...next, generationId: next.generation.id }, liveGeneration);
-    }
-    if (reviewDigest(expected) !== reviewDigest(next)) throw new Error("Stale or invalid review contract transition");
-  }
-  const result = { ...incoming, reviewContract: next,
-    reviewContractHistory: [...(existing.reviewContractHistory || []),
-      ...(current && reviewDigest(current) !== reviewDigest(next) ? [current] : [])] };
-  // Legacy event snapshots are bookkeeping, never authority to drop review data.
-  for (const field of ["history", "requirements", "findings", "humanFeedback"]) {
-    const entries = [...(existing[field] || []), ...(incoming[field] || [])];
-    result[field] = [...new Map(entries.map(entry => [reviewDigest(entry), entry])).values()];
-  }
-  return result;
-}
 
 export const loadToken = (env = process.env) => {
   const token = env.LINEAR_API_TOKEN || env.LINEAR_API_KEY;
@@ -1021,7 +979,6 @@ export const upsertCadenceWorkpad = async ({
   now = new Date(),
   logger = console,
   maxCommentChars = CADENCE_WORKPAD_MAX_COMMENT_CHARS,
-  liveGeneration,
 }) => {
   if (!issueIdentifier) {
     throw new Error("A Linear issue identifier is required.");
@@ -1030,17 +987,7 @@ export const upsertCadenceWorkpad = async ({
   const issue = await fetchIssueComments(issueIdentifier, token, { fetchImpl });
   const cadenceWorkpads = findCadenceWorkpadComments(issue.comments);
   const existing = cadenceWorkpads[0];
-  const hasContract = workpad.reviewContract || cadenceWorkpads.some(comment => {
-    try { return Boolean(parseCadenceWorkpad(comment.body).reviewContract); }
-    catch { return comment.body.includes('"reviewContract"'); }
-  });
-  if (!issue.complete && hasContract) {
-    throw new Error("Incomplete Linear comment history cannot establish acceptance");
-  }
   if (cadenceWorkpads.length > 1) {
-    if (hasContract) {
-      throw new Error("Duplicate Cadence workpads cannot establish acceptance");
-    }
     logger?.warn?.(
       `Found ${cadenceWorkpads.length} Cadence Workpad comments on ${issue.identifier}; updating the oldest (${existing.id}) and leaving duplicates for human cleanup.`
     );
@@ -1050,7 +997,6 @@ export const upsertCadenceWorkpad = async ({
     incomingWorkpad: workpad,
     existingBody: existing?.body,
     now,
-    liveGeneration,
   });
   const { body, compacted } = renderCadenceWorkpadForLinear(resolvedWorkpad, {
     maxCommentChars,
@@ -1065,7 +1011,6 @@ export const upsertCadenceWorkpad = async ({
     const comment = await updateComment(existing.id, body, token, {
       fetchImpl,
     });
-    if (resolvedWorkpad.reviewContract) await verifyContractWrite(comment.id);
     return {
       operation: "updated",
       issueId: issue.id,
@@ -1076,7 +1021,6 @@ export const upsertCadenceWorkpad = async ({
   }
 
   const comment = await createComment(issue.id, body, token, { fetchImpl });
-  if (resolvedWorkpad.reviewContract) await verifyContractWrite(comment.id);
   return {
     operation: "created",
     issueId: issue.id,
@@ -1084,14 +1028,6 @@ export const upsertCadenceWorkpad = async ({
     commentId: comment.id,
     body,
   };
-
-  async function verifyContractWrite(commentId) {
-    const readback = await fetchIssueComments(issueIdentifier, token, { fetchImpl });
-    const anchors = findCadenceWorkpadComments(readback.comments);
-    if (!readback.complete || anchors.length !== 1 || anchors[0].id !== commentId || anchors[0].body !== body) {
-      throw new Error("Cadence review persistence readback mismatch");
-    }
-  }
 };
 
 export const readWorkpadInput = (path, { readFile = readFileSync } = {}) => {

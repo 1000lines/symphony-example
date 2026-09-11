@@ -1,5 +1,12 @@
 # Hackathon readiness execution contract
 
+**Review amendment — 2026-09-11:** the
+[native review hooks decision](../../engineering/review/native-review-hooks.md)
+supersedes the controller acquisition/assessment/publication, generation-ledger
+and check-only cutover instructions below. GUIDE/DEPLOY use the working Claude
+reviewer and native hooks; later tickets must preserve its active credentials.
+The original requirements below remain historical evidence for other scope.
+
 This is required ticket content for the [100-7 plan](../fan-out-plan-100-7-hackathon-ready.md).
 The accepted design at controller commit
 `dc71026c35b7fc97f58e54cd03ce7fe513621e1f` defines the detailed requirements.
