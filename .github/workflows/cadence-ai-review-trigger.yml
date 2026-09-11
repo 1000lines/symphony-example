@@ -197,7 +197,7 @@ jobs:
     concurrency:
       group: cadence-ai-review-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
-      queue: max # Preserve distinct feedback while another review runs.
+      queue: single # Replace intermediate pending reviews; reacquire all feedback on start.
     outputs:
       ran_review: ${{ steps.plan.outputs.run_claude }}
       baseline: ${{ steps.started.outputs.baseline }}

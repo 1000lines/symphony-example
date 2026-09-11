@@ -144,7 +144,7 @@ test("acknowledgement uses the Cadence App after routing, outside the review que
   assert.equal(eventsWorkflow.concurrency, undefined);
   assert.equal(route.concurrency, undefined);
   assert.equal(review.needs, 'route');
-  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'max');
+  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'single');
 
   const eligible = new Function('steps', 'env', `return ${acknowledgement.if}`);
   for (const event of ['issue_comment', 'pull_request_review', 'pull_request_review_comment', 'pull_request_target']) {
@@ -220,7 +220,7 @@ test("manual matrix and events reuse the same reviewer with sufficient inherited
   assert.equal(triggerWorkflow.jobs.review.environment, "cadence-controller");
   assert.equal(triggerWorkflow.jobs.review.steps.find(step => step.id === "app-token").with["private-key"],
     "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
-  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'max');
+  assert.equal(triggerWorkflow.jobs.review.concurrency.queue, 'single');
   assert.equal(triggerWorkflow.jobs.review.concurrency['cancel-in-progress'], false);
   assert.equal(manual.jobs.resolve.if, "github.ref == 'refs/heads/main'");
   for (const caller of [manual, events]) assert.deepEqual(caller.permissions, triggerWorkflow.permissions);

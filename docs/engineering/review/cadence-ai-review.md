@@ -145,8 +145,12 @@ See [GitHub's reusable workflow secret rules](https://docs.github.com/en/actions
 Manual calls and legacy review requests
 retain their existing actor checks. All review execution requires `refs/heads/main`.
 
-GitHub's repository/PR concurrency group keeps one active review and queues up to
-100 pending reviews (`queue: max`), preserving distinct feedback during review.
+GitHub's repository/PR concurrency group keeps one active review and one pending
+review (`queue: single`). New arrivals replace intermediate pending jobs without
+cancelling the running review. The surviving job reacquires the current PR and
+all changes/feedback since the last posted Cadence review; it must not review only
+its triggering event. Feedback stays in GitHub even when its queued job is cancelled.
+Short admission/publication and Linear handoff queues retain every event.
 Closing or merging a PR cancels that group. Review planning also checks that the
 PR is still open, so delayed events cannot restart it. Unchanged
 duplicate events may still cause another review. The reviewer reacquires
