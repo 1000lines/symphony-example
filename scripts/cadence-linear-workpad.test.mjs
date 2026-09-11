@@ -1027,7 +1027,7 @@ import { createReviewGeneration, feedbackWatermark, queueReviewGeneration,
 function contractFixture() {
   const generation = createReviewGeneration({ repositoryId: 1, prNumber: 2,
     headSha: "a".repeat(40), baseSha: "b".repeat(40), configRevision: "c".repeat(40),
-    feedback: feedbackWatermark(Object.fromEntries(["reviews", "comments", "threads", "linearComments"]
+    feedback: feedbackWatermark(Object.fromEntries(["reviews", "comments", "threads", "linearComments", "commits"]
       .map(key => [key, { nodes: [], complete: true }]))) });
   const queued = queueReviewGeneration(null, generation, { checkId: 3 });
   const output = { schema: "cadence-review/v1", repositoryId: 1, prNumber: 2,

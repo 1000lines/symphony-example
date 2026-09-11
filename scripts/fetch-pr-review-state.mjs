@@ -295,10 +295,17 @@ export async function fetchReviewFeedback({ owner, repo, number, issueIdentifier
   for (const [source, connection, fields] of [
     ["reviews", "reviews", `${feedbackFields} state submittedAt commit { oid }`],
     ["comments", "comments", feedbackFields],
+    ["commits", "commits", `commit { oid message committedDate url author { user { login __typename } }
+      committer { user { login __typename } } parents(first:1) { nodes { oid } } }`],
     ["threads", "reviewThreads", `id isResolved isOutdated comments(first:100) { nodes { ${feedbackFields} } ${pageFields} }`],
   ]) {
     try {
       let nodes = await collectPages(after => readPr(connection, fields, after));
+      if (source === "commits") nodes = nodes.map(({ commit }) => ({
+        id: commit.oid, body: commit.message, updatedAt: commit.committedDate, url: commit.url,
+        author: commit.author?.user || commit.committer?.user,
+        parentSha: commit.parents?.nodes?.[0]?.oid,
+      }));
       if (source === "threads") {
         const comments = [];
         for (const thread of nodes) {

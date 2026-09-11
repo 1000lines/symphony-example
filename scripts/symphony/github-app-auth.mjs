@@ -364,7 +364,7 @@ export function createGitHubAppClient(options) {
   const endpointFor = (path) => {
     if (
       !path.startsWith("/") ||
-      path.includes("..") ||
+      /(?:^|\/)\.\.(?:\/|$)/.test(path.split("?")[0]) ||
       /[\\#\r\n]|%2e|%5c/i.test(path.split("?")[0])
     )
       fail("invalid repository API path");
