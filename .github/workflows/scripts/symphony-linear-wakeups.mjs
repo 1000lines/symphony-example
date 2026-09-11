@@ -14,6 +14,7 @@ import {
   terminalStateReason,
   wakeLinearIssue,
 } from "../../../scripts/linear-issue-wakeup.mjs";
+import { loadRepositoryConfig } from "../../../scripts/symphony/review-contract.mjs";
 
 const failed = (value) =>
   [
@@ -48,15 +49,19 @@ export const resolveIssue = ({
     return { issueIdentifier: ticketNumber, identitySource: "ticket_number" };
   }
   const titles = unique(
-    pullRequests.map((pr) => pr.title?.match(new RegExp(`^\\[(${identifier})\\]`))?.[1])
+    pullRequests.map(
+      (pr) => pr.title?.match(new RegExp(`^\\[(${identifier})\\]`))?.[1]
+    )
   );
   const candidates = titles.length
     ? titles
     : unique(
         [branch, ...pullRequests.map((pr) => pr.head?.ref)].flatMap((ref) =>
-          [...String(ref || "").matchAll(new RegExp(`\\b${identifier}\\b`, "gi"))].map(
-            (match) => match[0].toUpperCase()
-          )
+          [
+            ...String(ref || "").matchAll(
+              new RegExp(`\\b${identifier}\\b`, "gi")
+            ),
+          ].map((match) => match[0].toUpperCase())
         )
       );
   if (candidates.length !== 1) {
@@ -74,12 +79,12 @@ export const resolveIssue = ({
 
 // Dispatch inputs are not included in workflow_run. Only our anchored marker
 // is an explicit input; arbitrary issue-like text in a run title is not one.
-export const workflowTicket = (run) => {
+export const workflowTicket = (run, teamKey = readLinearTeamKey()) => {
   const title = String(run.display_title || "");
   if (!title.startsWith("[linear:")) return undefined;
   const match = title.match(/^\[linear:([^\]]*)\] /);
   if (!match) throw new Error("Malformed workflow ticket_number marker.");
-  resolveIssue({ ticketNumber: match[1] || "invalid" });
+  resolveIssue({ ticketNumber: match[1] || "invalid", teamKey });
   return match[1];
 };
 
@@ -115,6 +120,25 @@ export const createGitHubClient = ({ repo, token, fetchImpl = fetch }) => {
     }
   };
   return {
+    async configuration(baseBranch) {
+      const repository = await request(`repos/${repo}`);
+      const selected = baseBranch || repository.default_branch;
+      if (selected !== repository.default_branch)
+        throw new Error("Target default branch mismatch.");
+      const branch = await request(
+        `repos/${repo}/branches/${encodeURIComponent(selected)}`
+      );
+      const result = await loadRepositoryConfig({
+        repository: repo,
+        baseBranch: selected,
+        expectedRevision: branch.commit.sha,
+        token,
+        fetchImpl,
+      });
+      if (result.status !== "configured")
+        throw new Error("Missing target repository configuration.");
+      return result;
+    },
     getPr: (number) => request(`repos/${repo}/pulls/${number}`),
     listPrs: (branch) =>
       list(
@@ -138,7 +162,7 @@ export const createGitHubClient = ({ repo, token, fetchImpl = fetch }) => {
             repository(owner:$owner,name:$name) { pullRequest(number:$number) {
               headRefOid commits(last:1) { nodes { commit { statusCheckRollup {
                 contexts(first:100,after:$after) { nodes {
-                  ... on CheckRun { databaseId name conclusion detailsUrl checkSuite { app { databaseId } workflowRun { workflow { id } } } isRequired(pullRequestNumber:$number) }
+                  ... on CheckRun { databaseId name status conclusion detailsUrl checkSuite { app { databaseId } workflowRun { databaseId runAttempt event file { path } workflow { id } } } isRequired(pullRequestNumber:$number) }
                   ... on StatusContext { context state targetUrl isRequired(pullRequestNumber:$number) }
                 } pageInfo { hasNextPage endCursor } }
               } } } }
@@ -151,20 +175,18 @@ export const createGitHubClient = ({ repo, token, fetchImpl = fetch }) => {
           throw new Error("PR head changed during required-check lookup.");
         const contexts =
           pr.commits?.nodes[0]?.commit?.statusCheckRollup?.contexts;
-        if (!contexts) throw new Error("Missing current-head check rollup.");
+        if (!contexts) return Object.assign(checks, { complete: false });
         checks.push(...contexts.nodes);
         after = contexts.pageInfo.hasNextPage
           ? contexts.pageInfo.endCursor
           : null;
         if (contexts.pageInfo.hasNextPage && !after)
-          throw new Error("Missing check pagination cursor.");
+          return Object.assign(checks, { complete: false });
       } while (after);
       // A rerun supersedes an earlier failed attempt even before it completes.
       const latest = new Map();
       for (const check of checks) {
-        const checkOwner =
-          check.checkSuite?.workflowRun?.workflow?.id ||
-          check.checkSuite?.app?.databaseId;
+        const checkOwner = `${check.checkSuite?.app?.databaseId}:${check.checkSuite?.workflowRun?.workflow?.id}:${check.checkSuite?.workflowRun?.databaseId}`;
         const key = check.name
           ? `check:${checkOwner}:${check.name}`
           : `status:${check.context}`;
@@ -174,10 +196,122 @@ export const createGitHubClient = ({ repo, token, fetchImpl = fetch }) => {
         )
           latest.set(key, check);
       }
-      return [...latest.values()];
+      return Object.assign([...latest.values()], { complete: true });
     },
   };
 };
+
+// Keep the advisory review outside CI, including when a target accidentally
+// includes it in its CI contract. An empty contract cannot establish success.
+export async function requiredCi({ github, number, headSha, requiredChecks }) {
+  const checks = await github.checks(number, headSha);
+  const rules = requiredChecks.filter(
+    (rule) => rule.name.toLowerCase() !== "cadence review"
+  );
+  const required = checks.filter(
+    (check) =>
+      check.isRequired &&
+      check.name?.toLowerCase() !== "cadence review" &&
+      !rules.some((rule) => rule.name === check.name)
+  );
+  let waiting = checks.complete === false || rules.length === 0;
+  const runs = new Map();
+  const finish = (state, reason) => ({
+    state,
+    reason,
+    evidence: {
+      headSha,
+      requiredChecks,
+      complete: checks.complete !== false,
+      checks: checks.map((check) => ({
+        name: check.name || check.context,
+        checkId: check.databaseId,
+        appId: check.checkSuite?.app?.databaseId,
+        workflow: check.checkSuite?.workflowRun?.file?.path,
+        runId: check.checkSuite?.workflowRun?.databaseId,
+        status: check.status,
+        conclusion: check.conclusion || check.state,
+        url: check.detailsUrl || check.targetUrl,
+      })),
+      runs: [...runs.values()].map((run) => ({
+        id: run.id,
+        attempt: run.run_attempt,
+        headSha: run.head_sha,
+        workflow: run.path,
+        event: run.event,
+        status: run.status,
+        conclusion: run.conclusion,
+        url: run.html_url,
+      })),
+    },
+  });
+  for (const rule of rules) {
+    const matches = checks.filter(
+      (check) =>
+        check.name === rule.name &&
+        check.checkSuite?.app?.databaseId === rule.appId &&
+        check.checkSuite?.workflowRun?.file?.path === rule.workflow
+    );
+    if (!matches.length) waiting = true;
+    for (const check of matches) {
+      const id = check.checkSuite.workflowRun.databaseId;
+      if (!id) {
+        waiting = true;
+        continue;
+      }
+      if (!runs.has(id)) runs.set(id, await github.getRun(id));
+      const run = runs.get(id);
+      if (
+        run.head_sha !== headSha ||
+        run.path !== rule.workflow ||
+        !["pull_request", "push", "workflow_dispatch"].includes(run.event)
+      ) {
+        waiting = true;
+        continue;
+      }
+      if (run.status !== "completed") {
+        waiting = true;
+        continue;
+      } else if (failed(run.conclusion))
+        return finish(
+          "Active",
+          `Required CI ${run.conclusion}: ${run.html_url}`
+        );
+      else if (run.conclusion !== "success") waiting = true;
+      required.push(check);
+    }
+  }
+  for (const check of required) {
+    const id = check.checkSuite?.workflowRun?.databaseId;
+    if (id) {
+      if (!runs.has(id)) runs.set(id, await github.getRun(id));
+      const run = runs.get(id);
+      if (run.head_sha !== headSha || run.status !== "completed") {
+        waiting = true;
+        continue;
+      }
+    }
+    if (failed(check.conclusion || check.state))
+      return finish(
+        "Active",
+        `Required check failed: ${check.detailsUrl || check.targetUrl}`
+      );
+    if (
+      (check.name && check.status !== "COMPLETED") ||
+      (check.conclusion || check.state) !== "SUCCESS"
+    )
+      waiting = true;
+  }
+  return waiting
+    ? finish(
+        "Unhappy",
+        "Required CI is missing, incomplete, or pending; check again after wake:15m."
+      )
+    : finish(
+        "Inactive",
+        "All configured and observed required checks passed on the current head."
+      );
+}
 
 const prEvidence = (pr) => ({
   prNumber: pr.number,
@@ -210,6 +344,7 @@ export const planWakeups = async ({
   repo,
   bridgeRunUrl = "",
   triggerActor = "",
+  teamKey = readLinearTeamKey(),
 }) => {
   const run = payload.workflow_run;
   const base = {
@@ -270,7 +405,7 @@ export const planWakeups = async ({
   if (run && run.head_repository?.full_name !== repo)
     throw new Error("Workflow repository mismatch.");
 
-  const ticketNumber = completion ? workflowTicket(run) : undefined;
+  const ticketNumber = completion ? workflowTicket(run, teamKey) : undefined;
   // Mirror the runner gate: only Symphony-branch workflow completions qualify.
   // Explicit inputs retain routing precedence within that scope.
   if (run && !run.head_branch?.startsWith("symphony/"))
@@ -302,7 +437,8 @@ export const planWakeups = async ({
       if (managed(pr)) {
         requirePr(pr, repo);
         // One malformed PR must not abort the remaining scheduled sweep.
-        if (eventName === "schedule") resolveIssue({ pullRequests: [pr] });
+        if (eventName === "schedule")
+          resolveIssue({ pullRequests: [pr], teamKey });
         prs.push(pr);
       }
     } catch (error) {
@@ -320,6 +456,7 @@ export const planWakeups = async ({
   if (completion) {
     const identity = resolveIssue({
       ticketNumber,
+      teamKey,
       pullRequests: prs,
       branch: run.head_branch,
     });
@@ -353,7 +490,7 @@ export const planWakeups = async ({
     const evidence = {
       ...base,
       ...prEvidence(pr),
-      ...resolveIssue({ pullRequests: [pr] }),
+      ...resolveIssue({ pullRequests: [pr], teamKey }),
     };
     if (eventSha && pr.head.sha !== eventSha) {
       plans.push({
@@ -531,6 +668,7 @@ export const applyWakeup = async ({
   repo,
   token,
   githubToken,
+  teamKey = readLinearTeamKey(),
   fetchImpl = fetch,
 }) => {
   const redact = (message) => {
@@ -655,7 +793,7 @@ export const applyWakeup = async ({
       validateMetadata(data.issue, plan, pr);
       if (
         pr &&
-        resolveIssue({ pullRequests: [pr] }).issueIdentifier !==
+        resolveIssue({ pullRequests: [pr], teamKey }).issueIdentifier !==
           plan.issueIdentifier
       )
         throw new Error("PR issue identity changed before wakeup.");

@@ -442,15 +442,23 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
     wake label, move to `Inactive`, and stop.
 - Make surgical changes only. Do not refactor adjacent code unless required.
 - Prefer targeted validation over broad monorepo validation.
-- Validate local → Docker only for environment gaps → mandatory current-head CI,
-  including documentation changes. Passing local checks mean `Docker: skipped —
-passed locally`. Use the target's documented container or a compatible pinned
-  image when tools/services are unavailable; record its digest and run as the
-  workspace UID/GID with only the issue workspace mounted. Fix failing assertions.
-  Record exact CI workflow/run, App, head, attempt and required child-job results;
+- Use the selected-base config's `ci.mode`, defaulting to `native`. Native mode
+  validates local → Docker for environment gaps → mandatory current-head CI;
+  passing local checks mean `Docker: skipped — passed locally`. Docker mode runs
+  the existing command arrays that build the client's Dockerfile and execute its
+  checks in the container. Record the digest; mount only the issue workspace,
+  preserve UID/GID and remove task containers.
+- Remote mode runs useful checks with available tools and records missing
+  toolchains/checks as limitations, then publishes the prepared commit for GitHub
+  CI. Missing host tooling in remote mode does not block publication or require
+  installation or Docker. Fix known failed assertions in every mode; an unrun
+  check is not a pass. This exception applies to validation tools, not missing
+  source access, credentials or unsafe state transitions.
+- All modes require GitHub CI on the published head, including documentation
+  changes. Record workflow/run, App, SHA, attempt and required child results;
   missing, pending, skipped, canceled or stale checks never count as passing.
-  If neither environment works, publish available proof with the precise
-  limitation and repository-CI handoff. Do not install every host toolchain.
+  Use Unhappy with wake:15m while pending, Active for failures, and Inactive
+  after required CI passes. Keep the advisory Cadence check outside required CI.
 - If writing, reviewing, or refactoring code, apply the karpathy-guidelines skill.
 - Commit only intentional changes.
 - Batch publishing within a work loop. Multiple local commits are fine while
@@ -566,8 +574,8 @@ passed locally`. Use the target's documented container or a compatible pinned
 
 ## Blockers
 
-Stop and record a blocker in the workpad if any required local prerequisite is
-missing, including:
+Stop and record a blocker in the workpad if a required prerequisite is missing,
+except for the remote-mode validation-tool limitation described above, including:
 
 - Linear write access
 - GitHub clone, push, or PR access

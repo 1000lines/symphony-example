@@ -104,17 +104,22 @@ maturity for request-changes, rejected/stale acceptance evidence or similarly
 severe regression; ordinary edits alone do not revoke it. Human acceptance owns
 Done. Use the shared Cadence acceptance contract for freshness and provenance.
 
-Validate repository changes in order: **local → Docker if needed → mandatory CI**.
-Run relevant checks locally first. If they pass, skip Docker. Use Docker only
-when required tests cannot run in the local environment, such as missing tools
-or services. Then publish and inspect CI on the exact commit, even for small or
-documentation-only changes: CI is the shared, reviewable validation surface.
-Record `Docker: skipped — passed locally` or any environment limitation.
-Fix actionable failures and rerun affected
-checks before publishing. A missing host toolchain is a reason to try Docker,
-not immediately defer all validation. Missing, pending, failed, canceled, or
-stale CI is not passing evidence. Record each stage's commands, results, tested
-SHA, and CI links in the workpad and PR. Follow
+Select validation from the target's `ci.mode` (omitted means `native`).
+For native mode, validate **local → Docker for environment gaps → mandatory CI**;
+record `Docker: skipped — passed locally` when local checks pass. For `docker`,
+run the configured image-build and container commands using the client's Dockerfile;
+this is the selected environment, not redundant fallback testing. For `remote`,
+run useful checks with available tools, record each unavailable tool/check as a
+limitation, then publish the prepared commit for GitHub CI. Missing host tools in
+remote mode do not require installation or Docker and do not block publication.
+Known failed assertions must be fixed before publishing in every mode; never
+report an unrun check as passing. Missing credentials, source access and unsafe
+state transitions remain blockers for their dependent work.
+
+Every mode requires current-head GitHub CI, even for documentation changes.
+Record commands, results, tested SHA, image digest or skip, and CI links in the
+workpad and PR. Pending/missing checks mean Unhappy with wake:15m; failed checks
+mean Active; all required checks passing mean Inactive for review. Follow
 `docs/engineering/symphony/proof-of-work.md` for evidence details.
 
 The host installer provides Docker for containerized toolchains and test

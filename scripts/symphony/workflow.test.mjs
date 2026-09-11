@@ -133,3 +133,43 @@ process.stdout.write(JSON.stringify({args, source, toolingRoot: process.env.SYMP
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("remote missing-tool fixture reaches publication handoff but a known failure does not", async () => {
+  const guide = await readFile(
+    join(repoRoot, "docs/engineering/symphony/tooling-setup.md"),
+    "utf8"
+  );
+  const command = guide.match(
+    /<!-- remote-validation-example -->\s*```bash\n([\s\S]*?)```/
+  )?.[1];
+  assert.ok(command);
+  const result = spawnSync("bash", ["-c", command], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /Limitation: .* unavailable; compiler check not run/
+  );
+  assert.match(result.stdout, /Publication handoff/);
+  const failed = spawnSync(
+    "bash",
+    [
+      "-c",
+      command.replace("git diff --check", "false # known failed assertion"),
+    ],
+    { cwd: repoRoot, encoding: "utf8" }
+  );
+  assert.notEqual(failed.status, 0);
+  assert.doesNotMatch(failed.stdout, /Publication handoff/);
+  for (const file of [
+    workflowPath,
+    join(bundle, "codex/AGENTS.md"),
+    join(bundle, "skills/symphony-repository/SKILL.md"),
+  ]) {
+    const guidance = await readFile(file, "utf8");
+    assert.match(guidance, /[Rr]emote[\s\S]*publish/);
+    assert.match(guidance, /[Kk]nown failed assertions/);
+  }
+});
