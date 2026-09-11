@@ -1,0 +1,13 @@
+# CT-M frozen copy input. Repository: https://github.com/1000lines/symphony-example
+# Existing reviewed source: main / accepted PR #34, including merged PR #31.
+# Each data row is: source-commit mode git-blob-sha1 source-path destination-path
+# Preserve bytes and Git mode; hash is the Git blob object ID, not a raw SHA-1.
+# No planned file, secret value, symlink, package metadata or substitution.
+# Raw workflows are inert staging snapshots, removed/replaced as client-inventory.md specifies.
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 d3f2269ec732514a41f565f77e80fb08d25ae782 .github/workflows/cadence-review-ingress.yml templates/symphony-client/template/.github/workflows/cadence-review-ingress.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 dcf37fcae77f1e0be3d4c73054a0e36770a7ea9b .github/workflows/cadence-ai-review-events.yml templates/symphony-client/template/.github/workflows/symphony-client-review.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 c3bbd1a071516581e43b984ddbb785e50ffc5a92 .github/workflows/cadence-linear-rework.yml templates/symphony-client/template/.github/workflows/symphony-client-handoff.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 b539832722a1a13801904c087725e4e99f319ae0 .github/workflows/cadence-review-check-cleanup.yml templates/symphony-client/template/.github/workflows/symphony-client-review-cleanup.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 45bc24ef9f839bf2c25470b26d78cde45ec5a322 .github/workflows/symphony-linear-wakeups.yml templates/symphony-client/template/.github/workflows/symphony-client-wakeups.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 47bb6bfb6ac14a5b80fe18bac8e71b71df38b194 .github/workflows/ci.yml templates/symphony-client/template/.github/workflows/symphony-client-ci.yml
+873f511aea3e1d858e216d1a890ed1cd9a709d61 100644 183cb1d3056fc6412d7948f2409978c38be59002 .symphony.cfg.json templates/symphony-client/template/.symphony.cfg.json
