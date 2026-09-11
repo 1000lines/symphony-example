@@ -1,12 +1,19 @@
 name: Cadence Review Handoff
 
 on:
-  pull_request_review:
-    types: [submitted, edited]
-  issue_comment:
-    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed Cadence ingress run
+        required: true
+        type: string
+      pr_number:
+        description: Candidate PR number (verified against the source run)
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -18,45 +25,27 @@ env:
 jobs:
   review-handoff:
     name: Route Cadence review handoff
-    if: >-
-      ${{
-        (
-          github.event_name == 'issue_comment' &&
-          github.event.issue.pull_request &&
-          github.event.issue.state == 'open' &&
-          github.event.issue.user.login == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
-          contains(github.event.issue.labels.*.name, 'symphony') &&
-          github.actor != (vars.CADENCE_REVIEWER || 'example-cadence-bot') &&
-          github.actor != (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
-          github.actor != 'claude[bot]' &&
-          github.actor != 'dependabot[bot]' &&
-          !endsWith(github.actor, '[bot]')
-        ) || (
-          github.event_name == 'pull_request_review' &&
-          github.event.pull_request.state == 'open' &&
-          github.event.pull_request.user.login == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
-          contains(github.event.pull_request.labels.*.name, 'symphony') &&
-          (
-            github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot') ||
-            (
-              github.actor != (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') &&
-              github.actor != 'claude[bot]' &&
-              github.actor != 'dependabot[bot]' &&
-              !endsWith(github.actor, '[bot]') &&
-              github.event.review.state != 'approved'
-            )
-          )
-        )
-      }}
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: cadence-review-handoff-${{ github.repository }}-${{ inputs.pr_number }}
+      cancel-in-progress: false
+      queue: max
     steps:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: main
           persist-credentials: false
+
+      - name: Resolve current forwarded event
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: node .github/workflows/scripts/cadence-forwarded-event.mjs
 
       - name: Mint existing Cadence App token
         id: app-token

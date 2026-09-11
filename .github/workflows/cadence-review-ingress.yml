@@ -1,0 +1,30 @@
+name: Cadence Review Ingress
+# Only candidate identifiers travel in the run title. The main jobs read the
+# source run and current PR/feedback from GitHub before checking author authority.
+run-name: >-
+  cadence-event/v1 ${{ github.event_name }} ${{ github.event.action }} ${{ github.event.pull_request.number || github.event.issue.number || 0 }} ${{ github.event.review.id || github.event.comment.id || 0 }} ${{ github.event.pull_request.head.sha || '-' }}
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, synchronize]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+
+# Fork review tokens stay read-only. No checkout, environment, secrets, artifact
+# download, or repository token is needed here. workflow_run supplies delivery.
+permissions: {}
+
+jobs:
+  ingress:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request && !startsWith(github.event.comment.body, '<!-- cadence-review-request-receipts:v1'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Signal trusted forwarding
+        run: echo 'Current feedback will be resolved by the main controller.'

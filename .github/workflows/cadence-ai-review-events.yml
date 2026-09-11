@@ -1,26 +1,28 @@
 name: Cadence AI Review Events
 
-# PR opens, Symphony commits, and human feedback create a visible
-# request/re-request for `example-cadence-bot`. The follow-on Cadence review-request
-# event is owned by `cadence-ai-review-trigger.yml`. Human comments/reviews are
-# filtered with the actor-classification helper so Cadence/Symphony bot activity
-# does not create review loops. Linear-linked events are either queued or
-# recorded as explicit skips in the Cadence Workpad when Linear credentials are
-# available. Per-PR concurrency serializes receipt checks and reviewer mutations;
-# a versioned GitHub receipt coalesces duplicates without using Linear as a lock.
+# Secret-free ingress completes first. A trusted workflow_run job forwards only
+# candidate source-run/PR IDs; existing privileged jobs execute by dispatch on
+# main and fetch current feedback before the original-author authority check.
+# Existing per-PR receipts and reviewer selection remain in the route below.
 
 on:
-  pull_request_target:
-    types: [opened, ready_for_review, synchronize]
-  issue_comment:
-    types: [created, edited]
-  pull_request_review:
-    types: [submitted, edited]
-  pull_request_review_comment:
-    types: [created, edited]
+  workflow_run:
+    workflows: [Cadence Review Ingress]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed Cadence ingress run
+        required: true
+        type: string
+      pr_number:
+        description: Candidate PR number (verified against the source run)
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
   issues: read
   pull-requests: write
 
@@ -30,32 +32,38 @@ env:
   SYMPHONY_REPOSITORY_OWNER: ${{ vars.SYMPHONY_REPOSITORY_OWNER || github.repository_owner }}
 
 jobs:
+  forward:
+    name: Forward ingress to main
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted forwarding code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Dispatch existing event and handoff jobs on main
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { pathToFileURL } = require('node:url');
+            const { forwardCadenceEvent } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-forwarded-event.mjs`));
+            const workflows = await forwardCadenceEvent({ github, context });
+            await core.summary.addHeading('Forwarded to main').addRaw(workflows.join(', ')).write();
+
   route:
     name: Route review-causing event
-    # Coarse gate before a runner is claimed, so unrelated events skip silently
-    # instead of failing (e.g. during a GitHub outage) on the checkout + API call
-    # the route script would otherwise make. The script still does the full
-    # classification. `issue.labels` covers issue_comment; `pull_request.labels`
-    # the rest — the `.*` filter is an empty, safe no-op when that object is absent.
-    if: >-
-      ${{
-        !(
-          github.event_name == 'issue_comment' &&
-          github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot') &&
-          startsWith(github.event.comment.body, '<!-- cadence-review-request-receipts:v1')
-        ) && (
-        contains(github.event.pull_request.labels.*.name, 'symphony') ||
-        contains(github.event.issue.labels.*.name, 'symphony') ||
-        github.actor == (vars.SYMPHONY_BOT_USER || 'example-symphony-bot') ||
-        github.actor == (vars.CADENCE_REVIEWER || 'example-cadence-bot')
-        )
-      }}
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
       group: >-
-        cadence-ai-review-events-${{ github.repository }}-${{ github.event.pull_request.number || github.event.issue.number || 'no-pr' }}
+        cadence-ai-review-events-${{ github.repository }}-${{ inputs.pr_number }}
       cancel-in-progress: false
       # Keep distinct feedback queued; the default single pending slot can
       # discard a new context when a duplicate delivery arrives after it.
@@ -80,8 +88,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: main
           persist-credentials: false
+
+      - name: Resolve current forwarded event
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: node .github/workflows/scripts/cadence-forwarded-event.mjs
 
       - name: Mint existing Cadence App token
         id: app-token
