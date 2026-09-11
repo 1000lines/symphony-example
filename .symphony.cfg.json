@@ -15,6 +15,11 @@
         "name": "CI Required",
         "workflow": ".github/workflows/ci.yml",
         "appId": 15368
+      },
+      {
+        "name": "Client template tests",
+        "workflow": ".github/workflows/client-template-test.yml",
+        "appId": 15368
       }
     ]
   }

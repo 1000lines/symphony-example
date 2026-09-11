@@ -484,3 +484,27 @@ pending setup procedure. Real Copier fixtures cover exact paths, both reviewer
 choices, branches/teams, quoted/multiline commands, native expressions, YAML/JSON,
 root-only exclusion, existing-file preservation and a reviewed attributes merge
 checked with `git check-attr`. Actual session loading remains CT-O/A evidence.
+
+## CT-L independent CI readback
+
+The checkpoint based on `main@7a7b2cc4f7875c2e8d7822ba3f9b20d6dd6f4ef0`
+renders **23 of the 26 final paths**: CT-T's 21 plus
+`symphony-client-ci.yml` and `symphony-client-wakeups.yml`. Both thin callers
+and the wakeup helper checkout use accepted CT-C merge
+`fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e`. CI receives no named secrets;
+wakeups receive only `CADENCE_LINEAR_API_TOKEN`. The optional CI caller can be
+omitted when existing application CI suffices. Native/Docker/remote guidance
+uses the existing mode reader and client-supplied commands/Dockerfile.
+
+All fourteen copied skills/resources and licenses remain unchanged from CT-T.
+Eight answers and native GitHub expressions remain unchanged. Root development
+assets stay outside renders; ordinary formatting excludes raw templates while
+the seed registers the observed `Client template tests` check from
+`.github/workflows/client-template-test.yml`, App `15368`.
+
+The remaining review/handoff/cleanup paths still require CT-R's accepted reusable
+interfaces, explicit reviewer/key validation and live proof. PR #43 is an
+App-identity checkpoint; its merge and terminal 100-49 state do not deliver those
+artifacts. See [the precise remaining gate and source readback](../../../templates/symphony-client/PROVENANCE.md#ct-l-independent-ci-checkpoint).
+The final 26-path inventory and both export lists are preserved. CT-L remains
+incomplete; CT-U/O/V must wait for the full caller/export acceptance.

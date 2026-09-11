@@ -12,10 +12,35 @@ The initial `ci.requiredChecks: []` is **unconfigured**, never passing evidence.
 Record the target's observed check names, workflow paths and producing App IDs
 before activation. Keep the Cadence advisory check outside required checks.
 
-This initial tree is for review and rendering. Review, handoff, cleanup and
-wakeup callers, optional command CI and mode integration are pending
+The optional command CI and native CI wakeup callers use reviewed shared code.
+Omit `symphony-client-ci.yml` when existing application CI covers the commands;
+otherwise keep its command arrays aligned with config and provide any required
+application setup. It runs the exact PR head with no named secrets. Wakeups pass
+only `CADENCE_LINEAR_API_TOKEN` and use trusted source helpers, reading config
+from this repository's default branch. Record actual check/workflow/App evidence
+before activation; the generated empty required-check list is not a CI contract.
+
+Select `ci.mode` during onboarding without changing the eight Copier answers:
+
+- `native` (or omission): use installed tools. Passing local checks skip Docker;
+  missing tools/services may use the client's documented container as fallback.
+- `docker`: supply the application's Dockerfile and explicit setup/build/test
+  arrays to build and run it. The field does not wrap commands automatically.
+  Mount only the issue workspace, use its UID/GID, remove task containers and
+  record image digest/results. No generic Dockerfile is supplied.
+- `remote`: run useful available checks and record missing tools, then publish
+  for mandatory current-head GitHub CI. Fix known failures; unrun checks are not
+  passes. No host toolchain installation or Docker setup is required.
+
+GitHub CI needs its own working toolchain/commands in every mode. Required CI
+pending or missing uses Unhappy with `wake:15m`; failures return nonterminal
+tickets to Active; passing checks return them to Inactive for review. Preserve
+terminal states and current-head guards. Live mode/bridge proof remains CT-A.
+
+This tree remains a review checkpoint. Review, handoff and cleanup are pending
 [CT-L](https://linear.app/1000lines/issue/100-53). Publication and onboarding must
-wait for that integration. The ingress alone does not run a review.
+wait for the required CT-R interfaces and that integration. The ingress alone
+does not run a review.
 
 ## Client session skills
 
@@ -32,8 +57,9 @@ Load these skills from this generated client in the human-operated session:
 - [Karpathy guidelines](.agents/skills/karpathy-guidelines/SKILL.md), with
   [examples](.agents/skills/karpathy-guidelines/EXAMPLES.md), for coding work.
 
-Keep a separate [reviewed tooling checkout](https://github.com/1000lines/symphony-example/tree/d5e9692b84c3f338014b964fd9713143fb723b55)
-with its own locked dependencies. `SYMPHONY_TOOLING_ROOT` names that checkout;
+Keep a separate [reviewed tooling checkout](https://github.com/1000lines/symphony-example/tree/fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e)
+with its own locked dependencies and CT-C mode-aware config reader. Verify the
+hosted reader supports `ci.mode` before enabling an explicit mode on that host. `SYMPHONY_TOOLING_ROOT` names that checkout;
 external workflow guidance, color helper, DAG tooling and proof/review guides
 resolve there. Client plans and skill-relative resources resolve in this client.
 Record both checkout refs/locations and the loaded skill/resource paths. The
