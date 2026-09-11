@@ -236,8 +236,14 @@ branch ancestry.
 
 Do not commit predecessor work that is not already on the selected base branch.
 If a ticket cannot be compiled, tested, or reviewed without upstream code,
-record the exact dependency in the workpad and stop until the upstream work
-lands or the accepted plan supplies a hard blocker or explicit temporary seam.
+pause dependent implementation and validation, not publication. Open or update
+a draft PR against the selected base with independent work or a short
+implementation/dependency note. Name the upstream issue/PR, missing result,
+and resumption event/owner in both the PR and workpad; do not claim validation
+that depends on unmerged code. Establish any missing hard blocker through the
+replanning rules and keep dependency-gated work Active so it can resume.
+Continue independent work while waiting; resume dependent work when upstream
+lands or an accepted temporary seam makes it possible.
 Project state is the selected base branch plus the task PRs named in the
 accepted plan.
 
