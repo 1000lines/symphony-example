@@ -444,6 +444,6 @@ test("workflow puts recoverable admission before review queue and serializes onl
   );
   assert.deepEqual(
     config.ci.requiredChecks.map((check) => check.name),
-    ["CI Required"]
+    ["CI Required", "Client template tests"]
   );
 });

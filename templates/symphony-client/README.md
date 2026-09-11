@@ -1,10 +1,11 @@
 # Symphony client template package
 
-This initial Copier template renders 21 client files: secret-free review ingress,
+This Copier template checkpoint renders 23 client files: secret-free review ingress,
 repository config, worker/reviewer guidance, a direct-path App manifest,
 attributes, answers metadata and fourteen client skill/resource files. It is
-not ready for publication or onboarding. CT-L must complete the five caller
-roles and integration checks listed in [PROVENANCE.md](PROVENANCE.md).
+not ready for publication or onboarding. CI and wakeup callers use the accepted
+CT-C interface; CT-L still needs CT-R's reusable review, handoff and cleanup
+interfaces and proof listed in [PROVENANCE.md](PROVENANCE.md).
 
 Only `template/` is participant output. Root documentation, tests, workflows,
 configuration and any future root client are development assets and never render
@@ -35,6 +36,46 @@ requires `CADENCE_OPENAI_API_KEY`; `claude` requires
 reviewer. Missing/invalid selection or its matching key fails before provider
 execution; no fallback. The initial tree does not execute either provider.
 Provision named Actions secrets outside Copier answers and command strings.
+
+## CI callers and validation modes
+
+The generated `symphony-client-ci.yml` calls the reviewed command runner at
+`1000lines/symphony-example@fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e`.
+It runs the supplied build/test commands on the exact PR head or default-branch
+push, with read-only repository access and no named secrets. Omit this optional
+caller when existing application CI covers the commands. Otherwise, provide
+any application setup in those commands or a reviewed caller adjustment; the
+runner supplies Ubuntu 24.04, not an application toolchain or Dockerfile.
+After changing config commands, reconcile this caller's command arrays too.
+
+`symphony-client-wakeups.yml` calls the accepted wakeup workflow and checks out
+its helpers at that same fixed source commit. It passes only
+`CADENCE_LINEAR_API_TOKEN`, plus the target repository/default branch and native
+event name/payload. Config comes from the target's trusted default branch;
+helpers never come from the target PR. Native event filters retain same-repository
+PR/run admission, external-check handling and the existing current-head/terminal
+guards. The shared bridge handles CI state changes; no new state controller is
+generated. Onboarding records the actual required job names, caller workflow
+paths and App IDs after a run; seed check names are not participant defaults.
+
+The existing `ci.mode` field controls checks on the Symphony host. Set it in
+the target config during onboarding; it is not another Copier answer:
+
+| Mode                          | Target setup and validation                                                                                                                                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `native` (omitted by default) | Use installed tools and the configured command arrays. Passing local checks skip Docker; environment gaps may use the client's documented container.                                                                                                      |
+| `docker`                      | Supply the application's Dockerfile and concrete setup/build/test command arrays that build and run it. Mount only the issue workspace, run as its UID/GID, remove task containers and record the image digest/results. No generic Dockerfile is emitted. |
+| `remote`                      | Run useful checks with available tools, record missing tools, fix known failures and publish the prepared head for GitHub CI. Installing a toolchain or creating a Docker environment is not required. Unrun checks are not passes.                       |
+
+For Docker mode, a `commands.setup` array can invoke the client's `docker build`;
+build/test arrays invoke its documented `docker run --rm` commands. Include the
+actual image, workspace mount, working directory and UID/GID arguments. The
+mode field does not wrap commands or construct a container automatically.
+GitHub CI still needs its own working commands and toolchain in every mode.
+All modes require current-head CI: pending/missing checks wait in Unhappy with
+`wake:15m`, failures return nonterminal tickets to Active, and passing required
+checks return them to Inactive for review. Keep Cadence advisory results outside
+required checks. Live host/bridge proof remains CT-A-owned.
 
 ## Render and preserve existing files
 
@@ -79,8 +120,11 @@ examples retain their MIT declaration and attribution.
 
 The client is not a standalone tooling install. Keep a separate reviewed
 `1000lines/symphony-example` checkout at
-`d5e9692b84c3f338014b964fd9713143fb723b55`, with its own locked dependencies,
-and set `SYMPHONY_TOOLING_ROOT` to it. Copied references to the workflow profile,
+`fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e`, with its own locked dependencies,
+and set `SYMPHONY_TOOLING_ROOT` to it. This CT-C revision includes the mode-aware
+config reader; the original copied-tooling revision predates that interface.
+An installed hosted reader must also support `ci.mode` before enabling an
+explicit mode there; source validation does not prove a host update. Copied references to the workflow profile,
 color helper, DAG tools and shared proof/review guides resolve there; actual
 client plans and skill-relative resources stay in the client. Record both
 checkout refs/locations and loaded paths. CT-O supplies the complete session
@@ -109,7 +153,7 @@ python -m unittest discover -s tests
 
 The seed runs `python -m unittest discover -s templates/symphony-client/tests`.
 Both CI workflows run on every PR update. CT-Q's isolated question fixtures and
-CT-T's real-tree fixtures cover both reviewer choices, different repositories,
+the real-tree fixtures cover both reviewer choices, different repositories,
 branches/teams, quotes/newlines, source metadata, root-only exclusion and
 collisions. The real-tree tests also parse generated YAML/JSON, check skill
 resources/links and exercise Git's actual Linguist attributes.
@@ -123,7 +167,8 @@ node "$SYMPHONY_TOOLING_ROOT/scripts/symphony/runtime-bundle/skills/symphony-rep
 ```
 
 Ordinary formatting excludes raw `template/`; dedicated render tests remain
-mandatory. CT-L registers the completed render check before release. Structural
+mandatory. The seed config requires the observed `Client template tests` check from
+`.github/workflows/client-template-test.yml`, GitHub Actions App `15368`. Structural
 rendering does not prove live workflow, provider, host or skill execution.
 
 See [PROVENANCE.md](PROVENANCE.md) and [LICENSE](LICENSE) for sources and licenses.

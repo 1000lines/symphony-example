@@ -14,6 +14,10 @@ import yaml
 
 PACKAGE = Path(__file__).resolve().parents[1]
 INGRESS = ".github/workflows/cadence-review-ingress.yml"
+CI = ".github/workflows/symphony-client-ci.yml"
+WAKEUPS = ".github/workflows/symphony-client-wakeups.yml"
+CI_SOURCE = "1000lines/symphony-example"
+CI_REF = "fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e"
 REPLAN = "scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md"
 FACTORY = ".agents/skills/symphony-project-factory"
 SKILLS = {
@@ -33,7 +37,7 @@ SKILLS = {
 GENERATED = SKILLS | {
     INGRESS, ".symphony.cfg.json", ".gitattributes", "SYMPHONY.md",
     ".github/symphony/REVIEW.md", ".github/symphony/cadence-app-manifest.json",
-    ".copier-answers.yml",
+    ".copier-answers.yml", CI, WAKEUPS,
 }
 
 
@@ -125,6 +129,7 @@ class RenderTest(unittest.TestCase):
                 self.assertIn("CADENCE_OPENAI_API_KEY" if index else
                               "CADENCE_AI_REVIEW_ANTHROPIC_API_KEY", review)
                 self.check_ingress(output, answers)
+                self.check_ci_callers(output, answers)
                 manifest = json.loads((output / ".github/symphony/cadence-app-manifest.json").read_text())
                 self.assertEqual(manifest["name"], answers["cadence_app_slug"])
                 self.assertEqual(manifest["url"], f"https://github.com/{answers['repo_slug']}")
@@ -135,6 +140,66 @@ class RenderTest(unittest.TestCase):
                 self.assertFalse(manifest["public"])
                 self.assertEqual(manifest["default_events"], [])
                 self.check_skills(output)
+
+    def check_ci_callers(self, output, answers):
+        ci = yaml.safe_load((output / CI).read_text())
+        self.assertEqual(ci[True], {
+            "push": {"branches": [answers["default_branch"]]},
+            "pull_request": {"types": ["opened", "synchronize", "reopened"]},
+        })
+        self.assertEqual(ci["permissions"], {"contents": "read"})
+        command_job = ci["jobs"]["commands"]
+        self.assertEqual(json.loads(command_job["with"]["commands"]), [
+            ["bash", "-lc", answers["build_command"]],
+            ["bash", "-lc", answers["test_command"]],
+        ])
+        self.assertEqual(command_job["with"]["tested-ref"],
+                         "${{ github.event.pull_request.head.sha || github.sha }}")
+        self.assertNotIn("secrets", (output / CI).read_text())
+
+        wakeups = yaml.safe_load((output / WAKEUPS).read_text())
+        self.assertEqual(set(wakeups[True]), {
+            "pull_request_target", "workflow_run", "check_run", "status",
+        })
+        self.assertEqual(wakeups[True]["workflow_run"], {
+            "workflows": ["*"], "types": ["completed"],
+        })
+        self.assertEqual(wakeups["permissions"], dict.fromkeys(
+            ("actions", "checks", "contents", "pull-requests", "statuses"), "read"))
+        wake_job = wakeups["jobs"]["wake"]
+        self.assertEqual(wake_job["with"], {
+            "target-repository": answers["repo_slug"],
+            "target-default-branch": answers["default_branch"],
+            "event-name": "${{ github.event_name }}",
+            "event-payload": "${{ toJSON(github.event) }}",
+            "helpers-repository": CI_SOURCE,
+            "helpers-ref": CI_REF,
+        })
+        self.assertEqual(wake_job["secrets"], {
+            "CADENCE_LINEAR_API_TOKEN": "${{ secrets.CADENCE_LINEAR_API_TOKEN }}",
+        })
+        for path, job, entry in (
+            (CI, command_job, "symphony-client-commands.yml"),
+            (WAKEUPS, wake_job, "symphony-linear-wakeups.yml"),
+        ):
+            self.assertEqual(job["uses"], f"{CI_SOURCE}/.github/workflows/{entry}@{CI_REF}")
+            self.assertLessEqual(set(job), {"uses", "with", "if", "secrets"})
+            self.assertNotIn("inherit", (output / path).read_text())
+            source = (PACKAGE / "template" / (path + ".jinja")).read_text()
+            self.assertEqual(re.findall(r"\$\{\{.*?\}\}", (output / path).read_text(), re.S),
+                             re.findall(r"\$\{\{.*?\}\}", source, re.S))
+
+    def test_rendered_ci_commands_execute_and_fail_without_secrets(self):
+        answers = self.answers()
+        answers.update(build_command="printf '%s' 'literal: \"quotes\" \\ $HOME' > result",
+                       test_command="test \"$(cat result)\" = 'literal: \"quotes\" \\ $HOME'")
+        output = self.render(answers)
+        workflow = yaml.safe_load((output / CI).read_text())
+        commands = json.loads(workflow["jobs"]["commands"]["with"]["commands"])
+        for argv in commands:
+            subprocess.run(argv, cwd=output, check=True, capture_output=True, timeout=10)
+        (output / "result").write_text("wrong build result")
+        self.assertNotEqual(subprocess.run(commands[1], cwd=output, timeout=10).returncode, 0)
 
     def check_ingress(self, output, answers):
         text = (output / INGRESS).read_text()
