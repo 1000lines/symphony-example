@@ -1,0 +1,83 @@
+# CT-R owns this list after CT-I merges. Paths are relative to symphony-example.
+# Existing sources inspected at d5e9692b84c3f338014b964fd9713143fb723b55.
+# CT-V copies the final accepted list at its recorded source refs, at the same paths.
+# These mappings publish workflow-source assets, not participant output.
+# Separate client-copy mappings can select the same sources; see client-inventory.md.
+
+# Native/reusable review entry points and ingress contract fixture.
+.github/workflows/cadence-review-ingress.yml
+.github/workflows/cadence-ai-review-events.yml
+.github/workflows/cadence-ai-review-trigger.yml
+.github/workflows/cadence-ai-review.yml
+.github/workflows/cadence-linear-rework.yml
+.github/workflows/cadence-review-check-cleanup.yml
+.github/workflows/scripts/cadence-ai-review-route-event.mjs
+.github/workflows/scripts/cadence-ai-review-route-event.test.mjs
+.github/workflows/scripts/cadence-ai-review-events.test.mjs
+.github/workflows/scripts/cadence-forwarded-event.mjs
+.github/workflows/scripts/cadence-forwarded-event.test.mjs
+.github/workflows/scripts/cadence-review-check.mjs
+.github/workflows/scripts/cadence-review-check.test.mjs
+.github/workflows/scripts/verify-cadence-ai-review.cjs
+.github/workflows/scripts/request-pr-reviewer.mjs
+.github/workflows/scripts/request-pr-reviewer.test.mjs
+.github/workflows/scripts/cadence-review-request-receipt.mjs
+.github/workflows/scripts/cadence-review-request-receipt.test.mjs
+scripts/fetch-pr-review-state.mjs
+scripts/fetch-pr-review-state.test.mjs
+scripts/cadence-linear-rework.mjs
+scripts/cadence-linear-rework.test.mjs
+scripts/review-authority.test.mjs
+scripts/test-fixtures/review-authority.mjs
+
+# Shared with CI, listed once here. Membership does not change CT-C file ownership.
+scripts/github-actor-classification.mjs
+scripts/github-actor-classification.test.mjs
+scripts/linear-issue-wakeup.mjs
+scripts/linear-issue-wakeup.test.mjs
+scripts/cadence-linear-workpad.mjs
+scripts/cadence-linear-workpad.test.mjs
+scripts/cadence-linear-workpad-fixtures/sequence-two-alpha.md
+scripts/cadence-linear-workpad-fixtures/sequence-two-beta.md
+scripts/cadence-linear-workpad-fixtures/sequence-three-alpha.md
+scripts/cadence-linear-workpad-fixtures/sequence-three-beta.md
+scripts/cadence-linear-workpad-fixtures/sequence-three-gamma.md
+scripts/symphony/review-contract.mjs
+scripts/symphony/review-contract.test.mjs
+scripts/symphony/runtime-bundle/skills/symphony-repository/scripts/config.mjs
+
+# Reviewer instructions, acquisition and required ledger/authority documentation.
+.github/workflows/AGENTS.md
+.claude/skills/cadence-ai-review/SKILL.md
+.claude/skills/cadence-ai-review/review-CLAUDE.md
+.claude/skills/cadence-ai-review/references/acquisition.md
+.claude/skills/cadence-ai-review/references/linear.md
+.claude/skills/cadence-ai-review/references/cross-pr-gap-review.md
+scripts/fetch-linear-issue.mjs
+scripts/fetch-google-doc.mjs
+scripts/fetch-google-doc.test.mjs
+scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.md
+scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.test.mjs
+scripts/symphony/runtime-bundle/review-axes/standing-docs-current-state.fixture.md
+docs/engineering/review/cadence-ai-review.md
+docs/engineering/review/cadence-linear-workpad.md
+docs/engineering/review/github-actor-classification.md
+
+# Shared source attribution, Node version and repository review metadata.
+# .gitattributes goes to CT-V's root here, and separately to clients via client-copy.txt.
+LICENSE
+NOTICE
+.nvmrc
+.gitattributes
+
+# PLANNED CT-R: absent at the inspected ref; add only after implementation/merge.
+scripts/cadence-provider-result.mjs
+scripts/cadence-provider-result.test.mjs
+.github/symphony/cadence-provider-review.md
+
+# CT-V publication adaptations at existing root paths, not verbatim copies.
+# Keep only the publication ignores described in the inventory's root dotfile census.
+.gitignore
+# Use only the dependencies specified in client-inventory.md; regenerate the lock.
+package.json
+package-lock.json

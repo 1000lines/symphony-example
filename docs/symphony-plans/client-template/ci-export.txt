@@ -1,0 +1,14 @@
+# CT-C owns this list after CT-I merges. Paths are relative to symphony-example.
+# Existing sources inspected at d5e9692b84c3f338014b964fd9713143fb723b55.
+# CT-V copies final accepted sources at the same paths. No participant output.
+# Common helpers/config reader, instructions, package metadata and license occur
+# only in review-export.txt. Consume both lists together; see client-inventory.md.
+
+.github/workflows/symphony-linear-wakeups.yml
+.github/workflows/scripts/symphony-linear-wakeups.mjs
+.github/workflows/scripts/symphony-linear-wakeups.test.mjs
+scripts/symphony/repository-config.test.mjs
+
+# PLANNED CT-C: absent at the inspected ref; add only after implementation/merge.
+.github/workflows/symphony-client-commands.yml
+.github/workflows/scripts/symphony-client-commands.test.mjs
