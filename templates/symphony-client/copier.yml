@@ -1,0 +1,38 @@
+_subdirectory: template
+_envops:
+  variable_start_string: "[["
+  variable_end_string: "]]"
+  block_start_string: "[%"
+  block_end_string: "%]"
+  keep_trailing_newline: true
+
+repo_slug:
+  type: str
+  help: Target GitHub repository (owner/repository).
+
+default_branch:
+  type: str
+  default: main
+  help: Target repository's default branch.
+
+linear_team_key:
+  type: str
+  help: Linear team key shared by the repository's projects.
+
+symphony_app_slug:
+  type: str
+  help: GitHub App slug for the Symphony author.
+
+cadence_app_slug:
+  type: str
+  help: GitHub App slug for the Cadence reviewer.
+
+build_command:
+  type: str
+  multiline: true
+  help: Repository build command; supply commands without credentials.
+
+test_command:
+  type: str
+  multiline: true
+  help: Repository test command; supply commands without credentials.
