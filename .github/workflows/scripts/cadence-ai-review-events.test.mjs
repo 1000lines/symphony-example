@@ -166,7 +166,7 @@ test("closing a PR cancels only its review group; late arrivals skip review plan
   const metadata = review.steps.find(step => step.id === 'pr');
   assert.match(metadata.run, /--json state,/);
   assert.match(metadata.run, /printf 'state=%s/);
-  assert.equal(review.steps.find(step => step.id === 'plan').if, "steps.pr.outputs.state == 'OPEN'");
+  assert.equal(review.steps.find(step => step.id === 'plan').if, "steps.started.outputs.active == 'true' && steps.pr.outputs.state == 'OPEN' && steps.pr.outputs.head_sha == fromJSON(needs.accept.outputs.request).head");
   assert.equal(review.steps.find(step => step.id === 'cadence_review').if, "steps.plan.outputs.run_claude == 'true'");
 });
 
