@@ -301,7 +301,7 @@ For coding tickets spawned from a DAG plan:
 - Use Symphony's injected `linear_graphql` tool for Linear reads and writes.
   If `linear_graphql` is unavailable before the Codex workpad is pinned, fail
   closed and do not update another comment.
-- At the beginning of every hosted issue turn, after fetching the Linear issue,
+- At the beginning of every Symphony issue turn, after fetching the Linear issue,
   state, and comments but before planning, prerequisite checks, repository work,
   blocker handling, or state classification:
   1. Find the active comment whose first non-blank line is exactly

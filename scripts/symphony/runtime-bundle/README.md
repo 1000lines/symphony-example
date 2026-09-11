@@ -56,11 +56,14 @@ when removing it on success or failure. Reconcile older overrides that still
 disable these states or tell workers to sleep while CI runs; otherwise they
 will not provide the server timer behavior described by the source profile.
 
-For an existing host, deploy the accepted source, refresh `45-runtime-bundle`,
-render `80-config`, and reload the service through the authorized deployment
-procedure. A bundle-only freshness refresh does not re-render the running
-orchestrator's workflow. Custom overrides and later reconciliation need the
-same explicit source setting. A source edit, merge, or fixture test is not
+For an existing host, `scripts/symphony/host/install-runtime.sh
+--runtime-bundle-refresh` runs `05-source`, `45-runtime-bundle`, `80-config`, and
+`90-provenance`. It stages the selected source and renders
+`/etc/symphony/WORKFLOW.md`; it does not restart the service. Select an accepted
+source and refresh and reload through the authorized deployment procedure.
+Running only `45-runtime-bundle` does not render the workflow. Custom overrides
+and later reconciliation need the same explicit source setting. A source edit,
+merge, or fixture test is not
 proof that a running host loaded the new workflow; deployment is a separate
 operator action with its own evidence.
 

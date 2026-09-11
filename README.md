@@ -105,9 +105,9 @@ bundled. Select that dependency and check its workflow schema, maturity behavior
 and service command-line interface before planning to run workers.
 
 The [runtime-bundle workflow](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
-is the authoritative source for hosted installation and local invocation. The
-root copy has been removed. Configure team/state lists, workspace, worker and
-server settings for your environment. The bundled hooks are no-ops: the installed
+is the authoritative source for hosted installation and local invocation.
+Configure team/state lists, workspace, worker and server settings for your
+environment. The bundled hooks are no-ops: the installed
 repository skill resolves each task's repository, credentials, base branch and
 setup after the worker pins its Linear workpad.
 

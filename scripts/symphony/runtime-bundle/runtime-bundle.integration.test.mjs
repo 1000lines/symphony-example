@@ -128,7 +128,7 @@ test("personal and workflow instructions contain the ordered Codex workpad start
     executionRules
   );
   const startup = workflow.indexOf(
-    "- At the beginning of every hosted issue turn",
+    "- At the beginning of every Symphony issue turn",
     executionRules
   );
   const stateClassification = workflow.indexOf(
