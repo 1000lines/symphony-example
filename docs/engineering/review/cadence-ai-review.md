@@ -176,8 +176,42 @@ A clean current-head verdict marks a draft PR ready for human review when no
 newer accepted request exists. Already-ready PRs need no transition; findings
 leave a draft unchanged. Admission and final publication share a short native
 per-PR concurrency group; review execution uses its existing separate queue.
-The final job mints a fresh App token and rechecks the head before readying a
-draft. GitHub does not offer a head-conditional draft-to-ready mutation, so a
+The final job uses a fresh Cadence App token for PR/review reads and check
+publication (`pull-requests:read`, `checks:write`). A separate API client uses
+the repository's automatic `GITHUB_TOKEN` for `markPullRequestReadyForReview`.
+The finish job requests `contents:write` and `pull-requests:write`; the event
+and manual reusable-workflow callers must permit both, since a callee cannot
+increase its caller's permissions. Other jobs retain their narrower grants.
+The privileged finish job runs only on trusted `main`, checks out `main`
+without persisted credentials, and rechecks the head before readying a draft.
+It does not execute PR code, write contents, change workflows, or merge.
+The shared Cadence App does not need an additional grant or credential.
+
+A denied or unconfirmed ready mutation completes the advisory check as
+`failure`, retains the clean review link, and fails publication with a diagnostic
+in the check and Actions summary. It never falls back to a different actor or
+claims a ready handoff without GitHub confirming `isDraft: false`. The operator
+should check the finish job and caller permission blocks, then the job log's
+effective `GITHUB_TOKEN Permissions`. After correcting access, rerun **all** jobs
+to acquire a new guarded verdict; rerunning only publication cannot revive a
+completed check. Keep the shared App grants unchanged.
+
+[PR #34's publication job](https://github.com/1000lines/symphony-example/actions/runs/34612573918/job/103307363013)
+demonstrates that the Cadence App's `pull-requests:write` and `checks:write`
+token was denied with GraphQL `FORBIDDEN`. GitHub documents that PR authors and
+repository writers can [change the PR stage](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/changing-the-stage-of-a-pull-request);
+PR write alone is not sufficient evidence of that capability. The repository
+workflow's proposed contents-write grant still requires live verification on
+the deployed workflow; local fixtures do not establish GitHub authorization.
+
+For rollout, record the deployed main SHA, actual draft PR/head, fresh Cadence
+review, Actions actor/effective grants, mutation result and completed advisory
+check. Exercise the denied case with contents read and PR write, then the same
+operation with the finish job's grants. Confirm findings, a superseded same-head
+request, changed head and closed PR never become ready. Preserve the protected
+environment's main-only policy; a PR checkout is not deployment evidence.
+
+GitHub does not offer a head-conditional draft-to-ready mutation, so a
 push concurrent with that last API call remains a platform race; its own check
 and review still belong to the new head.
 
