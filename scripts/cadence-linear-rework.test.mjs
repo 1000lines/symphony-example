@@ -806,7 +806,7 @@ test("human request API failure records the gap and redacts credentials", async 
     url.includes("api.github.com")
       ? Promise.resolve(
           jsonResponse(
-            { message: "ghs_fixture denied" },
+            { message: `${appToken} denied` },
             { ok: false, status: 403 }
           )
         )
@@ -817,7 +817,7 @@ test("human request API failure records the gap and redacts credentials", async 
   );
   assert.equal(result.operation, "failed");
   assert.match(result.error, /HTTP 403/);
-  assert.doesNotMatch(JSON.stringify(result), /ghs_fixture/);
+  assert.equal(JSON.stringify(result).includes(appToken), false);
   assert.match(fixture.comments[1].body, /REDACTED/);
 });
 

@@ -130,9 +130,13 @@ author is checked even when another user sends the edit event. Missing authors
 never fall back to the sender. Bot-originated edits and superseded content are
 skipped.
 
-`verifyGitHubHumanWriteAccess` then reads
+`verifyGitHubHumanWriteAccess` authenticates the credential through
+`GET /installation/repositories?per_page=1`, which accepts installation access
+tokens, then reads
 `GET /repos/{owner}/{repo}/collaborators/{author}/permission` using the existing
-App installation token. The response must identify the same human `User` and
+App installation token. Token prefixes and character sets are not authority;
+GitHub's stateless installation tokens contain underscores and dots. The
+repository-scoped permission response must identify the same human `User` and
 report effective `write`, `maintain`, or `admin` access. GitHub maps maintain and
 custom roles to base permissions; a custom role qualifies when its effective
 base permission grants write. A role name, association, team classification,
@@ -142,8 +146,11 @@ service accounts and GitHub bots cannot qualify as human writers.
 Every actionable creation, submission, edit, and replay performs fresh reads.
 There is no stored allow decision. Missing credentials, redirects, mismatched
 responses, malformed data, timeouts, and API failures leave the event untrusted
-and cause no wake or review request. The workflow summary records a fixed reason
-without API error bodies or credentials. No read-only agent is dispatched.
+and cause no wake or review request. Credential/API failures and malformed
+installation or permission responses set `verificationFailed`; both routing
+CLIs exit nonzero, and the handoff reports `operation: failed`. A verified
+read-only author remains a normal skipped event. The workflow summary records a
+fixed reason without API error bodies or credentials. No read-only agent is dispatched.
 Verified writers can request design changes directly without another owner
 approval. Existing Cadence review handoffs and bot-loop suppression remain.
 

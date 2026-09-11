@@ -430,6 +430,7 @@ const main = async () => {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     `### Review event authority\n\n${JSON.stringify(result.authority || { reason: result.skipReason || "not-feedback" })}\n`);
   writeRouteResult(result);
+  if (result.authority?.verificationFailed) process.exitCode = 1;
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
