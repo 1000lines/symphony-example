@@ -91,6 +91,12 @@ feedback is actionable without Cadence repeating it. Read `## Cadence Workpad`
 for the AI handoff and update only the pinned `## Codex Workpad` with execution
 progress and the incoming/addressed/deferred/blocked feedback ledger.
 
+Feedback that changes an approach or decomposition follows
+[Replanning From Human Feedback](./replanning.md). A normal comment is enough:
+the worker records the interpretation and revises the implementation or plan
+at the smallest coherent scope. An unchanged DAG can still need new decision
+and acceptance text. Unresolved comments survive workpad updates and rewrites.
+
 ## GitHub Event Bridges
 
 The [Cadence event router](../../../.github/workflows/cadence-ai-review-events.yml)

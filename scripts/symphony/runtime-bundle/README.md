@@ -57,6 +57,14 @@ mode), `45-runtime-bundle` and `80-config` installation steps, plus the normal
 service reload. Merging the source does not activate it on an existing host.
 Operator-supplied `SYMPHONY_WORKFLOW_SOURCE` overrides need equivalent updates.
 
+## Human feedback and replanning
+
+The installed `symphony-replan` skill follows the
+[replanning guide](../../../docs/engineering/symphony/replanning.md): apply small
+node changes directly; create a replanning ticket and dependent fan-out ticket
+for larger changes, using the existing templates. Install the accepted runtime
+bundle and workflow to activate these instructions on an existing host.
+
 ## Supplying host settings
 
 The existing installer inputs are environment variables; it does not

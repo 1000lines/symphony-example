@@ -174,6 +174,7 @@ test("runtime bundle install stages release, links skills through current, and w
       sharedSkill,
       "linear-graphql",
       "symphony-repository",
+      "symphony-replan",
     ]) {
       const linkTarget = await readlink(join(codexHome, "skills", skill));
       assert.equal(linkTarget.startsWith(currentLink), true);
@@ -266,6 +267,7 @@ test("runtime bundle install stages release, links skills through current, and w
       "private:symphony-google-docs",
       "private:symphony-linear-api",
       "private:symphony-proof-of-work",
+      "private:symphony-replan",
       "private:symphony-repository",
       "shared:karpathy-guidelines",
       "shared:linear-graphql",

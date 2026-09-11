@@ -40,8 +40,13 @@ Small PRs can use the human guide directly.
 
 1. Collect the PR, linked issue, intended base, head SHA, changed files, CI
    status, prior review comments, and stack context.
-2. Run a PR-shape preflight. If the PR is too large or mixes unrelated work,
-   produce a reshape brief before detailed axis review.
+2. Check whether the ticket and approach still serve the current human outcome
+   before checking conformance. Consider simpler existing mechanisms and fresh
+   objections to accepted decisions. A matching line estimate or ownership
+   list does not justify the design. Name an evidence-backed implementation
+   replacement or replanning need; if a human decision is required, escalate
+   it before spending the pass on dependent detail. Then run the PR-shape
+   preflight and produce a reshape brief for incoherent scope when needed.
 3. Select axes. Always consider reviewability, scope coherence, test/evidence,
    and backward compatibility. Add conditional axes based on the diff.
 4. Run one bounded review per selected axis.
@@ -293,6 +298,13 @@ When a human reviewer identifies required rework, treat that feedback as the
 source of authority for the coding agent. AI reviewers may add same-class
 follow-up only when it is directly grounded in the human comment and remains
 inside the issue's scope.
+
+A human with repository write access may also change the design or that scope.
+Their clear instruction is the decision: record its source and superseded
+criteria, then have the coding agent amend the plan/tickets and implement and
+commit. Do not require a separate design owner's ratification or classify AI
+disagreement with the decision as `human-needed`. Review implementation defects
+against the revised intent. Ask only for decisions or access still missing.
 
 Classify follow-up as mandatory only when it is needed to resolve the same issue
 class, reviewer clarity gap, or in-scope requirement gap. Mandatory follow-up

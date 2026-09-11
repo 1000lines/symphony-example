@@ -40,7 +40,11 @@ To expand a label into a group:
   which exports it as Markdown using the service-account credentials in
   `GOOGLE_APPLICATION_CREDENTIALS` (or `GOOGLE_SA_KEY`). The doc must be shared
   with the service-account email. The design/requirement doc is the source of
-  truth for intent; acceptance criteria are the checklist derived from it.
+  truth for intent as amended by later clear human repository-writer decisions;
+  acceptance criteria derive from that revised intent. Read those decisions
+  from submitted reviews, conversation comments and current issue context, and
+  record their source and superseded criteria. The human need not first edit
+  the document or seek the original design owner's approval.
 - If a referenced doc cannot be read, record a `human-needed` finding naming the
   doc. Do not guess its contents.
 
@@ -69,7 +73,8 @@ A PR may carry a role label:
 
 - `plan`: treat its body and diff as a derived requirements/assignment source — a
   decomposition of the design doc into the stack. The plan is **not** ground
-  truth: the **design doc is the source of truth for intent**, and the plan may
+  truth: the design doc plus subsequent human repository-writer decisions
+  establish current intent, and the plan may
   under-cover the doc or diverge from the actual implementation. Use the plan to
   seed the requirement→PR assignment, then verify coverage against the design
   doc. Review the plan PR for plan↔doc coverage, not code nits.
