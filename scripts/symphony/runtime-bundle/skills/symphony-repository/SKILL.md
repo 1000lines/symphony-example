@@ -112,7 +112,22 @@ Record its commit alongside the task head and validation evidence.
 
 ## Work and review
 
-Run the target's commands in its configured working directory. Keep commands,
+Run the target's executable/argument arrays in its configured working directory.
+`ci.mode` selects native (also the default when omitted), docker or remote.
+Native uses installed tools, with Docker fallback for environment gaps. Docker
+uses the existing commands to build the client's Dockerfile and run its checks;
+record the image digest, mount only the issue workspace, preserve UID/GID and
+remove task containers. Remote runs available checks, records missing tools and
+unrun checks as limitations, then publishes the prepared head to GitHub CI.
+Remote does not require toolchain installation or Docker before publication.
+Fix known failed assertions in every mode; never call an unrun check a pass.
+Every mode requires current-head GitHub CI. Pending/missing → Unhappy + wake:15m;
+failed → Active; all required checks passed → Inactive for review.
+
+`linear.teamKey` is the only repository Linear field. Resolve project metadata
+from each issue; two projects can share the same config without regeneration.
+See the config reference for correctly serialized `bash -lc` and Docker arrays.
+Keep commands,
 dependencies and target code inside the issue workspace; signing material stays
 outside it. Use installed personal skills and `SYMPHONY_TOOLING_ROOT` for shared
 Symphony tools and docs, rather than expecting their copies in every target.

@@ -35,7 +35,9 @@ export function validateConfig(config) {
     "Unsupported repository config schema"
   );
   requireThat(
-    object(config.linear) && typeof config.linear.teamKey === "string" && /^[A-Z0-9]+$/.test(config.linear.teamKey),
+    object(config.linear) &&
+      typeof config.linear.teamKey === "string" &&
+      /^[A-Z0-9]+$/.test(config.linear.teamKey),
     ".symphony.cfg.json requires linear.teamKey, e.g. 100 or ENG"
   );
   keys(config.linear, ["teamKey"]);
@@ -58,7 +60,12 @@ export function validateConfig(config) {
     ),
     "Commands must be arrays of executable/argument arrays"
   );
-  keys(config.ci, ["requiredChecks"]);
+  keys(config.ci, ["mode", "requiredChecks"]);
+  requireThat(
+    config.ci.mode === undefined ||
+      ["native", "docker", "remote"].includes(config.ci.mode),
+    "ci.mode must be native, docker, or remote"
+  );
   requireThat(
     Array.isArray(config.ci.requiredChecks),
     "ci.requiredChecks must be an array"

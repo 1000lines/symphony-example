@@ -28,13 +28,45 @@ Verify the aggregate and its child jobs at the exact PR head; the expected
 Actions App is `15368`. Reusable workflows alone are not CI evidence.
 
 Read each target's README, applicable AGENTS/CLAUDE instructions, toolchain
-files and `.github` workflows before selecting commands. Validate locally,
-use Docker only for missing tools/services, and always inspect current-head CI,
-including documentation changes. Passing local checks skip Docker. For a
-fallback, use a documented container or compatible pinned image, record its
-digest, mount only the issue workspace and run as its UID/GID. A failing
-assertion requires a fix; unavailable tooling needs a precise environment/CI
-handoff. See the [proof standard](./proof-of-work.md#validation-order).
+files and `.github` workflows. Select `ci.mode` from its selected-base config:
+`native` (also the default when omitted), `docker`, or `remote`. Native runs
+installed tools and uses Docker for environment gaps; passing local checks
+record `Docker: skipped — passed locally`. Docker runs the existing command
+arrays to build the client's Dockerfile and execute its checks. Record the image
+digest, mount only the issue workspace, preserve UID/GID and remove task containers.
+Remote runs available checks, records missing tools/unrun checks as limitations,
+then publishes the prepared head for GitHub CI. It does not require installation
+or Docker before publication. Known failed assertions must be fixed in every
+mode. All modes require current-head GitHub CI, including documentation changes;
+see the [proof standard](./proof-of-work.md#validation-order).
+
+The [config reference](../../../scripts/symphony/runtime-bundle/skills/symphony-repository/references/config.md#validation-modes-and-portable-commands)
+shows executable/argument arrays and correct `bash -lc` serialization. Keep
+`linear.teamKey` as the only Linear setting: each issue supplies its project,
+so one config supports multiple projects without regeneration.
+
+For example, a remote worker can check an unavailable optional local compiler,
+run available Git validation, and record the publication handoff. Replace the
+fixture tool with the target's real tool. A present tool's failure stops this
+sequence; do not reinterpret a failed assertion as a missing environment.
+
+<!-- remote-validation-example -->
+
+```bash
+set -e
+if command -v client-example-compiler >/dev/null 2>&1; then
+  client-example-compiler --check
+else
+  printf '%s\n' 'Limitation: client-example-compiler unavailable; compiler check not run.'
+fi
+git diff --check
+printf '%s\n' 'Publication handoff: push the prepared head; require GitHub CI.'
+```
+
+This example does not itself push or claim a CI pass. Missing source access or
+credentials still gates the dependent action. After publishing, missing/pending
+CI means Unhappy + wake:15m; failed CI means Active; all required CI passing
+means Inactive for review. The advisory Cadence review stays separate.
 
 `build` compiles `tools/symphony-dag` and `tools/symphony-host`, then checks the
 TypeScript helpers in `scripts/` without emitting them. `test` selects the two
@@ -176,10 +208,15 @@ PR events, completed `CI` runs triggered by `pull_request`, and failed external
 required checks/statuses. It selects one open PR with the `symphony` label at
 the event's current head and resolves the configured team's issue from the PR
 title prefix, then the branch. It reads trusted helpers from the default branch.
-Its `workflow_run` subscription names `CI`; it does not subscribe to arbitrary
-dispatched workflows or run a scheduled conflict sweep. The outcome step reads
-the target's `ci.yml` pull-request runs. Workers must still collect complete
-acceptance evidence.
+Its `workflow_run` subscription accepts completions, then checks the target's
+configured workflow paths. It reads `.symphony.cfg.json` from the target's actual
+default branch via the API, separately from trusted workflow helpers. CI uses
+observed check name/workflow/App provenance and current-head run results; it does
+not assume `CI`, `ci.yml`, Node application packages or a `main` default branch.
+Incomplete, missing, pending and skipped checks cannot establish success. A
+pending rerun supersedes an earlier result. Additional observed required checks
+remain enforced; the advisory Cadence check is excluded. Workers must still
+collect complete acceptance evidence, including required children and tested refs.
 
 An Active worker gets up to one minute to finish; if still Active, it is left
 alone. For waiting tickets, pending CI means `Unhappy` with `wake:15m`, successful
@@ -190,7 +227,7 @@ It does not retry unknown mergeability or sweep conflicts introduced by base
 changes. The server's per-ticket timer supplies another check for `Unhappy`
 tickets through the authoritative workflow's `Evaluating` instructions.
 
-The job runs on `ubuntu-latest` with a five-minute timeout and
+The job runs on `ubuntu-24.04` with a five-minute timeout and
 `concurrency.queue: max`. Configure compatible GitHub event/queue support and
 install/reload the server workflow before relying on timer recovery. Source
 configuration alone does not prove a running server loaded it.
@@ -203,6 +240,31 @@ GitHub secret is needed by this workflow. The YAML records conflict instructions
 in the Cadence workpad and state changes in its run log. It rereads the issue
 and PR before mutation, preserves unrelated labels, and only updates tickets
 still in the observed `Inactive` or `Unhappy` state.
+
+The same workflow exposes `workflow_call` for thin target-owned event callers.
+Pass `target-repository`, `target-default-branch`, `event-name` and
+`event-payload: ${{ toJSON(github.event) }}`. The target repository must equal the
+caller. Pass `helpers-repository` and `helpers-ref` as reviewed workflow-source
+values, never from PR text or the target head. Helpers are checked out separately
+under `_symphony`; record the actual checkout commit, including when using the
+accepted moving publication branch. Only `CADENCE_LINEAR_API_TOKEN` is declared;
+pass it explicitly. No reviewer App/provider key or `secrets: inherit` belongs
+on this boundary. Native triggers remain usable until the adoption owner retires
+duplicate callers after live proof. Source tests do not prove host reload or a
+live GitHub-to-Linear transition; CT-A owns that integrated proof.
+
+For clients without application CI, `symphony-client-commands.yml` exposes a
+secret-free `workflow_call`. Supply `tested-ref` as the exact PR head SHA,
+`working-directory` from config, and `commands` as a JSON array of argument
+arrays in setup/build/test/lint order. For example, serialize the chosen config
+commands with `JSON.stringify(['setup', 'build', 'test', 'lint'].flatMap(key =>
+config.commands[key] || []))`. Commands run unchanged, including Docker commands;
+CI never waives missing tools or failures based on the server's validation mode.
+The runner uses Ubuntu's tools and the maintained GitHub script Action; it does
+not install a Node application package or require reviewer credentials. Keep
+existing application CI where it already covers the target. Discover the actual
+caller check name/workflow/App before registering required checks. The runner's
+native PR event is a source-package smoke check, not a generated application caller.
 
 The retained `.github/workflows/scripts/symphony-linear-wakeups.mjs` standalone
 entry point is separate from the YAML orchestration. A caller of that entry

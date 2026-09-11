@@ -58,3 +58,53 @@ repository must not redirect privileged review jobs or request private keys.
 
 If config cannot be proposed in a PR, include this same JSON in a GitHub issue
 or the pinned Linear workpad, with the desired path and the observed limitation.
+
+## Validation modes and portable commands
+
+Only optional `ci.mode` is added: `native`, `docker`, or `remote`. Omitting it
+leaves the config unchanged and preserves native-first behavior. Native uses
+installed tools, with Docker fallback for environment gaps. Docker runs the
+client's image-build and container commands. Remote runs available checks,
+records missing tools/unrun checks and publishes the prepared head to GitHub CI
+without installing toolchains or requiring Docker. Known failed assertions must
+be fixed in every mode. All modes require actual current-head GitHub CI.
+
+Keep `linear.teamKey` alone. A repository has no `projectKey` or project filter;
+project identity and metadata come from each issue. Different issue/project
+contexts can use exactly the same repository configuration.
+
+A shell command is **one argument** after `bash`, `-lc`. Serialize the complete
+array with `JSON.stringify(["bash", "-lc", command])`, preserving quotes,
+newlines, pipelines and shell substitutions instead of splitting on spaces:
+
+```json
+{
+  "build": [["bash", "-lc", "make build && printf '%s\\n' \"build complete\""]],
+  "test": [["bash", "-lc", "make test"]]
+}
+```
+
+Docker is expressed through those same arrays, with no separate Docker schema
+or mode dispatcher. For example, these commands build a client-supplied root
+Dockerfile and run checks in its image. The worker substitutes its own task-local
+image name, records `docker image inspect` output, and uses that digest in the
+run command. Run from the issue workspace root so the mount stays isolated.
+
+```json
+{
+  "setup": [["docker", "build", "-t", "client-template-ci-DEMO-123", "."]],
+  "test": [
+    [
+      "bash",
+      "-lc",
+      "docker run --rm --user \"$(id -u):$(id -g)\" --mount \"type=bind,src=$PWD,dst=/workspace\" --workdir /workspace \"$(docker image inspect --format '{{.Id}}' client-template-ci-DEMO-123)\" bash -lc 'make build && make test'"
+    ]
+  ]
+}
+```
+
+Avoid published ports and remove only task containers. The config reader never
+executes commands; the worker and optional secret-free client command workflow
+use executable/argument arrays. Existing application CI remains the preferred
+GitHub validation surface. Discover its check names, workflow paths and emitting
+Apps; never copy seed check names or count the advisory Cadence review as CI.

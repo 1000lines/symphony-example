@@ -9,6 +9,6 @@
 .github/workflows/scripts/symphony-linear-wakeups.test.mjs
 scripts/symphony/repository-config.test.mjs
 
-# PLANNED CT-C: absent at the inspected ref; add only after implementation/merge.
+# CT-C command runner and boundary/command tests (implemented in this task).
 .github/workflows/symphony-client-commands.yml
 .github/workflows/scripts/symphony-client-commands.test.mjs
