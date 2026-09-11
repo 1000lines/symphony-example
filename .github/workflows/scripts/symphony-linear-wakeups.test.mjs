@@ -1163,17 +1163,25 @@ async function runWorkflowFixture(t, {
   eventName = 'pull_request_target', currentState = 'Inactive', conflict = false,
   ci = null, changedState = '', changedHead = false, required = true,
   prTitle = '[100-502]: fix CI', prBranch = branch, releaseAfter = 0,
+  labelIds = currentState === 'Unhappy' ? ['yellow', 'wake'] : ['yellow'],
+  beforeMutation = () => undefined, afterMutation = () => undefined, audit = {}, duplicate = false,
+  incompleteLabels = false,
 } = {}) {
   const originalEnv = { ...process.env };
   const originalFetch = globalThis.fetch;
   const outputs = {};
   const writes = [];
+  const infos = [];
+  const snapshots = [];
+  Object.assign(audit, { writes, infos, snapshots });
   let reads = 0;
   const currentPr = pr({ title: prTitle, head: { ...pr().head, ref: prBranch }, mergeable: conflict });
   currentPr.mergeable = !conflict;
   const states = ['Active', 'Inactive', 'Unhappy', 'Done', 'Backlog'].map(name => ({ id: name, name }));
+  const live = { state: currentState, labels: new Set(labelIds), pr: currentPr };
   const issue = () => ({ id: 'issue-502', identifier: '100-502',
-    state: states.find(s => s.name === currentState), team: { states: { nodes: states } } });
+    state: states.find(s => s.name === live.state), team: { states: { nodes: states } },
+    labels: { nodes: [...live.labels].map(id => ({ id })), pageInfo: { hasNextPage: incompleteLabels } } });
   process.env.GITHUB_WORKSPACE = new URL('../../../', import.meta.url).pathname.replace(/\/$/, '');
   process.env.LINEAR_API_TOKEN = 'fixture-token';
   process.env.GH_TOKEN = 'fixture-github-token';
@@ -1186,8 +1194,10 @@ async function runWorkflowFixture(t, {
       } }] } } } };
     } else if (query.includes('query LinearWakeupIssue')) {
       reads++;
-      if (releaseAfter && reads > releaseAfter) currentState = 'Inactive';
+      if (releaseAfter && reads === releaseAfter + 1) live.state = 'Inactive';
+      snapshots.push(issue());
       data = { issue: issue() };
+      if (!query.includes('labels(')) delete data.issue.labels;
     } else if (query.includes('CadenceWorkpadIssue')) {
       data = { issue: { ...issue(), comments: { nodes: [{ id: 'workpad', body: renderCadenceWorkpad({ status: 'reviewing' }) }],
         pageInfo: { hasNextPage: false } } } };
@@ -1197,8 +1207,20 @@ async function runWorkflowFixture(t, {
     } else if (query.includes('team{labels')) {
       data = { issue: { team: { labels: { nodes: [{ id: 'wake', name: 'wake:15m' }], pageInfo: { hasNextPage: false } } } } };
     } else if (query.includes('issueUpdate')) {
-      writes.push({ kind: 'state', input: variables.input });
-      data = { issueUpdate: { success: true, issue: { state: { id: variables.input.stateId } } } };
+      const input = variables.input;
+      const attempt = writes.filter(write => write.kind === 'state').length + 1;
+      const failure = beforeMutation(live, input, attempt);
+      writes.push({ kind: 'state', input, previousState: live.state });
+      if (failure) return { ok: true, status: 200, json: async () => failure };
+      const rejection = input.removedLabelIds?.some(id => !live.labels.has(id)) ? 'Label not on issue' :
+        input.addedLabelIds?.some(id => live.labels.has(id)) ? 'Label already on issue' : '';
+      if (rejection) return { ok: true, status: 200,
+        json: async () => ({ errors: [{ message: rejection, path: ['issueUpdate'], extensions: { code: 'INPUT_ERROR' } }] }) };
+      for (const id of input.removedLabelIds || []) live.labels.delete(id);
+      for (const id of input.addedLabelIds || []) live.labels.add(id);
+      live.state = input.stateId;
+      data = { issueUpdate: { success: true, issue: issue() } };
+      afterMutation(live);
     } else throw new Error(`Unexpected request: ${query}`);
     return { ok: true, status: 200, json: async () => ({ data }) };
   };
@@ -1221,7 +1243,7 @@ async function runWorkflowFixture(t, {
     Object.assign(process.env, env);
     const step = wakeWorkflow.jobs.wake.steps.find(step => step.id === name || step.name === name);
     const result = {};
-    const core = { info() { return; }, setOutput: (key, value) => { result[key] = String(value); } };
+    const core = { info: message => infos.push(message), setOutput: (key, value) => { result[key] = String(value); } };
     await new AsyncFunction('github', 'context', 'core', 'setTimeout', step.with.script)(
       github, context, core, (resolve, ms) => { assert.equal(ms, 10000); waits++; resolve(); });
     outputs[name] = result;
@@ -1233,12 +1255,14 @@ async function runWorkflowFixture(t, {
   if (!state.state) return { writes, waits, outputs };
   const outcome = await run('outcome', { PR_NUMBER: ticket.pr, HEAD_SHA: ticket.sha, ISSUE_STATE: state.state });
   if (outcome.conflict) await run('Record conflict resolution in the Cadence workpad', { REASON: outcome.reason });
-  if (changedState) currentState = changedState;
+  if (changedState) live.state = changedState;
   if (changedHead) currentPr.head.sha = 'new-head';
-  if (outcome.state) await run('Set the ticket state and wake label', {
-    PREVIOUS_STATE: state.state, TARGET_STATE: outcome.state, REASON: outcome.reason,
-  });
-  return { writes, waits, outputs };
+  for (let attempt = 0; outcome.state && attempt < (duplicate ? 2 : 1); attempt++) {
+    await run('Set the ticket state and wake label', {
+      PREVIOUS_STATE: state.state, TARGET_STATE: outcome.state, REASON: outcome.reason,
+    });
+  }
+  return { writes, waits, outputs, infos, snapshots, issue: issue() };
 }
 
 for (const [name, options, expected] of [
@@ -1261,7 +1285,12 @@ for (const [name, options, expected] of [
     const { writes, waits } = await runWorkflowFixture(t, options);
     const update = writes.find(write => write.kind === 'state');
     assert.equal(update?.input.stateId, expected);
-    if (update) assert.deepEqual(update.input[expected === 'Unhappy' ? 'addedLabelIds' : 'removedLabelIds'], ['wake']);
+    if (update) {
+      const input = { stateId: expected };
+      if (expected === 'Unhappy') input.addedLabelIds = ['wake'];
+      else if (options.currentState === 'Unhappy') input.removedLabelIds = ['wake'];
+      assert.deepEqual(update.input, input);
+    }
     if (options.currentState === 'Active') assert.equal(waits, options.releaseAfter || 6);
   });
 }
@@ -1286,4 +1315,119 @@ test('workflow configuration runs CI once per PR update and handles CI completio
     assert.doesNotThrow(() => new AsyncFunction('github', 'context', 'core', step.with.script));
     assert.ok(!step.with.script.includes('${{'), 'event values must be passed as data');
   }
+});
+
+for (const currentState of ['Inactive', 'Unhappy']) {
+  for (const ci of ['failure', 'success', null]) {
+    for (const present of [false, true]) {
+      test(`YAML label update: ${currentState}, CI ${ci}, wake present ${present}`, async t => {
+        const target = ci === 'failure' ? 'Active' : ci === 'success' ? 'Inactive' : 'Unhappy';
+        const desired = target === 'Unhappy';
+        const { writes, issue, snapshots, infos } = await runWorkflowFixture(t, {
+          eventName: 'workflow_run', currentState, ci,
+          labelIds: present ? ['yellow', 'wake'] : ['yellow'],
+        });
+        const input = { stateId: target };
+        if (present !== desired) input[desired ? 'addedLabelIds' : 'removedLabelIds'] = ['wake'];
+        assert.deepEqual(writes.map(write => write.input), [input]);
+        assert.equal(issue.state.name, target);
+        assert.deepEqual(issue.labels.nodes.map(label => label.id).sort(), desired ? ['wake', 'yellow'] : ['yellow']);
+        assert.deepEqual(snapshots.at(-1), issue, 'success requires a persisted state/label readback');
+        assert.ok(infos.some(message => message.includes(`-> ${target}.`)));
+      });
+    }
+  }
+}
+
+for (const adding of [false, true]) {
+  test(`YAML label race: concurrent ${adding ? 'add' : 'remove'} retries the state transition`, async t => {
+    const { writes, issue } = await runWorkflowFixture(t, {
+      ci: adding ? null : 'failure', labelIds: adding ? ['yellow'] : ['yellow', 'wake'],
+      beforeMutation(live, _input, attempt) {
+        if (attempt !== 1) return;
+        live.labels[adding ? 'add' : 'delete']('wake');
+        live.labels.add('concurrent-label');
+      },
+    });
+    const target = adding ? 'Unhappy' : 'Active';
+    assert.equal(writes.length, 2);
+    assert.deepEqual(writes[1], { kind: 'state', input: { stateId: target }, previousState: 'Inactive' });
+    assert.equal(issue.state.name, target);
+    assert.deepEqual(issue.labels.nodes.map(label => label.id).sort(),
+      adding ? ['concurrent-label', 'wake', 'yellow'] : ['concurrent-label', 'yellow']);
+  });
+}
+
+for (const change of ['Active', 'Done', 'head', 'closed']) {
+  test(`YAML label race: retry preserves newer ${change} decision`, async t => {
+    const { writes, issue, infos } = await runWorkflowFixture(t, {
+      ci: 'failure', labelIds: ['yellow', 'wake'],
+      beforeMutation(live) {
+        live.labels.delete('wake');
+        if (change === 'head') live.pr.head.sha = 'new-head';
+        else if (change === 'closed') live.pr.state = 'closed';
+        else live.state = change;
+      },
+    });
+    assert.equal(writes.length, 1);
+    assert.equal(issue.state.name, ['head', 'closed'].includes(change) ? 'Inactive' : change);
+    assert.ok(infos.some(message => message.includes('Ticket or PR changed')));
+    assert.ok(infos.every(message => !message.includes('->')));
+  });
+}
+
+test('YAML label update: duplicate failure does not mutate an activated ticket again', async t => {
+  const { writes, issue } = await runWorkflowFixture(t, { ci: 'failure', duplicate: true });
+  assert.equal(writes.length, 1);
+  assert.equal(issue.state.name, 'Active');
+});
+
+for (const failure of [
+  { errors: [{ message: 'Permission denied' }] },
+  { errors: [{ message: 'Label not on issue' }] },
+  { data: { issueUpdate: { success: false } } },
+  { data: { issueUpdate: { success: true, issue: { state: { id: 'wrong' } } } } },
+]) {
+  test(`YAML label update: genuine failure stays visible ${JSON.stringify(failure)}`, async t => {
+    const audit = {};
+    await assert.rejects(runWorkflowFixture(t, {
+      ci: 'failure', labelIds: ['yellow', 'wake'], audit, beforeMutation: () => failure,
+    }), /Permission denied|Label not on issue|Ticket state update failed/);
+    assert.equal(audit.writes.length, 1, 'no retry without an observed membership change');
+    assert.ok(audit.infos.every(message => !message.includes('->')));
+  });
+}
+
+test('YAML label race: a second mutation failure is not retried or swallowed', async t => {
+  const audit = {};
+  await assert.rejects(runWorkflowFixture(t, {
+    ci: 'failure', labelIds: ['yellow', 'wake'], audit,
+    beforeMutation(live, _input, attempt) {
+      live.labels.delete('wake');
+      if (attempt === 2) return { errors: [{ message: 'Permission denied' }] };
+    },
+  }), /Permission denied/);
+  assert.equal(audit.writes.length, 2);
+  assert.ok(audit.infos.every(message => !message.includes('->')));
+});
+
+for (const change of ['state', 'label']) {
+  test(`YAML label update: mismatched ${change} readback cannot report success`, async t => {
+    const audit = {};
+    await assert.rejects(runWorkflowFixture(t, {
+      ci: 'failure', audit,
+      afterMutation(live) {
+        if (change === 'state') live.state = 'Done';
+        else live.labels.add('wake');
+      },
+    }), /readback/);
+    assert.equal(audit.writes.length, 1);
+    assert.ok(audit.infos.every(message => !message.includes('->')));
+  });
+}
+
+test('YAML label update: incomplete membership fails before mutation', async t => {
+  const audit = {};
+  await assert.rejects(runWorkflowFixture(t, { ci: 'failure', incompleteLabels: true, audit }), /incomplete/);
+  assert.equal(audit.writes.length, 0);
 });
