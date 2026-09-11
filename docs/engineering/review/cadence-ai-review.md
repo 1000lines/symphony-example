@@ -62,9 +62,9 @@ The next actor should be visible through GitHub events wherever possible,
 rather than through hidden Symphony or Cadence-only decisions:
 
 - Symphony PR opens, Symphony commits, human PR comments, human PR reviews,
-  inline review comments, and ready-for-review events request or re-request
-  review from `example-cadence-bot`. That GitHub reviewer request is the visible
-  queued state.
+  inline review comments, and ready-for-review events call the existing reviewer
+  after the router verifies eligibility and the original feedback author's write
+  permission. The Actions run shows queued, running and completed review work.
 - A `pull_request_target.review_requested` event whose requested reviewer is
   `example-cadence-bot` invokes the single-PR Cadence review workflow. Review
   requests for other reviewers do not invoke Cadence.
@@ -81,145 +81,59 @@ rather than through hidden Symphony or Cadence-only decisions:
 - Human non-approved review summaries with content, `CHANGES_REQUESTED`
   reviews, and nonempty top-level PR comments also wake the linked issue
   directly. Human `APPROVED` reviews do not directly wake Linear, but still
-  re-request Cadence so a human approval with notes receives a Cadence re-look.
+  run Cadence so a human approval with notes receives a Cadence re-look.
 - Human reviewers own final merge readiness. Cadence approval is advisory and
   does not satisfy branch-protection human approval requirements.
 
 ## Dispatch And PR Selection
 
-There is one request router, one review-request runner, and one manual request
-entry point.
+The event bridge and manual PR matrix both call
+[the existing reviewer](../../../.github/workflows/cadence-ai-review-trigger.yml)
+through GitHub's native `workflow_call`. Normal routing does not remove and
+re-add a bot review request. The reviewer already reads current PR state, runs
+Claude, updates its workpad and applies its existing review cap and handoff.
 
-The Cadence review event state machine is:
+Events first run the secret-free `cadence-review-ingress.yml`. Its JSON title
+contains selectors, never authority. The `workflow_run` consumers execute on
+trusted `main`, read current PR/feedback through `actions/github-script`, and
+verify the original author's write permission. A failed or denied router cannot
+start the dependent review job. Keep `cadence-controller` restricted to `main`.
 
-```mermaid
-stateDiagram-v2
-  [*] --> EventObserved
-  EventObserved --> NoLinearAction: no linked issue, missing label, bot loop, or non-Symphony PR
-  EventObserved --> RequestCadenceReview: Symphony commit, human feedback, or ready
-  EventObserved --> QueueReview: Cadence review request observed
-  RequestCadenceReview --> QueueReview: GitHub review_requested event
-  QueueReview --> ReviewRunning: concurrency group available
-  QueueReview --> PendingLatest: review already running
-  PendingLatest --> ReviewRunning: active run completes
-  ReviewRunning --> LinearActive: new actionable findings
-  ReviewRunning --> HumanReviewRequested: clean approval or human-needed finding
-  ReviewRunning --> NextEvent: no changed assessment but next actor still needed
-  HumanReviewRequested --> StaleReview: new commit or human feedback
-  LinearActive --> StaleReview: new commit or human feedback
-  StaleReview --> QueueReview: re-request or event router
-  NextEvent --> HumanReviewRequested: loop cap or Symphony/Cadence quiescence
-  HumanReviewRequested --> QueueReview: human feedback resets loop
-```
+The reusable call retains the caller's event and actor. GitHub-identified bot
+initiators may enter the provider's bot allowlist; humans still pass the provider's
+independent write-permission check. Reviews use the configured publishing
+credential. Only three named repository secrets are passed; the signing key comes
+from the reviewer's protected environment. Manual calls and legacy review requests
+retain their existing actor checks. All review execution requires `refs/heads/main`.
 
-No Linear-linked ticket is silently ignored by the configured Cadence event
-surfaces. Every linked-ticket event records or performs one explicit outcome:
-request or re-request Cadence review, run the Cadence review from the resulting
-review-request event, move the linked issue for Symphony rework, ask for human
-input, or record the skip/escalation reason in the Cadence workpad. Events with
-no linked Linear issue, closed PRs,
-non-Symphony PRs, missing `symphony` labels outside the bot synchronize race,
-and non-human bot actors are explicit no-review paths rather than review loops.
+GitHub's repository/PR concurrency group keeps one active review and queues up to
+100 pending reviews (`queue: max`), preserving distinct feedback during review.
+Closing or merging a PR cancels that group. Review planning also checks that the
+PR is still open, so delayed events cannot restart it. Unchanged
+duplicate events may still cause another review. The reviewer reacquires
+current state; its outcome verifier rejects missing or stale-head reviews.
 
-The single-PR workflow is
-`.github/workflows/cadence-ai-review-trigger.yml`. Its normal entry is
-`pull_request_target.review_requested` when the requested reviewer is
-`example-cadence-bot`. Direct `workflow_dispatch` and `workflow_call` remain only as
-break-glass fallbacks; the automated router and legacy group workflow do not
-call them. The trigger normally requires the `symphony` PR label, with a narrow
-exception for Cadence's synthetic review-request event while labels are
-settling. It runs with a deterministic concurrency group keyed by repository and
-PR number. GitHub keeps the active review running and collapses pending
-duplicate triggers to the latest pending run. Project color labels such as
-`cyan` still identify Symphony project lanes for humans, but Cadence's review
-gate is the shared `symphony` label.
+Manual `cadence-ai-review.yml` accepts `pr_numbers` (comma/space separated),
+`review_label`, or both, then calls the reviewer once per selected PR. Direct
+single-PR dispatch and `review_requested` remain compatibility entry points.
+The existing stale-approval fallback also remains inside the reviewer; migrating
+publication to an App is separate work.
 
-The event router's concurrency key includes repository, PR, available head SHA,
-and review/comment context. Submitted review comments share their review id;
-standalone comments and edits retain their own context. The review runner uses
-a separate repository/PR concurrency group. Each group keeps one active and one
-latest pending run; this coalesces bursts but does not promise exactly one run
-per head. The workpad records context keys and skipped-event reasons.
+CI wakeups and `cadence-linear-rework.yml` keep their existing responsibilities.
+There is no second CI evaluator, Linear state machine or human-invitation engine.
+This routing change retains Claude; it does not enable the experimental Codex
+producer or its acceptance-check contract.
 
-The [review-request helper](../../../.github/workflows/scripts/request-pr-reviewer.mjs)
-clears an existing request, verifies its removal, and requests review again.
-If the request remains present or GitHub only reports an already-requested
-review, the helper fails visibly: an idempotent POST is not evidence of a fresh
-`review_requested` event.
-
-Before a stale approval re-review, the single-PR workflow tries to dismiss stale
-approvals authored by `example-cadence-bot`. GitHub can reject self-dismissal for
-the triage-scoped Cadence token; when that happens, the workflow uses the
-Cadence review request UI as the supported visible stale-state marker. A
-Cadence `review_requested` trigger is already visible pending re-review, and
-other stale paths try to re-request `example-cadence-bot`. The check fails only when
-GitHub allows neither dismissal nor visible review re-request.
-
-Review events first run `.github/workflows/cadence-review-ingress.yml` with no
-checkout, secrets or token permissions. Its JSON run title carries only event,
-PR and feedback identifiers. Both existing consumers use `workflow_run`, which
-[GitHub runs on the default branch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run),
-and require `refs/heads/main`. Keep `cadence-controller` restricted to `main`;
-no dispatch token or fork write-token setting is needed.
-
-The consumers fetch current PR/feedback through `actions/github-script` before
-applying their existing original-author permission, eligibility and receipt
-checks. Source titles supply selectors, never authority; stale heads and feedback
-from another PR are rejected. No PR code or artifacts are executed. Fork ingress
-may still require maintainer approval under repository settings.
-
-After merge, verify authorized and unauthorized review/comment events on same-repo
-and fork PRs, recording the Actions links and actual Linear state readback. Local
-tests cannot prove live environment admission or delivery.
-
-Submitted inline review comments also arrive with the submitted PR review event; the inline-comment
-event covers standalone inline comments and post-submission edits. Every
-configured event reaches the lightweight router job; the router classifies the
-triggering actor with the
-[GitHub Actor Classification](./github-actor-classification.md) helper and
-requests or re-requests Cadence review when the PR has the required `symphony`
-label and the event is human-facing, or when the event is a Symphony PR open or
-synchronize push to Symphony's own PR before labels are applied. Closed PRs,
-missing labels, non-Symphony PRs, and bot-loop events are recorded as explicit
-skips when the linked Linear issue can be identified. The router never starts
-Claude directly.
-
-| Event surface                         | Controller workflow             | Runner / action                                                                                                 |
-| ------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Symphony opens a PR                   | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review; the label gate is waived for the bot-authored open-then-label race.      |
-| Symphony commit to an open PR         | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review so stale approvals stop looking current.                               |
-| Human PR comment                      | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; human feedback resets the Cadence loop count in the review run.       |
-| Human PR review summary               | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review; submitted review summaries cover submitted inline comments.           |
-| Inline review comment                 | `cadence-ai-review-events.yml`  | Re-requests `example-cadence-bot` review for standalone created comments and post-submission edits.             |
-| Ready-for-review event                | `cadence-ai-review-events.yml`  | Requests `example-cadence-bot` review.                                                                          |
-| Cadence review request or re-request  | `cadence-ai-review-trigger.yml` | Runs the single-PR Cadence review; explicit re-requests force a current-head review.                            |
-| Manual PR list or label sweep         | `cadence-ai-review.yml`         | Resolves PRs and requests or re-requests `example-cadence-bot`; the review request starts the trigger workflow. |
-| Cadence review with actionable output | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`, which is the machine-readable wakeup for Symphony.                   |
-| Cadence review needing human input    | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                       |
-| Clean Cadence approval                | `cadence-linear-rework.yml`     | Requests human review from the PR assignee, or records a visible no-assignee routing gap.                       |
-| Human review with actionable summary  | `cadence-linear-rework.yml`     | Wakes the linked Linear issue to `Active`; direct human review feedback does not need Cadence to restate it.    |
-| Human PR conversation comment         | `cadence-linear-rework.yml`     | Wakes `Active` for nonempty human comments on eligible PRs; Cadence re-review is requested separately.          |
-
-Manual group review remains available through
-`.github/workflows/cadence-ai-review.yml`. It runs through `workflow_dispatch`,
-with two optional inputs (at least one is required):
-
-- `pr_numbers`: a comma- or space-separated list of PRs to review as a group.
-- `review_label`: review every open PR carrying this label as a group.
-
-A single PR is a group of one. The manual workflow is orchestration only: it
-resolves the requested PRs, fans out with a matrix, and requests or re-requests
-Cadence review once per PR. Use manual group review when a human wants an
-explicit PR list or label sweep. Direct single-PR dispatch of the trigger
-workflow is reserved for break-glass retries when review-request events cannot
-be used.
+After merge, verify an authorized feedback event, an unauthorized author, and a
+manual selection. Record their Actions links and actual handoff. Local tests do
+not prove live environment admission or provider execution.
 
 ## Automated Triggers And Manual Fallbacks
 
 For this project, automated Cadence review is label-gated and actor-gated:
 
 - A human-facing PR comment, PR review, inline review comment, or
-  ready-for-review event can request or re-request Cadence when the PR has the
+  ready-for-review event can call Cadence when the PR has the
   `symphony` label.
 - A review request targeting `example-cadence-bot` invokes the single-PR trigger
   workflow. Non-Cadence reviewer requests do not invoke Cadence.
@@ -229,8 +143,8 @@ For this project, automated Cadence review is label-gated and actor-gated:
   bot-authored open/update request path.
 - Cadence, Claude, dependency bots, generic `[bot]` actors, closed PRs,
   non-Symphony PRs, and PRs without the `symphony` label outside the bot
-  open/update race do not queue review. The router records those skips in the
-  Cadence workpad when the linked issue can be identified.
+  open/update race do not queue review. The router records the reason in the
+  Actions summary.
 - Human feedback enters the same Cadence/Symphony review loop regardless of
   GitHub review state. Humans do not need to use GitHub's formal
   `CHANGES_REQUESTED` review state; a human comment without approval is de

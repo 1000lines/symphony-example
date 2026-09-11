@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import yaml from "js-yaml";
 import { readFileSync } from "node:fs";
 import { routeReviewHandoff } from "./cadence-linear-rework.mjs";
 import { routeCadenceReviewEvent } from "../.github/workflows/scripts/cadence-ai-review-route-event.mjs";
@@ -204,7 +205,7 @@ test("bodyless changes-requested reviews accept GitHub null bodies but reject ma
   }
 });
 
-test("feedback workflows use trusted checkout and the existing App without a PAT fallback", () => {
+test("feedback routing jobs use trusted checkout and the existing App without a PAT fallback", () => {
   for (const name of ["cadence-linear-rework", "cadence-ai-review-events"]) {
     const workflow = readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8");
     assert.match(workflow, /ref: main/);
@@ -212,7 +213,8 @@ test("feedback workflows use trusted checkout and the existing App without a PAT
     assert.match(workflow, /environment: cadence-controller/);
     assert.match(workflow, /app-id: \$\{\{ vars.CADENCE_APP_ID \}\}/);
     assert.match(workflow, /permission-metadata: read/);
-    assert.doesNotMatch(workflow, /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members|permission-issues/);
+    const routeJob = yaml.load(workflow).jobs[name === 'cadence-ai-review-events' ? 'route' : 'review-handoff'];
+    assert.doesNotMatch(JSON.stringify(routeJob), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members|permission-issues/);
     assert.match(workflow, /GH_TOKEN: \$\{\{ steps.app-token.outputs.token \}\}/);
   }
 });

@@ -327,7 +327,7 @@ test("Cadence review-request trigger stays wired for Cadence self requests", () 
     "utf8"
   );
 
-  assert.match(workflow, /types:\s*\[review_requested\]/);
+  assert.match(workflow, /types:\s*\[[^\]]*\breview_requested\b[^\]]*\]/);
   assert.match(
     workflow,
     /github\.event\.requested_reviewer\.login == \(vars\.CADENCE_REVIEWER \|\| 'example-cadence-bot'\)/
