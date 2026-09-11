@@ -306,22 +306,34 @@ is changed by this limited instruction.
 - **delivery_notes / exclusions:** CT-Q can run with CT-I/M/C/R: it owns package
   metadata and question tests, CT-M owns only copied `template/` files. CT-T
   consumes the accepted question interface; CT-L later registers final CI.
-  No Copier hooks/update, rendered operator skill or late workflow integration.
+  No Copier hooks/update or late workflow integration; CT-M owns the selected
+  client-session skill copies and CT-T owns their conversion.
 - **split_criteria:** `ticket-template-contract`, `risk-blast-radius`.
 
 ## CT-M — Copy every listed client file without changes
 
 - **Scope:** a separate, mechanically verifiable PR copies the complete CT-I
-  list into staging before any template conversion.
+  list into staging before any template conversion, including the authorized
+  list correction described below.
 - **owned_files:** exactly the `templates/symphony-client/template/` destination
-  paths in accepted `client-copy.txt`; no package metadata or inventory edits.
+  paths in `client-copy.txt`. For Jeremy's [PR #44 correction](https://github.com/1000lines/symphony-example/pull/44#issuecomment-5638514034),
+  also `docs/symphony-plans/client-template/{client-copy.txt,ci-export.txt,client-inventory.md}`
+  and the affected plan/design/item notes; no package metadata.
 - **owned_external_resources:** task-local immutable source export and its own
   branch/PR. No Actions/secret/repository settings or participant operations.
-- **creates:** every listed destination. **edits:** none. **deletes:** none.
+- **creates:** every listed destination (22 files after the correction).
+  **edits:** the two lists, inventory and affected plan/design/item notes above.
+  **deletes:** none; remove the fourteen mistaken CI memberships, not source files.
 - **dependencies:** CT-I, hard, accepted source/path/hash list. No CT-Q/C/R gate.
-- **source_files:** every exact source path/ref in CT-I's merged copy list.
+- **source_files:** every exact source path/ref in CT-I's merged copy list plus
+  the fourteen skill/resource paths selected in merged #46 and corrected by Jeremy.
+  Keep all rows pinned to `d5e9692b84c3f338014b964fd9713143fb723b55`.
 - **required_actions:** use ordinary Git/copy tools to copy all listed bytes and
-  modes, including dotfiles. No selection, substitutions, redaction, formatting,
+  modes, including dotfiles. First move exactly the fourteen #46 skill/resource
+  entries from CI export into client-copy, with explicit mode/blob/destination
+  rows retaining their relative paths. Reconcile the inventory and downstream
+  delivery notes in this PR; this human-authorized correction supersedes the
+  earlier inventory-edit exclusion. No other selection, substitutions, redaction, formatting,
   thin-wrapper rewrite or new helper hidden in this PR. An invalid/sensitive
   entry returns to inventory review before copying. Source commits are read as
   data; do not merge or cherry-pick their history into the task branch.
@@ -365,6 +377,9 @@ is changed by this limited instruction.
   expressions and serialize shell arrays/YAML/JSON correctly.
   Render short instructions, config, direct App manifest and only callers whose
   interfaces already exist at reviewed seed refs. Default native mode by omission.
+  Preserve the fourteen client skill/resource paths from corrected CT-M, their
+  licenses and relative resources; document external tooling dependencies and
+  verify loading paths from the generated client, including replan's nested path.
   Reuse existing application CI and preserve unrelated instructions/license/files.
   Omit unavailable review/CI callers from this initial cut and enumerate their
   exact CT-L additions in PROVENANCE; never invent refs/interfaces, emit raw
@@ -474,6 +489,9 @@ is changed by this limited instruction.
   App cross-installation PR/issues/checks write scope accurately; no fork-key gate.
   Select/create the initial Linear project through existing planning tools;
   additional projects reuse the same client and derive metadata from each issue.
+  Load project-factory, Linear GraphQL and replan from the generated client's
+  copied paths, retaining their resources and the separate reviewed tooling
+  checkout. Do not source those fourteen client files from CT-V's workflow repo.
   No repository project binding. Describe exact missing-access owner/action and
   idempotent resumption; the advisory check is automatic and never required.
 - **acceptance_checks:** dry walkthrough of fork, direct, repeat and additional

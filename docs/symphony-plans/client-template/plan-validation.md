@@ -44,7 +44,9 @@ The APIs also do not prove acyclicity, ownership or live prerequisites. Manual
 inspection checks that every edge goes to a strictly higher numbered round,
 which proves this graph acyclic; I→M→T→L→U (or V)→F→A→Z attains eight rounds.
 No graph edge has a redundant transitive alternative. CT-Q is disjoint from CT-I/M/C/R; CT-M/C/R are disjoint after
-CT-I; CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U/V are disjoint after CT-L; CT-F directly joins U/V. All later overlapping files/resources have
+CT-I. Jeremy's PR #44 correction temporarily gives CT-M the two-list/inventory
+amendment after CT-I and CT-C have merged; no concurrent list writer or new
+hard dependency is introduced. CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U/V are disjoint after CT-L; CT-F directly joins U/V. All later overlapping files/resources have
 explicit ownership handoffs. No new test or planning engine is needed.
 Jeremy's 14:44 self-use decision changes node scope/labels, not edges: CT-U
 owns root bootstrap/proof, CT-F takes that same repository for alpha migration

@@ -13,23 +13,5 @@ scripts/symphony/repository-config.test.mjs
 .github/workflows/symphony-client-commands.yml
 .github/workflows/scripts/symphony-client-commands.test.mjs
 
-# Client-session skills: Jeremy's PR #46 comment 5638123815 selects these extras.
-# Existing at the inspected ref; CT-C preserves these rows, CT-V publishes them,
-# CT-O documents client-session loading and the external tooling dependencies.
-# Complete factory and Linear directories, plus replan and its relative templates.
-.agents/skills/symphony-project-factory/SKILL.md
-.agents/skills/symphony-project-factory/templates/project-description.md
-.agents/skills/symphony-project-factory/templates/tickets/requirements-and-design.md
-.agents/skills/symphony-project-factory/templates/tickets/plan-project.md
-.agents/skills/symphony-project-factory/templates/tickets/trigger-fan-out.md
-.agents/skills/symphony-project-factory/templates/tickets/broaden-fanout-integration.md
-.agents/skills/symphony-project-factory/templates/tickets/standup.md
-.agents/skills/linear-graphql/SKILL.md
-.agents/skills/linear-graphql/agents/openai.yaml
-.agents/skills/linear-graphql/scripts/linear-graphql.mjs
-scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md
-docs/engineering/symphony/replanning.md
-
-# Factory-required guidance and its linked examples; retain its MIT attribution.
-.agents/skills/karpathy-guidelines/SKILL.md
-.agents/skills/karpathy-guidelines/EXAMPLES.md
+# Client-session skills moved to client-copy.txt by Jeremy's PR #44 correction
+# (comment 5638514034). They are client assets, not workflow-repository exports.
