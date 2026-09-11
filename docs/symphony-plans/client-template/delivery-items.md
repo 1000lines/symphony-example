@@ -39,14 +39,15 @@ repositories created by this planning ticket.
   `README.md`, `PROVENANCE.md`, `.symphony.cfg.json` and `.github/workflows/ci.yml`
   for this repository's own setup/CI. These files are outside the rendered tree.
 - **owned_external_resources:** this destination's creation/bootstrap,
-  main/PR/release refs, Actions enablement/variables/named secrets and required
+  main/PR/alpha branch refs, Actions enablement/variables/named secrets and required
   CI configuration, through existing authorized tools or Jeremy. No writes to
   seed content, onboarding skill, workflow destination or participant repos.
 - **creates:** all owned import files except the bootstrap README.
   **edits:** bootstrap `README.md`; publication metadata changes to imported
   `PROVENANCE.md` and `.github/workflows/ci.yml` remain part of their new-file diff.
 - **dependencies:** CT-L, hard, complete accepted staging commit with passing render CI;
-  reason: exact import source. CT-O is independent and shares no mutable resource.
+  reason: exact import source. CT-O/V are independent and share no mutable
+  file, repository setting, alpha ref or live proof resource.
 - **source_files:** full staging root at its accepted SHA, client inventory,
   license, template tests and source CI; all source reads are immutable.
 - **required_actions:** verify name availability/public access and actual push,
@@ -58,23 +59,25 @@ repositories created by this planning ticket.
   tools with dotfiles; record source SHA/path, destination SHA, path mapping,
   justified publication-only differences and Apache-2.0 attribution. Preserve
   template tests/CI at their root-relative paths. After human acceptance publish
-  an immutable reviewed ref and perform a fresh Git-URL render at that ref.
+  `refs/heads/alpha` at the accepted main commit and perform a fresh Git-URL
+  render with `--vcs-ref=alpha`. Record branch resolution and actual rendered
+  commit; verify no same-name tag. Follow the plan's alpha evidence contract.
 - **acceptance_checks:** public anonymous readback; source/tree comparison with
   no lost dotfiles, secrets or additional rendered assets; seven answers and
   `_src_path`/`_commit`; exact published render passes CT-L's full matrix. Template
-  still pins reviewed seed workflows at this intermediate release; CT-F owns
-  final pins. Record actual destination CI/reviewer provenance and ref links.
+  still references reviewed seed workflows at this intermediate publication; CT-F owns
+  final alpha references. Record actual destination CI/reviewer provenance and ref links.
 - **Validation, in order:** local `git diff --no-index` between export and
   destination (explicit publication differences reviewed), pinned requirements
-  install and `python -m unittest discover -s tests`; `copier copy --vcs-ref
-<published-sha> <published-git-url> <isolated-target>` with fixture answer files.
+  install and `python -m unittest discover -s tests`; `copier copy --vcs-ref=alpha
+<published-git-url> <isolated-target>` with fixture answer files.
   Docker skipped on local pass; otherwise CT-Q's pinned Python/Git environment
   and workspace UID/mount policy. Mandatory destination `.github/workflows/ci.yml`
   render tests on the published task head, plus any observed required checks.
   CI must exist and run; absence is not a green import. Record App/check names
-  from the actual run, not seed assumptions. Read back release after human merge.
-- **delivery_notes / exclusions:** CT-V is next publication owner, CT-F later
-  edits these pins/provenance. No workflow implementations in the template repo,
+  from the actual run, not seed assumptions. Read back alpha and its actual commit after human merge.
+- **delivery_notes / exclusions:** CT-V publishes independently in its own repo;
+  CT-F waits for both and later edits these references/provenance. No workflow implementations in the template repo,
   staged-source deletion, upstream submission, participant setup or copier update.
   Missing create/admin rights needs the prepared import patch/PR and exact named
   owner operation; it does not authorize expanded credentials or direct merges.
@@ -92,15 +95,16 @@ repositories created by this planning ticket.
   Expand those accepted lists into the ticket before copying. The import is the
   whole listed set, not further unreviewed file selection.
 - **owned_external_resources:** workflow destination creation/bootstrap, public
-  read/access/Actions settings and its main/PR/release refs; task-specific CI.
+  read/access/Actions settings and its main/PR/alpha branch refs; task-specific CI.
   No source deletions, seed credential mutation or template publication writes.
 - **creates:** accepted export-list paths and owned destination metadata/CI
   except bootstrap `README.md`. **edits:** bootstrap `README.md`.
-- **dependencies:** CT-U, hard, first accepted public template release;
-  reason: the accepted near-end publication sequence and consumer/ref handoff.
-  Its ancestry in the DAG already includes accepted CT-C/R exports and 100-43.
+- **dependencies:** CT-L, hard, final integrated caller/export contract with
+  accepted CT-C/R exports and 100-43 proof. CT-V can publish concurrently with
+  CT-U; it neither reads an unfinished CT-U result nor writes that repository.
 - **source_files:** exact accepted seed refs/export lists and their tests,
-  early-review evidence, CT-U public template ref and both license/provenance sets.
+  early-review evidence, CT-L caller mapping and source license/provenance.
+  No CT-U public ref is needed for the import.
 - **required_actions:** verify name/access/permissions, minimal-main bootstrap
   when needed, then draft import PR against destination main as in CT-U. Copy
   the reviewed lists with dotfiles, source/destination mapping and license.
@@ -110,13 +114,14 @@ repositories created by this planning ticket.
   assumption of a full target-side Node package. Use repo-root package/lock only
   for actually imported workflow tooling dependencies, as listed by CT-I/R.
   Keep helper checkout repository/ref distinct from target source/config and
-  preserve the caller's target context. Pin nested calls and helper checkouts to
-  reviewed destination code, not `github.sha` of a target PR. A reviewed export
-  commit may be the helper pin for a subsequent release commit; do not invent a
-  circular self-SHA. Same-repository nested workflow references may use GitHub's
-  native same-commit semantics where applicable and verified.
-  Ensure explicit secrets remain intact at each remote hop. Publish the accepted
-  full ref, record anonymous availability and workflow-call access.
+  preserve the caller's target context. Reference nested calls and helper checkouts at
+  destination `alpha` code, not `github.sha` of a target PR; record actual helper
+  commits used. Same-repository nested calls may use native same-commit semantics
+  where verified; avoid circular self-SHA requirements. Ensure explicit secrets
+  remain intact at each remote hop, including App-only cleanup. After human
+  acceptance publish `refs/heads/alpha`, record its actual commit, anonymous
+  availability and workflow-call access, and verify no same-name tag. Follow the
+  alpha evidence contract; no release tag is required.
 - **acceptance_checks:** imported tests pass; graph of nested calls/helper
   checkouts resolves to reviewed destination refs. Both providers, native CI,
   feedback routing and inherited advisory/readiness contracts survive. Public
@@ -128,38 +133,42 @@ repositories created by this planning ticket.
   otherwise digest-pinned Node 20 with workspace policy. Mandatory destination
   CI runs those imported tests on the current head, with actual required
   workflow/App/check readback; record any bootstrap/trusted-workflow limitation.
-  Publish/resolve the human-reviewed release ref before CT-F proceeds.
+  Publish/resolve the human-reviewed alpha branch before CT-F proceeds.
 - **delivery_notes / exclusions:** this is an intentional large mechanical diff,
   not a reason to expand its behavioral scope. Do not delete/retarget seed
   callers here, copy host installers, move onboarding skills or claim final live
-  review. CT-F owns template pins; CT-A owns consumer migration; CT-Z owns retirement.
+  review. CT-F owns template alpha references; CT-A owns consumer migration; CT-Z owns retirement.
 - **split_criteria:** `external-system-boundary`, `default-branch-dispatch-prerequisite`.
 
-## CT-F — Release template pinned to published workflows
+## CT-F — Connect template alpha to published workflow alpha
 
 - **Repository override:** `https://github.com/1000lines/symphony-client-template`;
-  main/main. **Scope:** final release from the CT-U repository using CT-V refs.
+  main/main. **Scope:** integrate both accepted publications so template alpha
+  emits callers using workflow `@alpha`.
 - **owned_files:** `template/.github/workflows/` caller files from CT-L's final
   inventory (only source/ref mappings), root `README.md`, `PROVENANCE.md`,
   `tests/test_render.py` (expected destination refs only).
-- **owned_external_resources:** template task branch/PR and new immutable release
-  ref. CT-U relinquishes this repository's write ownership; CT-V is read-only.
+- **owned_external_resources:** template task branch/PR and its moving `alpha` branch. CT-U relinquishes this repository's write ownership; CT-V is read-only.
 - **creates:** none. **edits:** all owned files, source/ref expectations only.
-- **dependencies:** CT-V, hard, accepted public workflow release and complete
-  mapping; reason: final literal workflow pins must resolve before release.
-- **source_files:** CT-U source metadata and tests; CT-V release/provenance.
+- **dependencies:** CT-U and CT-V, hard direct fan-in. CT-U supplies the accepted
+  template repository and relinquishes its files/alpha ref; CT-V supplies the
+  accepted public workflow alpha branch and complete mapping. Both must exist
+  before the final references can be validated and published.
+- **source_files:** CT-U source metadata and tests; CT-V alpha/provenance.
 - **required_actions / acceptance_checks:** repoint every generated workflow
-  caller to the reviewed full destination SHA; inspect onward references via
-  CT-V evidence. Keep all named secrets and seven questions unchanged. Publish
-  the human-reviewed template ref, render from its Git URL in a fresh isolated
-  checkout and record the exact template/workflow pair. Inspect no remaining
+  caller to the literal destination `@alpha`; inspect onward references via
+  CT-V evidence. Keep all named secrets and seven questions unchanged. After
+  human acceptance advance template `refs/heads/alpha`, render using
+  `--vcs-ref=alpha` from its Git URL in a fresh isolated checkout and record
+  the actual template/workflow commits. Moving branches are intentional; apply
+  the alpha evidence contract rather than replacing consumer refs with SHAs. Inspect no remaining
   active seed-workflow pin in rendered callers. Historical source refs stay valid.
 - **Validation, in order:** local pinned render unittest matrix and diff check;
   real published-ref Copier render; Docker skipped on local pass or same pinned
   CT-Q/U Python/Git fallback. Mandatory current-head template CI and discovered
-  required checks, even for this small pin change; then release-ref readback.
+  required checks, even for this small pin change; then alpha branch/readback provenance.
 - **delivery_notes / exclusions:** CT-A consumes this pair; no seed/staging edits,
-  workflow behavior changes, copier update or unreviewed floating refs.
+  workflow behavior changes, copier update, tags or unreviewed code on alpha.
 - **split_criteria:** `cross-package-contract`, `low-risk-batch`.
 
 ## CT-A — Adopt published template and prove live consumer paths
@@ -171,6 +180,7 @@ repositories created by this planning ticket.
   `.github/workflows/cadence-review-ingress.yml`,
   `.github/workflows/symphony-client-review.yml`,
   `.github/workflows/symphony-client-handoff.yml`,
+  `.github/workflows/symphony-client-review-cleanup.yml`,
   `.github/workflows/symphony-client-wakeups.yml`,
   `.github/workflows/symphony-client-ci.yml` only if needed,
   `SYMPHONY.md`, `.github/symphony/REVIEW.md`,
@@ -178,7 +188,8 @@ repositories created by this planning ticket.
   `.copier-answers.yml`; native event triggers in
   `cadence-ai-review-events.yml`, `cadence-linear-rework.yml`,
   `symphony-linear-wakeups.yml`, `cadence-ai-review-trigger.yml` and
-  `cadence-ai-review.yml` under `.github/workflows/` only as needed to prevent
+  `cadence-ai-review.yml` and `cadence-review-check-cleanup.yml` under
+  `.github/workflows/` only as needed to prevent
   duplicate admission while retaining manual/compatibility paths;
   `templates/symphony-client/` deletion and
   `.github/workflows/client-template-test.yml` removal/repoint after extraction;
@@ -201,10 +212,11 @@ repositories created by this planning ticket.
   skill are required for adoption and the owner-operated walkthrough.
 - **source_files:** CT-F/CT-V publication evidence, CT-O skill, CT-C compatibility
   and CT-R early proof, current seed config/application/manual workflow paths.
-- **required_actions:** render from CT-F's published Git URL at exact SHA into
+- **required_actions:** render from CT-F's published Git URL with `--vcs-ref=alpha` into
   an isolated clean checkout. Inspect collisions and merge existing config and
   instruction content explicitly; preserve unrelated file hashes and existing CI.
-  Keep Copier source/version answers. Delete staging only after extraction and
+  Keep Copier source/version answers and record actual resolved template and
+  workflow/helper commits under the alpha evidence contract. Delete staging only after extraction and
   successful isolated adoption; human reviews the adoption diff before merge.
   Disable duplicate automatic triggers atomically with caller replacement;
   retain useful manual/forwarding entry points. No indiscriminate body deletion.
@@ -215,10 +227,13 @@ repositories created by this planning ticket.
   Verify fork/direct/repeat/additional-project procedures, two projects sharing
   one repo config, and actual current installed reader support before activation.
 - **acceptance_checks:** after trusted adoption callers land, a real follow-up
-  PR executes those callers against the published workflow SHA and gets a real
+  PR executes those callers using workflow `@alpha` and gets a real
   Codex Cadence review, App/head-correct advisory queued/running→linked result,
   and clean-current-head draft→ready with no newer feedback pending. Record
-  caller/ref/run/review/check IDs, provider/App identity and before/after PR state.
+  caller/ref/run/review/check IDs, actual consumed template/workflow/helper SHAs,
+  provider/App identity and before/after PR state. The local cleanup listener
+  must match the actual caller workflow names and close checks after canceled
+  or failed review execution; include migrated cancellation/recovery proof.
   Keep proportional Claude-only/both/neither tests at the final exported source;
   an actual provider fallback smoke test is required if migration changes its
   execution boundary beyond already tested behavior. Do not claim Claude live
@@ -261,14 +276,20 @@ repositories created by this planning ticket.
   `.github/workflows/cadence-ai-review.yml`,
   `.github/workflows/cadence-linear-rework.yml`,
   `.github/workflows/symphony-linear-wakeups.yml`,
-  `.github/workflows/symphony-client-commands.yml`, and only exported helpers
+  `.github/workflows/symphony-client-commands.yml`,
+  `.github/workflows/cadence-review-check-cleanup.yml`, and only exported helpers
   explicitly marked unreferenced in the accepted consumer census. Expand those
-  exact helper paths before edits; preserve shared seed imports/manual wrappers.
+  exact helper paths before edits; preserve shared seed imports/manual wrappers
+  and the generated client cleanup listener. Standing path/usage references in
+  `README.md`, `docs/engineering/symphony/tooling-setup.md`,
+  `docs/engineering/symphony/project-workflow.md` and
+  `docs/engineering/review/cadence-ai-review.md` are owned only where this
+  migration changes their instructions; keep historical plans as records.
 - **owned_external_resources:** read-only public ref/CI/review/settings census;
   this task's branch/PR. No repo deletion, tag removal, participant credential
   revocation, host reload or unsolicited project terminal-state mutation.
 - **creates:** owned `finalization.md`. **edits:** owned census/evidence and
-  retained compatibility entry points. **deletes:** only owned bodies/helpers
+  retained compatibility entry points and owned standing guidance. **deletes:** only owned bodies/helpers
   proven unreferenced by the accepted consumer census; otherwise retain them.
 - **dependencies:** CT-A, hard, accepted adoption and final live evidence;
   reason: retirement cannot be justified from an untested replacement.

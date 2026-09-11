@@ -42,15 +42,15 @@ The separate relation-table call is intentional: `parseProjectPlan` derives
 expected relations from the manifest; it does not validate that Markdown table.
 The APIs also do not prove acyclicity, ownership or live prerequisites. Manual
 inspection checks that every edge goes to a strictly higher numbered round,
-which proves this graph acyclic; I→M→T→L→U→V→F→A→Z attains nine rounds.
+which proves this graph acyclic; I→M→T→L→U (or V)→F→A→Z attains eight rounds.
 No graph edge has a redundant transitive alternative. CT-Q is disjoint from CT-I/M/C/R; CT-M/C/R are disjoint after
-CT-I; CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U are disjoint after CT-L. All later overlapping files/resources have
+CT-I; CT-T has no C/R dependency; CT-L joins T/C/R; CT-O/U/V are disjoint after CT-L; CT-F directly joins U/V. All later overlapping files/resources have
 explicit ownership handoffs. No new test or planning engine is needed.
 
 Local results from the proposed tree:
 
-- Shared parse: one manifest, 14 nodes, 16 edges; standalone graph identical.
-- Shared relation table: exactly the same 16 blocker→blocked edges.
+- Shared parse: one manifest, 14 nodes, 17 edges; standalone graph identical.
+- Shared relation table: exactly the same 17 blocker→blocked edges.
 - Shared dry-run renderer: CT-I/Q/M/C/R/T/L/O/U/V/F/A/Z, thirteen new issue payloads;
   existing 100-43 produces no create payload. Defaults are Active, main/main,
   draft, Jeremy, pink/symphony; existing 100-43 remains Misc/blue.
@@ -88,7 +88,8 @@ Compose each description in this stable order:
 4. Direct blockers and directly blocked keys from the shared payload/graph only.
    Replace placeholders with clickable actual Linear identifier/URL mappings
    after creation. 100-43 has an existing real link; no other live IDs are assumed.
-5. Main plan's ticket execution contract, including pinned workpad, human review,
+5. Main plan's alpha publication/evidence and ticket execution contracts, including
+   moving branch semantics, actual consumed SHAs, pinned workpad, human review,
    current-head CI, mature rules, state handling, metadata and PR requirements.
 
 Inspection example for CT-I: it owns the four inventory files, creates all four,

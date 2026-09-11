@@ -9,11 +9,11 @@ flowchart LR
   T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
   L["Round 4: CT-L · Add late CI and Codex parts before release"]
   O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
-  U["Round 5: CT-U · Publish complete template repository"]
-  V["Round 6: CT-V · Publish reusable workflows and required helpers"]
-  F["Round 7: CT-F · Release template pinned to published workflows"]
-  A["Round 8: CT-A · Adopt published pair and prove live consumer paths"]
-  Z["Round 9: CT-Z · Retire migrated bodies and finalize evidence"]
+  U["Round 5: CT-U · Publish template repo and alpha branch"]
+  V["Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
+  F["Round 6: CT-F · Join both repos using workflow alpha in template alpha"]
+  A["Round 7: CT-A · Adopt published pair and prove live consumer paths"]
+  Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
   I --> M
   I --> C
   I --> R
@@ -25,7 +25,8 @@ flowchart LR
   R --> L
   L --> O
   L --> U
-  U --> V
+  L --> V
+  U --> F
   V --> F
   O --> A
   F --> A

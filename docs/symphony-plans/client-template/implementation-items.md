@@ -20,6 +20,7 @@ participant projects or operates the parent rehearsal.
 - **dependencies:** none. Read 100-43's available PR for context; do not copy it.
 - **source_files:** merged `client-template-design.md`; `.github/workflows/AGENTS.md`;
   native ingress, event, trigger, manual review, handoff and wakeup workflows;
+  merged 100-43 `.github/workflows/cadence-review-check-cleanup.yml`;
   their directly/transitively imported helpers; config reader and license.
 - **required_actions:** map each D1 artifact to a generated path and reason;
   enumerate existing target collisions, source-only files and exclusions.
@@ -33,7 +34,11 @@ participant projects or operates the parent rehearsal.
   includes only existing nonsecret files; new Copier metadata belongs to CT-Q,
   and later Docker/Codex additions are listed separately, never invented copies.
   Specify which copied files can be converted immediately and which raw workflow
-  bodies must be omitted until CT-L adds their thin reusable callers.
+  bodies must be omitted until CT-L adds their thin reusable callers. Include
+  `.github/workflows/symphony-client-review-cleanup.yml` as a local native
+  `workflow_run` listener: it must match generated caller workflow names. CT-R
+  exposes its body as reusable cleanup; CT-L renders the App-only caller. Do
+  not assume extracting the body moves a native event listener into clients.
 - **acceptance_checks:** every proposed client file is local for a concrete
   reason; no host/secret/application payload or reusable body is rendered. Review
   and CI export lists are disjoint, except explicitly read-only/common files
@@ -69,7 +74,8 @@ participant projects or operates the parent rehearsal.
   `.github/workflows/symphony-client-commands.yml` (new),
   `.github/workflows/scripts/symphony-client-commands.test.mjs` (new),
   `docs/symphony-plans/client-template/ci-export.txt`,
-  `docs/engineering/symphony/tooling-setup.md` (mode guidance only).
+  `docs/engineering/symphony/tooling-setup.md` (mode/config instructions,
+  including existing setup sentences invalidated by this compatibility change).
 - **owned_external_resources:** task-local fixture directories, Docker image
   `client-template-ci-${issue}` and task containers. No live provider, seed
   secret, branch-rule or Linear state mutation; CT-A owns integrated live proof.
@@ -89,6 +95,10 @@ participant projects or operates the parent rehearsal.
   Update operative worker guidance through the existing bundle path so remote
   runs available checks and publishes despite unavailable toolchains. Do not
   rebuild the host or make Docker a remote prerequisite.
+  Expose `symphony-linear-wakeups.yml` through `workflow_call` with explicit
+  target/event inputs and only `CADENCE_LINEAR_API_TOKEN`, preserving its existing
+  native triggers until CT-A replaces them. CT-L/V consume this callable entry;
+  CT-V only copies it and must not discover an unowned conversion.
   Replace the wakeup's hardcoded `CI`/`ci.yml` success lookup with the target's
   observed required-check contract; accept configured workflow completions and
   current-head failure/success appropriately. Preserve actual emitting App and
@@ -101,7 +111,8 @@ participant projects or operates the parent rehearsal.
   Remote missing-tool case records a limitation and reaches publication handoff;
   known failed assertions do not get waived. Tests include non-main default
   branch, differently named CI/workflow path, multiple required checks, generic
-  completion events, failed→Active, passed→Inactive, stale/terminal rejection.
+  completion events, failed→Active, passed→Inactive, stale/terminal rejection;
+  test native and reusable wakeup dispatch with the same identity/CI contract.
   CI executes the exact head without review credentials or a Node package
   requirement on application clients. Update `ci-export.txt` to actual paths.
 - **Validation, in order:** local
@@ -133,6 +144,7 @@ participant projects or operates the parent rehearsal.
   `.github/workflows/cadence-ai-review-trigger.yml`,
   `.github/workflows/cadence-ai-review.yml`,
   `.github/workflows/cadence-linear-rework.yml`,
+  `.github/workflows/cadence-review-check-cleanup.yml` (from 100-43),
   `.github/workflows/scripts/cadence-ai-review-route-event.mjs`,
   `.github/workflows/scripts/cadence-ai-review-route-event.test.mjs`,
   `.github/workflows/scripts/cadence-ai-review-events.test.mjs`,
@@ -163,7 +175,8 @@ participant projects or operates the parent rehearsal.
   Reasons: editing the selected export and the same native publication files.
   Do not duplicate 100-43, change its project/labels or copy its unmerged branch.
 - **source_files:** all owned existing files; read native ingress, existing
-  feedback/workpad/permission helpers and Claude skill; read dormant Codex source
+  feedback/workpad/permission helpers, `scripts/symphony/review-contract.mjs`,
+  its `cadence-review/v1` schema/ledger tests and Claude skill; read dormant Codex source
   only to understand historical constraints, not to revive its controller.
 - **required_actions:** declare `workflow_call` inputs for repository/default
   branch, identity and discovered App IDs; caller config/source and pinned trusted
@@ -172,8 +185,14 @@ participant projects or operates the parent rehearsal.
   `CADENCE_OPENAI_API_KEY`, optional `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`.
   Handoff gets only App/Linear. Remove the adopter requirement for legacy bot PAT;
   both providers publish with the configured App. No generated/onward cross-repo
-  `inherit`. Use native jobs/maintained Actions and a small result adapter for
-  `{repository, prNumber, headSha, verdict, summary, findings}`. Codex wins with
+  `inherit`. Use native jobs/maintained Actions and a small provider adapter
+  into the existing `cadence-review/v1`/workpad ledger contract. D6's small
+  provider result does not replace that schema: preserve `requirements`,
+  `findings`, `humanFeedback`, stable IDs, mandatory dispositions and requirement
+  coverage through publication; trusted code supplies identity/provenance.
+  Expose advisory cleanup via `workflow_call` with target/run inputs and App key
+  only, retaining its seed native listener until migration. The generated local
+  listener owns `workflow_run` names/triggers; no new secret or opt-in. Codex wins with
   OpenAI, Claude runs with Anthropic alone, neither fails before review, and API
   failure never selects another provider. Reuse the existing review ledger and
   APPROVE/COMMENT publication; no GitHub REQUEST_CHANGES.
@@ -185,6 +204,8 @@ participant projects or operates the parent rehearsal.
   to unreviewed refs. Keep native/manual compatibility entry points working.
 - **acceptance_checks:** all four key combinations and malformed/stale/missing
   output tested; one provider runs; both use the same verdict/handoff contract.
+  Include carried-forward mandatory human feedback and unmet requirements so
+  a provider adapter cannot silently lose them or incorrectly permit approval.
   Boundary tests cover explicit secrets at every hop and no CI/ingress leakage.
   After human merge/trusted enablement, a real seed PR gets a Codex App-authored
   review, workpad, actual-head advisory result and appropriate readiness. Record
@@ -326,7 +347,7 @@ participant projects or operates the parent rehearsal.
   `docs/symphony-plans/client-template/client-inventory.md` (final readback).
 - **owned_external_resources:** task-local render fixtures and seed task checks.
   No live provider/App/secret/project operations; CT-R/A retain those proofs.
-- **creates:** the deferred thin review/handoff/wakeup/CI caller paths in the
+- **creates:** the deferred thin review/handoff/wakeup/CI/cleanup caller paths in the
   accepted inventory. **edits:** other owned paths. **deletes:** none.
 - **dependencies:** CT-T, CT-C and CT-R, hard: merged initial tree and final
   reader/runner/reviewer interfaces, export lists and reviewed seed refs.
@@ -337,6 +358,9 @@ participant projects or operates the parent rehearsal.
   supplies its Dockerfile; do not introduce a generic application Dockerfile.
   Pin reviewed full seed refs, explicitly map named secrets at every hop and
   preserve 100-43's advisory/ready behavior without a setting or required check.
+  Render `symphony-client-review-cleanup.yml` with local native `workflow_run`
+  triggers matching actual generated review workflow names, calling CT-R's
+  cleanup entry with App key only. Exercise cancellation/recovery boundary tests.
   Handoff has App/Linear only; CI/ingress have no review secrets. Register the
   observed render job name/workflow/App in seed required checks. Close the
   PROVENANCE pending list and keep source/version metadata.
@@ -345,7 +369,8 @@ participant projects or operates the parent rehearsal.
   no remaining deferred caller, placeholder ref or raw workflow body. Exact
   secret mappings and provider matrix match CT-R's tested interface; no new
   questions. Existing application/instruction/license content is preserved.
-  Template is now complete for CT-U publication and CT-O onboarding authoring.
+  Template is now complete for CT-U publication and CT-O onboarding authoring;
+  the accepted caller/export readback also enables concurrent CT-V publication.
 - **Validation, in order:** local pinned render unittest matrix, existing reader
   validation for all three modes, YAML/secret/pin boundary inspection, locked
   formatting/diff checks. Docker fallback skipped on pass or CT-Q's pinned
@@ -376,6 +401,9 @@ participant projects or operates the parent rehearsal.
   1000lines and grant the owner admin; direct for private/secret-dependent CI
   uses the owner's App manifest/installation. Inspect first on repeated invocation
   so no duplicate repo/App/project/secrets/seed set; preserve unrelated settings.
+  Final public usage selects template `--vcs-ref=alpha` and workflow `@alpha`;
+  record actual resolved commits as described in the plan. Author/dry-run from
+  CT-L's local staging source until both publication branches exist.
   Supply seven known answers; set chosen mode/commands outside questions;
   discover IDs, Actions enablement/permissions and actual required checks.
   Provision named secrets separately and show names only. Record accepted public
@@ -394,8 +422,8 @@ participant projects or operates the parent rehearsal.
   local render command; Docker fallback skipped on local pass, otherwise same
   pinned Python/Node environment as CT-T for unavailable tools. Mandatory seed
   CI including Changed Markdown on this skill/docs PR's head.
-- **delivery_notes / exclusions:** CT-U runs concurrently but owns a different
-  repository and no shared credential operations. Later relocation of this
+- **delivery_notes / exclusions:** CT-U/V run concurrently but own different
+  repositories and no shared credential operations. Later relocation of this
   skill is unnecessary. No unattended project-factory installation or new helper
   without a demonstrated existing-tool API gap and amended ownership.
 - **split_criteria:** `codex-skill-boundary`, `operational-prerequisite`.

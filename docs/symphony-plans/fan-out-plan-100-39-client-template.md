@@ -21,7 +21,7 @@ except the reused 100-43. Payload keys below are placeholders, never Linear IDs.
 
 The result is a small client for Jeremy's shared host: build in the example,
 publish the template and workflows separately, then adopt the published pair
-back into the example. The thirteen new tasks and one reused task require **nine
+back into the example. The thirteen new tasks and one reused task require **eight
 minimum dependency rounds**, counting nodes on the longest path, not elapsed
 time or worker availability. Every task begins and opens its PR against `main`
 in its explicitly named target repository. No predecessor branch is a PR base.
@@ -39,7 +39,7 @@ in its explicitly named target repository. No predecessor branch is a PR base.
 | CT-O   | One onboarding entry skill and fork/direct resources       | +240 / -0                                                     | hard       |
 | CT-U   | Whole reviewed template root into public repository        | +650 / -0, primarily copy                                     | easy       |
 | CT-V   | Reviewed workflow/helper export into public repository     | +2,000–5,000 / -0, primarily copy; ≤250 behavior/pin/CI lines | hard       |
-| CT-F   | Final workflow pins and release provenance                 | +60 / -30                                                     | easy       |
+| CT-F   | Final workflow alpha references and provenance             | +60 / -30                                                     | easy       |
 | CT-A   | Generated callers/config/guidance, proof, staging deletion | +250 / -650                                                   | hard       |
 | CT-Z   | Evidence and obsolete bodies after consumer checks         | +100 / -500–1,500                                             | easy       |
 
@@ -78,13 +78,19 @@ changes must be distinguished from that copy and reviewed before publication.
   answers independently and integrate late Docker/Codex additions afterward.
   Verified GitHub admin authority; this revises the existing unaccepted plan,
   with no new planning seed or live downstream ticket.
+- [Jeremy's parallel publication and alpha decision](https://github.com/1000lines/symphony-example/pull/34#pullrequestreview-5179855445),
+  September 11 at 14:32 UTC, supersedes U → V serialization and immutable-only
+  publication refs in this proposal and design D3. CT-U/V publish concurrently;
+  both repositories expose moving `alpha` branches, and CT-F joins them. Main
+  remains the task/PR base. Actual consumed SHAs remain validation provenance.
 - [100-43 / PR #31](https://github.com/1000lines/symphony-example/pull/31): refreshed
   September 11, now Done; PR merged at 14:02:53Z as
   `ca5c37344df600468ee69e73c04c54197a5b062c`. CT-R still reads its workpad and
   verifies required initial live proof; Done alone is not execution evidence.
 - Required baseline `3de96c9f739d732cc7efd498225b4444b547cc57` and selected main
   `99d401c` (initial); refreshed main `77b6b687e2213157ccfde75fef3867a4b886367c`
-  retains the same team/CI contract. README, config, native workflow/AGENTS guidance, runtime WORKFLOW,
+  and latest main `e14f398345bd9b7d30f00767bba1d00530ad73ce`
+  retain the same team/CI contract. README, config, native workflow/AGENTS guidance, runtime WORKFLOW,
   package/toolchain, CI, review contract, shared [schema](fan-out-plan-schema.md),
   [criteria](fan-out-criteria.md), proof/PR/replan guidance and DAG APIs read.
   PR #29's inheritance workaround and closed/unmerged #24 are context only.
@@ -110,12 +116,15 @@ plan neither claims it exists nor commissions another controller.
 The original combined CT-T offered ten new tasks/eight rounds, but mixed copying
 with template behavior and waited for all Docker/Codex work. A fully serial
 list/copy/questions/conversion plan would separate review but unnecessarily hold
-question authoring. The chosen split has thirteen new tasks/nine rounds: CT-Q
+question authoring. The chosen split has thirteen new tasks/eight rounds: CT-Q
 owns package metadata/question tests in parallel with CT-I and CT-M's file work;
 CT-M is only exact copying, then CT-T introduces the template. CT-C/R progress
 alongside those lanes, and CT-L adds their completed interfaces before release.
-This preserves all final acceptance criteria while accepting one extra minimum
-round and three more focused PRs. The large copy diff contains no hidden changes.
+Concurrent CT-U/V publication restores eight rounds while keeping three more
+focused PRs than the original combined plan. Serial publication would take nine
+rounds without a file/resource conflict to justify it; publishing workflows before
+CT-L would omit the integrated caller/export readback. The large copy diff
+contains no hidden changes.
 
 The explicit preparation path is I → M → T. Q → T joins the independently
 implemented seven-answer package only for the actual conversion/render tests.
@@ -123,15 +132,21 @@ Neither Q, M nor T waits on C/R; their later additions join at L. I/Q/M/C/R own
 disjoint writable paths and isolated fixtures when unordered: copied source is
 pinned and read-only even while C/R edit their own workflow sources. T takes M's
 tree and Q's README/provenance only after both merges. L then takes T's tree/tests
-and consumes C/R without editing their implementations. O/U are disjoint after L.
+and consumes C/R without editing their implementations. O/U/V are disjoint after L:
+O writes the seed skill, U writes only the template repository and its alpha ref,
+V writes only the workflow repository and its alpha ref. Shared source is read-only;
+no task changes org-wide App grants or uses another lane's live proof PR.
 No live shared secret or proof resource is used by Q/M/T/L.
 
 Every drawn edge is hard: its downstream outcome needs a reviewed artifact on the
 selected base (or an accepted published ref), or relinquished write ownership.
-U → V also preserves the near-end workflow-publication sequence; O → A supplies
-the actual skill for its walkthrough. Transitive edges are omitted. The longest
-path is I → M → T → L → U → V → F → A → Z, nine nodes. No no-op joins.
-Publication, final pins, real adoption and consumer-aware retirement stay intact.
+L → V supplies the final integrated caller/export contract and completed C/R
+work; U and V do not depend on each other. U → F and V → F are direct fan-in:
+F edits the accepted template repository using the accepted workflow alpha ref.
+O → A supplies the actual skill for its walkthrough. Transitive edges are omitted.
+The longest path is I → M → T → L → U (or V) → F → A → Z, eight nodes. No no-op
+joins. Both publications remain near project end, followed by final alpha
+integration, real adoption and consumer-aware retirement.
 
 ## DAG
 
@@ -147,11 +162,11 @@ flowchart LR
   T["Round 3: CT-T · Convert copied files into initial template in its own PR"]
   L["Round 4: CT-L · Add late CI and Codex parts before release"]
   O["Round 5: CT-O · Deliver fork direct and repeat onboarding skill"]
-  U["Round 5: CT-U · Publish complete template repository"]
-  V["Round 6: CT-V · Publish reusable workflows and required helpers"]
-  F["Round 7: CT-F · Release template pinned to published workflows"]
-  A["Round 8: CT-A · Adopt published pair and prove live consumer paths"]
-  Z["Round 9: CT-Z · Retire migrated bodies and finalize evidence"]
+  U["Round 5: CT-U · Publish template repo and alpha branch"]
+  V["Round 5: CT-V · Publish workflow repo helpers and alpha branch"]
+  F["Round 6: CT-F · Join both repos using workflow alpha in template alpha"]
+  A["Round 7: CT-A · Adopt published pair and prove live consumer paths"]
+  Z["Round 8: CT-Z · Retire migrated bodies and finalize evidence"]
   I --> M
   I --> C
   I --> R
@@ -163,7 +178,8 @@ flowchart LR
   R --> L
   L --> O
   L --> U
-  U --> V
+  L --> V
+  U --> F
   V --> F
   O --> A
   F --> A
@@ -369,7 +385,7 @@ nodes:
       labels: [pink, symphony]
   - id: F
     payload_key: CT-F
-    title: Release template pinned to published workflows
+    title: Connect template alpha to published workflow alpha
     type: task
     difficulty: easy
     labels: [pink]
@@ -435,8 +451,10 @@ edges:
     to: O
   - from: L
     to: U
-  - from: U
+  - from: L
     to: V
+  - from: U
+    to: F
   - from: V
     to: F
   - from: O
@@ -451,7 +469,7 @@ edges:
 
 Resolve each key to its actual issue UUID after creation/reuse; then submit exactly
 `{issueId: blockerUUID, relatedIssueId: blockedUUID, type: "blocks"}`. This table
-and the graph/manifest have the same sixteen direct edges. There are no live UUIDs
+and the graph/manifest have the same seventeen direct edges. There are no live UUIDs
 for future tasks yet; do not submit a placeholder or reverse an endpoint.
 
 | Source    | issueId (blocker key) | relatedIssueId (blocked key) | type     |
@@ -467,7 +485,8 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
 | R → L     | `CT-R`                | `CT-L`                       | `blocks` |
 | L → O     | `CT-L`                | `CT-O`                       | `blocks` |
 | L → U     | `CT-L`                | `CT-U`                       | `blocks` |
-| U → V     | `CT-U`                | `CT-V`                       | `blocks` |
+| L → V     | `CT-L`                | `CT-V`                       | `blocks` |
+| U → F     | `CT-U`                | `CT-F`                       | `blocks` |
 | V → F     | `CT-V`                | `CT-F`                       | `blocks` |
 | O → A     | `CT-O`                | `CT-A`                       | `blocks` |
 | F → A     | `CT-F`                | `CT-A`                       | `blocks` |
@@ -480,13 +499,19 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
    CT-T's template conversion. CT-Q owns the independent seven-answer package;
    CT-L integrates late CT-C/R additions before publication. CT-C/R update only
    their own export lists; CT-U/V compare against the final accepted lists.
-2. **Keep native review and one small verdict.** CT-R wires Codex/Claude into the
-   existing workflow, preserving author checks, freshness, feedback and 100-43.
+2. **Keep native review and the existing ledger contract.** CT-R maps both
+   providers into `cadence-review/v1` and the current feedback ledger, preserving
+   requirement coverage, mandatory findings/human feedback, author checks,
+   freshness and 100-43. D6's small provider result is an adapter input, not a
+   replacement acceptance schema.
    OpenAI wins when present; Anthropic alone selects Claude; neither fails early.
    API failures do not switch providers. No dormant controller is revived.
 3. **Explicit least-secret boundaries.** CT-R/L/V/F map App, Linear and optional
    provider secrets at every review call; handoff has App/Linear; wakeups have
-   Linear only; CI and ingress have none. IDs/slugs are named config inputs.
+   Linear only; advisory cleanup has App only; CI and ingress have none.
+   IDs/slugs are named config inputs. CT-R makes cleanup reusable; CT-I/L keep
+   its native `workflow_run` listener local to each client and match actual
+   caller workflow names. CT-C owns exposing the wakeup as `workflow_call`.
 4. **Seven answers and many projects per repo.** CT-Q/T/L/O keep only repo slug,
    default branch, Linear team, two App slugs, build and test commands. Optional
    `ci.mode` belongs to existing config, not an eighth question; project metadata
@@ -495,10 +520,13 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
    reader/wakeup compatibility; CT-A proves real mode behavior and failure/recovery.
    Remote records missing tooling and publishes for mandatory CI. No new host
    orchestration, validator or compulsory host toolchain installation.
-6. **Two public repositories and final proof.** CT-U publishes template content;
-   CT-V publishes workflows/helpers; CT-F releases final pins; CT-A proves that
-   exact pair. CT-Z retires old bodies only after a consumer census and replacement
-   runs. Preserve historical refs, manual paths and needed forwarders.
+6. **Parallel publications on moving alpha branches.** CT-U/V publish separate
+   repositories concurrently after CT-L. CT-F waits for both and updates template
+   `alpha` to call workflow `@alpha`; CT-A proves the actual consumed pair. This
+   implements Jeremy's 14:32 review and supersedes immutable-only D3 refs and the
+   earlier U → V gate. Keep third-party Actions SHA-pinned. CT-Z retires old bodies
+   only after a consumer census and replacement runs, updating standing guidance
+   as paths move. Preserve historical commits, manual paths and needed forwarders.
 7. **Onboarding is a small skill.** CT-O owns entry/fork/direct/repeat procedures;
    CT-A owns one owner-controlled walkthrough. Jeremy/parent owns installation,
    invocation, participant credentials and wider rehearsal. Public forks use the
@@ -517,9 +545,36 @@ for future tasks yet; do not submit a placeholder or reverse an endpoint.
     existing 100-40 fans out; existing 100-43 supplies shared behavior. No duplicate
     advisory implementation, planning seed, validator or no-op join ticket.
 
+## Alpha publication and evidence contract
+
+`alpha` is the moving publication branch in both new repositories, not a tag or
+an alternative task/PR base. CT-U/V create or advance only their destination's
+`refs/heads/alpha` to human-accepted code from its main; CT-F later owns advances
+of template alpha. Use normal reviewed ref updates and preserve existing work.
+A same-name tag would shadow a branch in GitHub workflow calls; verify no `alpha`
+tag collision and report a real collision rather than silently deleting it.
+
+Generated final callers use literal
+`1000lines/symphony-client-workflows/.github/workflows/<file>@alpha`.
+Onboarding/rendering uses `copier copy --vcs-ref=alpha <template-git-url> <target>`;
+this is an operator argument, not an eighth answer or a `copier.yml` setting.
+Preserve ordinary `_src_path`/`_commit`; separately record the actual template
+commit, workflow source commits and trusted helper checkout commits used by a
+run. Same-repository nested calls may use native same-commit references. Helper
+checkouts must use trusted workflow-source code, never the target PR's SHA.
+
+The accepted tradeoff is that alpha can change without regenerating a consumer.
+Evidence applies to the recorded commits/run, not every later branch tip. CT-U/V/F
+record ref resolution at publication; CT-A records actual consumed commits during
+live proof, including any movement. If movement changes the tested combination,
+rerun the affected proof; do not claim the previous run validates the new tips.
+No tag release, automatic ref updater, new gate or immutable-consumer policy is
+commissioned. Existing human review and mandatory current-head CI still apply.
+
 ## Ticket source and execution contract
 
-Copy this section, the item's complete section and its incoming relation rows
+Copy this section, the Alpha publication and evidence contract above, the item's
+complete section and its incoming relation rows
 into every generated description. The per-task files are part of this plan:
 
 - [CT-I/Q/M/C/R/T/L/O: implementation items](client-template/implementation-items.md).
