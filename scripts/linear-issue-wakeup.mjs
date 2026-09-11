@@ -19,6 +19,7 @@ const ISSUE_QUERY = `query LinearWakeupIssue($id: String!) {
     id
     identifier
     state { id name type }
+    labels(first: 100) { nodes { id } pageInfo { hasNextPage } }
     team { states(first: 100) { nodes { id name type } } }
   }
 }`;

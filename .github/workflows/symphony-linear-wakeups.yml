@@ -178,24 +178,52 @@ jobs:
           script: |
             const { linearRequest, readLinearIssue } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/linear-issue-wakeup.mjs`);
             const token = process.env.LINEAR_API_TOKEN;
-            const issue = await readLinearIssue({ issueIdentifier: process.env.ISSUE, token });
-            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: Number(process.env.PR_NUMBER) });
-            if (issue.state.name !== process.env.PREVIOUS_STATE || pr.state !== 'open' || pr.head.sha !== process.env.HEAD_SHA) {
-              return core.info('Ticket or PR changed; leaving it alone.');
+            const options = { issueIdentifier: process.env.ISSUE, token };
+            const wantsWake = process.env.TARGET_STATE === 'Unhappy';
+            const hasWakeLabel = (issue, wakeId) => {
+              if (!issue.labels || issue.labels.pageInfo.hasNextPage) throw new Error('Issue label lookup is incomplete.');
+              return issue.labels.nodes.some(label => label.id === wakeId);
+            };
+            let retryError;
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const issue = await readLinearIssue(options);
+              const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: Number(process.env.PR_NUMBER) });
+              if (issue.state.name !== process.env.PREVIOUS_STATE || pr.state !== 'open' || pr.head.sha !== process.env.HEAD_SHA) {
+                return core.info('Ticket or PR changed; leaving it alone.');
+              }
+              const target = issue.team.states.nodes.find(state => state.name === process.env.TARGET_STATE);
+              if (!target) throw new Error(`Missing Linear state: ${process.env.TARGET_STATE}`);
+              const labels = await linearRequest({ token, operation: 'find wake label',
+                query: 'query($id:String!){issue(id:$id){team{labels(first:100){nodes{id name} pageInfo{hasNextPage}}}}}',
+                variables: { id: issue.id } });
+              const available = labels.issue.team.labels;
+              if (available.pageInfo.hasNextPage) throw new Error('Wake label lookup is incomplete.');
+              const wake = available.nodes.find(label => label.name === 'wake:15m');
+              if (!wake) throw new Error('Missing Linear label: wake:15m');
+              const hasWake = hasWakeLabel(issue, wake.id);
+              // Retry only when a re-read confirms the rejected delta is now unnecessary.
+              if (retryError && hasWake !== wantsWake) throw retryError;
+              const input = { stateId: target.id };
+              if (hasWake !== wantsWake) {
+                input[wantsWake ? 'addedLabelIds' : 'removedLabelIds'] = [wake.id];
+              }
+              let data;
+              try {
+                data = await linearRequest({ token, operation: 'set CI ticket state',
+                  query: 'mutation($id:String!,$input:IssueUpdateInput!){issueUpdate(id:$id,input:$input){success issue{state{id}}}}',
+                  variables: { id: issue.id, input } });
+              } catch (error) {
+                const labelError = wantsWake ? 'Label already on issue' : 'Label not on issue';
+                if (attempt === 0 && hasWake !== wantsWake && error.message.includes(`"message":"${labelError}"`)) {
+                  retryError = error;
+                  continue;
+                }
+                throw error;
+              }
+              if (!data.issueUpdate?.success || data.issueUpdate.issue?.state.id !== target.id) throw new Error('Ticket state update failed.');
+              const updated = await readLinearIssue(options);
+              if (updated.state.id !== target.id || hasWakeLabel(updated, wake.id) !== wantsWake) {
+                throw new Error('Ticket state/wake label readback did not match; leaving the newer values alone.');
+              }
+              return core.info(`${issue.identifier}: ${issue.state.name} -> ${updated.state.name}. ${process.env.REASON}`);
             }
-            const target = issue.team.states.nodes.find(state => state.name === process.env.TARGET_STATE);
-            if (!target) throw new Error(`Missing Linear state: ${process.env.TARGET_STATE}`);
-            const labels = await linearRequest({ token, operation: 'find wake label',
-              query: 'query($id:String!){issue(id:$id){team{labels(first:100){nodes{id name} pageInfo{hasNextPage}}}}}',
-              variables: { id: issue.id } });
-            const available = labels.issue.team.labels;
-            if (available.pageInfo.hasNextPage) throw new Error('Wake label lookup is incomplete.');
-            const wake = available.nodes.find(label => label.name === 'wake:15m');
-            if (!wake) throw new Error('Missing Linear label: wake:15m');
-            const input = { stateId: target.id,
-              [target.name === 'Unhappy' ? 'addedLabelIds' : 'removedLabelIds']: [wake.id] };
-            const data = await linearRequest({ token, operation: 'set CI ticket state',
-              query: 'mutation($id:String!,$input:IssueUpdateInput!){issueUpdate(id:$id,input:$input){success issue{state{id}}}}',
-              variables: { id: issue.id, input } });
-            if (!data.issueUpdate?.success || data.issueUpdate.issue?.state.id !== target.id) throw new Error('Ticket state update failed.');
-            core.info(`${issue.identifier}: ${issue.state.name} -> ${target.name}. ${process.env.REASON}`);
