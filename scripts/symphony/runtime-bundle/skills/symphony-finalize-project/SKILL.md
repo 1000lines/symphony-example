@@ -13,7 +13,7 @@ project finalization mechanics, not for generic fan-out pattern design.
 
 - Linear issue identifier, title, current state, labels, project metadata, and
   the existing `## Codex Workpad`.
-- `WORKFLOW.md`.
+- `$SYMPHONY_TOOLING_ROOT/scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`.
 - Project metadata: `project-code`, `project-color`, and selected
   `base-branch`.
 - Fan-out plan or project ticket list for the project being finalized.

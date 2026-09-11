@@ -1,10 +1,9 @@
 # Symphony Project Workflow
 
 This document expands the state and handoff contract in
-[WORKFLOW.md](../../../WORKFLOW.md). Hosted Symphony loads the
-[runtime-bundle workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md).
-Their prose shares the same contract; configuration and hooks are
-environment-specific.
+[authoritative workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md).
+Hosted installation and local invocation use this same source; operators may
+supply environment-specific overrides as described in [tooling setup](./tooling-setup.md#repository-workflow-and-guardrails).
 
 ## Required Project Metadata
 

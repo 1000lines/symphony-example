@@ -6,7 +6,7 @@ handoffs, validation evidence, and finalization.
 
 ## Current Runtime Docs
 
-- [`../../../WORKFLOW.md`](../../../WORKFLOW.md) - local Symphony execution
+- [Runtime workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md) - authoritative Symphony execution
   contract for issue states, branch handling, PR handoff, and human review.
 - [`project-workflow.md`](./project-workflow.md) - project factory workflow,
   state transitions, fallback states, branch handling, and handoffs.

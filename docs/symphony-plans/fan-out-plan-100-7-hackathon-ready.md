@@ -31,9 +31,11 @@ repository ID `1076114173`. No `1000lines/symphony` code change is planned.
   The planning baseline is `main@dc71026c35b7fc97f58e54cd03ce7fe513621e1f`,
   including the later local → Docker if needed → mandatory CI clarification.
 - Read planning README/schema/criteria, shared DAG parser and renderer,
-  MIGRATION.md, both WORKFLOW.md profiles, project-workflow.md and proof-of-work.md;
+  MIGRATION.md, both then-existing WORKFLOW.md profiles, project-workflow.md and proof-of-work.md;
   inspected current Cadence event/execution/handoff, CI/wakeup workflows and
-  credential integration points. These identify current behavior, not rollout proof.
+  credential integration points. These record behavior at that baseline, not rollout proof. Current workflow
+  edits use `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`; the root copy
+  was removed in 100-27.
 - Read runtime daemon/schema at
   `1000lines/symphony@e4d3f6a05b0a00201c9d04d3ceca02b206e22de5`, the selected Rust
   CI at `99528c2e4da241ec2c9961d0a155357611f16a76`, pinned Codex Action source,

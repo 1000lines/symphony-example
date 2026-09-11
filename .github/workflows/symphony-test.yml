@@ -54,3 +54,5 @@ jobs:
         run: npm install
       - name: Test Symphony tooling
         run: npm test
+      - name: Test authoritative workflow and host rendering
+        run: node --test scripts/symphony/runtime-bundle/runtime-bundle.integration.test.mjs scripts/symphony/host/reconcile.test.mjs

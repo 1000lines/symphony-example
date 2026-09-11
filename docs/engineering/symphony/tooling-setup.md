@@ -38,7 +38,9 @@ workspace's existing `symphony-dag:lint` command and `.prettierrc`.
 Host installer and infrastructure helper tests have a separate command,
 `npm run symphony-host:test`; runtime bundle cases are selected with
 `node --test scripts/symphony/runtime-bundle/*.test.mjs scripts/symphony/runtime-bundle/review-axes/*.test.mjs`.
-Both globs are needed to include the nested standing-docs cases. They require the host
+Both globs are needed to include the nested standing-docs cases. CI also runs
+the workflow contract and host-rendering suites explicitly; the local invocation
+and source-selection smoke tests run through `npm test`. Other host suites require the host
 tools described in [host operations](../../operations/symphony-host.md).
 The label-repair host test and several review/wakeup tests import `js-yaml`,
 which is not declared directly in the tooling manifests. A transitive install
@@ -57,15 +59,39 @@ not automatically run on push.
 
 ## Repository workflow and guardrails
 
-Use `WORKFLOW.md` as a template for an adopter-owned workflow profile passed to
-your chosen Symphony runtime. Its YAML defines `tracker.team_key`, tracker
-state lists, `workspace.root`, clone URL/base, hooks, concurrency, model command,
-and server settings. Supply your repository URL, workspace path, team, and
-credentials before use. The clone example selects `main`; the setup hook no
-longer assumes a product package manager. Add any setup command you need to
-your profile's `hooks.after_create`. The external runtime must support the
-profile format; it is a separate dependency. The hosted installer uses its own
-bundle profile described in [hosted runtime tooling](./hosted-runtime-tooling.md).
+Use the [authoritative workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
+for both hosted installation and local invocation. Its YAML defines tracker
+team/state mappings, workspace, hooks, concurrency, model command and server
+settings. The installed repository skill selects the task repository, its
+configured base (otherwise its GitHub default branch) and setup commands.
+Bundled hooks are no-ops; no repository clone or package manager is hard-coded.
+
+For local execution, first supply a compatible external Symphony runtime and
+prepare bot credentials and a personal Codex home containing the runtime bundle's
+instructions and skills. The credential recipe below does not install that
+bundle. See [hosted runtime tooling](./hosted-runtime-tooling.md) for installation
+requirements; keep personal runtime files outside the target checkout. Configure
+the tracker team, workspace and server in an operator-owned override if the
+shipped settings do not match your environment.
+
+From this tooling repository's root, with `SYMPHONY_RUNTIME_BIN` set to your
+runtime executable, use this command. `SYMPHONY_WORKFLOW_SOURCE` is optional and
+selects an operator-owned file; it does not merge with the bundled workflow.
+
+<!-- local-workflow-invocation -->
+
+```sh
+export SYMPHONY_TOOLING_ROOT="${SYMPHONY_TOOLING_ROOT:-$PWD}"
+"${SYMPHONY_RUNTIME_BIN:?Set SYMPHONY_RUNTIME_BIN to the Symphony executable}" \
+  --i-understand-that-this-will-be-running-without-the-usual-guardrails \
+  "${SYMPHONY_WORKFLOW_SOURCE:-$SYMPHONY_TOOLING_ROOT/scripts/symphony/runtime-bundle/workflow/WORKFLOW.md}"
+```
+
+Use an absolute tooling root when invoking from elsewhere. Replace old commands
+that pass the deleted root `WORKFLOW.md` or rely on implicit path discovery.
+Existing root-derived overrides need the [workflow migration](../../../scripts/symphony/runtime-bundle/README.md#workflow-source-migration).
+The local smoke test uses a stub executable to verify argument/path selection;
+it does not establish compatibility or live worker behavior for your runtime.
 
 The optional `npm run agent:guardrails` command retains a narrow agent-edit
 sandbox in `scripts/agent-guardrails.ts:allowedScopeRules`. It is not the root CI

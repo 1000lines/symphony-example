@@ -84,16 +84,10 @@ test("renders service units with runtime paths and worker settings", async () =>
     assert.match(workflow, /\n  host: "::"\n/);
     assert.match(workflow, /codex-with-runtime-bundle\.sh --enable apps/);
     assert.match(workflow, /Only after the Codex workpad ID is pinned/);
-    assert.match(
-      workflow,
-      /  before_run: \|\n    node scripts\/symphony\/route-misc-project-on-ticket-start\.mjs/
-    );
-    assert.match(
-      workflow,
-      /  after_run: \|\n    node scripts\/symphony\/ensure-pr-labels\.mjs --issue "\$\(basename "\$PWD"\)" --repo example-org\/example-repo\n/
-    );
-    assert.match(workflow, /  after_create: \|/);
-    assert.match(workflow, /  before_remove: \|\n    true/);
+    for (const hook of ["after_create", "before_run", "after_run", "before_remove"]) {
+      assert.ok(workflow.includes(`  ${hook}: |\n    true\n`));
+    }
+    assert.ok(service.includes(` ${env.SYMPHONY_CONFIG_DIR}/WORKFLOW.md\n`));
     assert.doesNotMatch(workflow, /Worker slots:/);
 
     const reconcile = await readFile(

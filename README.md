@@ -103,22 +103,26 @@ revision. No runtime source, binary or known compatible runtime revision is
 bundled. Select that dependency and check its workflow schema, maturity behavior
 and service command-line interface before planning to run workers.
 
-There are two workflow profiles with different consumers:
+The [runtime-bundle workflow](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
+is the authoritative source for hosted installation and local invocation. The
+root copy has been removed. Configure team/state lists, workspace, worker and
+server settings for your environment. The bundled hooks are no-ops: the installed
+repository skill resolves each task's repository, credentials, base branch and
+setup after the worker pins its Linear workpad.
 
-- [WORKFLOW.md](WORKFLOW.md) is the repository profile template. Make an
-  adopter-owned Markdown profile with YAML frontmatter and supply it to your
-  selected runtime. Configure the clone URL and branch, `tracker.team_key`,
-  state lists, `workspace.root`, setup hooks, worker command and server settings.
-  The template selects `main` and has no product installation command; put your
-  setup in your profile's `hooks.after_create`.
-- The [hosted profile](scripts/symphony/runtime-bundle/workflow/WORKFLOW.md)
-  is the host installer's default. Select an operator-owned profile through
-  `SYMPHONY_WORKFLOW_SOURCE`. Its frontmatter must start with `---` on line 1.
-  Within it, the renderer needs exactly one `max_concurrent_agents` line with
-  exactly two leading spaces and a digits-only value (no trailing comment), and
-  one `command: codex` line with exactly two leading spaces, to substitute worker
-  slots and the bundle wrapper. Its npm setup and ticket-routing hooks are
-  examples to assess in your profile, not requirements on your product.
+For local invocation, pass this source explicitly to your compatible runtime;
+do not rely on a runtime's implicit `./WORKFLOW.md` default. See the
+[local command and prerequisites](docs/engineering/symphony/tooling-setup.md#repository-workflow-and-guardrails).
+An operator-owned profile may be selected with `SYMPHONY_WORKFLOW_SOURCE` for
+both the documented local command and host installation. Overrides are maintained
+by the operator and do not receive upstream workflow changes automatically.
+
+The host installer renders the staged bundle source (or its source checkout
+before staging) to `/etc/symphony/WORKFLOW.md`. It substitutes worker slots and
+the Codex freshness wrapper. Overrides must start with `---` on line 1 and have
+exactly one numeric `max_concurrent_agents` line and one `command: codex` line,
+each with two leading spaces. See the [migration guide](scripts/symphony/runtime-bundle/README.md#workflow-source-migration)
+for old root-path invocations and existing hosts.
 
 For the host path, supply the tooling and runtime repositories as GitHub
 `owner/repository` names and select full immutable commit IDs. The existing
@@ -164,17 +168,12 @@ they preserve terminal issues and fail if neither safe state exists. Configure
 those states in the Linear team. A runtime profile's state list does not remap
 the helpers, and wakeups do not bypass issue dependencies.
 
-The hosted `hooks.after_run` invokes optional PR label repair with an explicit
-`--issue TEAM-123` and `--repo owner/repository`. Configure the repository in
-your operator-owned workflow selected by `SYMPHONY_WORKFLOW_SOURCE`; the hook
-uses the issue workspace's basename as its issue identifier. Its process needs
-Linear read access through `LINEAR_API_TOKEN` (fallback `LINEAR_API_KEY`) and
-GitHub PR/label read/write access through `GH_TOKEN` (fallback `GITHUB_TOKEN`).
-All are secret token strings with no default. The hook adds only missing
-`symphony`/project-color labels after checking a unique open PR and label
-existence, then reads them back. Failures are logged and ignored by the runtime's
-best-effort hook contract; publishing still needs explicit label verification.
-See the [bundle guide](scripts/symphony/runtime-bundle/README.md#pr-label-repair).
+The worker explicitly verifies PR labels with the shared helper and the actual
+target's credentials. Bundled hooks are no-ops. Operators may configure optional
+`hooks.after_run` label repair in their own workflow, with explicit
+`--issue TEAM-123` and `--repo owner/repository` arguments and the matching
+credentials. Hook failures are logged and ignored; publishing still requires
+explicit label verification. See the [bundle guide](scripts/symphony/runtime-bundle/README.md#pr-label-repair).
 
 Optional [non-review wakeups](docs/engineering/symphony/tooling-setup.md#pr-labels-and-non-review-wakeups)
 consume failed required checks, conflicts and dispatched-workflow completions.
@@ -346,113 +345,113 @@ README alone is not a complete value-supply guide.
 
 <!-- BEGIN GENERATED -->
 
-| Name | Setting mechanism |
-| --- | --- |
-| Agent guardrails | Configuration file values |
-| ARCHIVED_REVIEW_REFERENCE | Manual setup steps |
-| AWS_ACCESS_KEY_ID | Repository secrets |
-| AWS_ACCOUNT_ID | Repository variables |
-| AWS_PROFILE_ARGUMENT | Manual setup steps |
-| AWS_PROFILE_HELP | Manual setup steps |
-| AWS_PROFILE_LOGIN | Manual setup steps |
-| AWS_PROFILE_QUOTED | Manual setup steps |
-| AWS_SECRET_ACCESS_KEY | Repository secrets |
-| BOOTSTRAP_SOURCE_SYMBOL | Manual setup steps |
-| CADENCE_AI_REVIEW_ANTHROPIC_API_KEY | Repository secrets |
-| CADENCE_BOT_EMAIL | Manual setup steps |
-| CADENCE_BOT_GITHUB_TOKEN | Repository secrets |
-| CADENCE_GIT_EMAIL | Repository variables |
-| CADENCE_LINEAR_API_TOKEN | Repository secrets |
-| CADENCE_REVIEWER | Repository variables |
-| DAG project settings | Manual setup steps |
-| DAG_PLANNING_KEY | Manual setup steps |
-| GITHUB_TOKEN_FIXTURE | Manual setup steps |
-| Google OIDC client secret | Manual setup steps |
-| GOOGLE_DOC_ID_EXAMPLE | Manual setup steps |
-| GOOGLE_PROJECT_ID_EXAMPLE | Manual setup steps |
-| GOOGLE_SA_KEY | Repository secrets |
-| Host hooks | Configuration file values |
-| Host layout | Configuration file values |
-| Host management settings | Manual setup steps |
-| Host toolchain | Configuration file values |
-| HUMAN_DISPLAY_NAME_EXAMPLE | Manual setup steps |
-| HUMAN_LOGIN_CASE_FIXTURE | Manual setup steps |
-| HUMAN_LOGIN_EXAMPLE | Manual setup steps |
-| HUMAN_REVIEWER_EXAMPLE | Manual setup steps |
-| LINEAR_AWS_SECRET_ID | Manual setup steps |
-| LINEAR_OTHER_TEAM_EXAMPLE | Manual setup steps |
-| LINEAR_STATE_TEAM | Manual setup steps |
-| LINEAR_TEAM_KEY | Manual setup steps |
-| LINEAR_TEAM_LITERAL | Manual setup steps |
-| LINEAR_TEAM_MARKDOWN | Manual setup steps |
-| LINEAR_TEAM_METADATA | Manual setup steps |
-| LINEAR_TEAM_NEGATIVE_FIXTURE | Manual setup steps |
-| LINEAR_TEAM_PROSE | Manual setup steps |
-| LINEAR_TEAM_SLUG_EXAMPLE | Manual setup steps |
-| LINEAR_TEAM_WORKFLOW | Manual setup steps |
-| LINEAR_TOKEN_FIXTURE | Manual setup steps |
-| LINEAR_WAKEUP_BOT_NAME | Manual setup steps |
-| LINEAR_WORKSPACE | Manual setup steps |
-| Local environment loader | Manual setup steps |
-| LOCAL_GITHUB_TOKEN_FIXTURE | Manual setup steps |
-| Misc project routing | Manual setup steps |
-| Non-review wakeups | Manual setup steps |
-| ORGANIZATION_DISPLAY_NAME | Manual setup steps |
-| PR label repair | Manual setup steps |
-| PROJECT_COLOR_NAME | Manual setup steps |
-| PROJECT_COLOR_URL | Manual setup steps |
-| PROJECT_DAG_EXAMPLE | Manual setup steps |
-| PROJECT_EXPORT_NAME | Manual setup steps |
-| PROJECT_FACTORY_EXAMPLE | Manual setup steps |
-| PROJECT_HOST_BRANCH | Manual setup steps |
-| PROJECT_HUMAN_LEAD | Manual setup steps |
-| PROJECT_MOVE_NAME | Manual setup steps |
-| PROJECT_REVIEW_BRANCH | Manual setup steps |
-| PROJECT_REVIEWER_NAME | Manual setup steps |
-| PROJECT_TRIGGER_BRANCH | Manual setup steps |
-| PROJECT_WAKEUP_CODE | Manual setup steps |
-| PROJECT_WORKPAD_BRANCH | Manual setup steps |
-| Repository guidance and examples | Manual setup steps |
-| Repository workflow profile | Manual setup steps |
-| Review lifecycle mapping | Manual setup steps |
-| Review service settings | Manual setup steps |
-| Runtime bundle | Configuration file values |
-| Runtime credential secret reference | Manual setup steps |
-| Runtime source | Configuration file values |
-| Runtime workflow | Configuration file values |
-| RUNTIME_PLAN_PROVENANCE_EXAMPLE | Manual setup steps |
-| RUNTIME_PLANNING_KEY | Manual setup steps |
-| SOURCE_ISSUE_LINK_EXAMPLE | Manual setup steps |
-| Symphony domain | Manual setup steps |
-| Symphony host image | Manual setup steps |
-| Symphony network inputs | Configuration file values |
-| Symphony Terraform backend | Configuration file values |
-| Symphony TLS certificate | Configuration file values |
-| symphony-build.yml | Configuration file values |
-| symphony-lint.yml | Configuration file values |
-| symphony-test.yml | Configuration file values |
-| SYMPHONY_BOOTSTRAP_REPO | Manual setup steps |
-| SYMPHONY_BOT_USER | Repository variables |
-| SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL | Manual setup steps |
-| SYMPHONY_EXPECTED_LINEAR_EMAIL | Manual setup steps |
-| SYMPHONY_EXPECTED_LINEAR_EMAIL_REGEX_FIXTURE | Manual setup steps |
-| SYMPHONY_GIT_AUTHOR_EMAIL | Manual setup steps |
-| SYMPHONY_GIT_AUTHOR_EMAIL_REGEX_FIXTURE | Manual setup steps |
-| SYMPHONY_GOOGLE_SA_SECRET_ID | Manual setup steps |
-| SYMPHONY_HUMAN_LEAD | Repository variables |
-| SYMPHONY_KEYS_SECRET_ID | Manual setup steps |
-| SYMPHONY_REPOSITORY_OWNER | Repository variables |
-| SYMPHONY_RUNTIME_REPO | Manual setup steps |
-| TEAM_FIXTURE_IDENTIFIER | Manual setup steps |
-| TEAM_FIXTURE_SYMBOL | Manual setup steps |
-| TEAM_ROUTING_COMPARISON | Manual setup steps |
-| TEAM_ROUTING_SYMBOL | Manual setup steps |
-| Terraform state bucket | Manual setup steps |
-| Terraform state object key | Manual setup steps |
-| Tooling dependency commands | Configuration file values |
-| TOOLING_PACKAGE_SCOPE | Manual setup steps |
-| TOOLING_ROOT_PACKAGE | Manual setup steps |
-| WORKPAD_REQUIREMENT_KEY | Manual setup steps |
+| Name                                         | Setting mechanism         |
+| -------------------------------------------- | ------------------------- |
+| Agent guardrails                             | Configuration file values |
+| ARCHIVED_REVIEW_REFERENCE                    | Manual setup steps        |
+| AWS_ACCESS_KEY_ID                            | Repository secrets        |
+| AWS_ACCOUNT_ID                               | Repository variables      |
+| AWS_PROFILE_ARGUMENT                         | Manual setup steps        |
+| AWS_PROFILE_HELP                             | Manual setup steps        |
+| AWS_PROFILE_LOGIN                            | Manual setup steps        |
+| AWS_PROFILE_QUOTED                           | Manual setup steps        |
+| AWS_SECRET_ACCESS_KEY                        | Repository secrets        |
+| BOOTSTRAP_SOURCE_SYMBOL                      | Manual setup steps        |
+| CADENCE_AI_REVIEW_ANTHROPIC_API_KEY          | Repository secrets        |
+| CADENCE_BOT_EMAIL                            | Manual setup steps        |
+| CADENCE_BOT_GITHUB_TOKEN                     | Repository secrets        |
+| CADENCE_GIT_EMAIL                            | Repository variables      |
+| CADENCE_LINEAR_API_TOKEN                     | Repository secrets        |
+| CADENCE_REVIEWER                             | Repository variables      |
+| DAG project settings                         | Manual setup steps        |
+| DAG_PLANNING_KEY                             | Manual setup steps        |
+| GITHUB_TOKEN_FIXTURE                         | Manual setup steps        |
+| Google OIDC client secret                    | Manual setup steps        |
+| GOOGLE_DOC_ID_EXAMPLE                        | Manual setup steps        |
+| GOOGLE_PROJECT_ID_EXAMPLE                    | Manual setup steps        |
+| GOOGLE_SA_KEY                                | Repository secrets        |
+| Host hooks                                   | Configuration file values |
+| Host layout                                  | Configuration file values |
+| Host management settings                     | Manual setup steps        |
+| Host toolchain                               | Configuration file values |
+| HUMAN_DISPLAY_NAME_EXAMPLE                   | Manual setup steps        |
+| HUMAN_LOGIN_CASE_FIXTURE                     | Manual setup steps        |
+| HUMAN_LOGIN_EXAMPLE                          | Manual setup steps        |
+| HUMAN_REVIEWER_EXAMPLE                       | Manual setup steps        |
+| LINEAR_AWS_SECRET_ID                         | Manual setup steps        |
+| LINEAR_OTHER_TEAM_EXAMPLE                    | Manual setup steps        |
+| LINEAR_STATE_TEAM                            | Manual setup steps        |
+| LINEAR_TEAM_KEY                              | Manual setup steps        |
+| LINEAR_TEAM_LITERAL                          | Manual setup steps        |
+| LINEAR_TEAM_MARKDOWN                         | Manual setup steps        |
+| LINEAR_TEAM_METADATA                         | Manual setup steps        |
+| LINEAR_TEAM_NEGATIVE_FIXTURE                 | Manual setup steps        |
+| LINEAR_TEAM_PROSE                            | Manual setup steps        |
+| LINEAR_TEAM_SLUG_EXAMPLE                     | Manual setup steps        |
+| LINEAR_TEAM_WORKFLOW                         | Manual setup steps        |
+| LINEAR_TOKEN_FIXTURE                         | Manual setup steps        |
+| LINEAR_WAKEUP_BOT_NAME                       | Manual setup steps        |
+| LINEAR_WORKSPACE                             | Manual setup steps        |
+| Local environment loader                     | Manual setup steps        |
+| LOCAL_GITHUB_TOKEN_FIXTURE                   | Manual setup steps        |
+| Misc project routing                         | Manual setup steps        |
+| Non-review wakeups                           | Manual setup steps        |
+| ORGANIZATION_DISPLAY_NAME                    | Manual setup steps        |
+| PR label repair                              | Manual setup steps        |
+| PROJECT_COLOR_NAME                           | Manual setup steps        |
+| PROJECT_COLOR_URL                            | Manual setup steps        |
+| PROJECT_DAG_EXAMPLE                          | Manual setup steps        |
+| PROJECT_EXPORT_NAME                          | Manual setup steps        |
+| PROJECT_FACTORY_EXAMPLE                      | Manual setup steps        |
+| PROJECT_HOST_BRANCH                          | Manual setup steps        |
+| PROJECT_HUMAN_LEAD                           | Manual setup steps        |
+| PROJECT_MOVE_NAME                            | Manual setup steps        |
+| PROJECT_REVIEW_BRANCH                        | Manual setup steps        |
+| PROJECT_REVIEWER_NAME                        | Manual setup steps        |
+| PROJECT_TRIGGER_BRANCH                       | Manual setup steps        |
+| PROJECT_WAKEUP_CODE                          | Manual setup steps        |
+| PROJECT_WORKPAD_BRANCH                       | Manual setup steps        |
+| Repository guidance and examples             | Manual setup steps        |
+| Repository workflow profile                  | Manual setup steps        |
+| Review lifecycle mapping                     | Manual setup steps        |
+| Review service settings                      | Manual setup steps        |
+| Runtime bundle                               | Configuration file values |
+| Runtime credential secret reference          | Manual setup steps        |
+| Runtime source                               | Configuration file values |
+| Runtime workflow                             | Configuration file values |
+| RUNTIME_PLAN_PROVENANCE_EXAMPLE              | Manual setup steps        |
+| RUNTIME_PLANNING_KEY                         | Manual setup steps        |
+| SOURCE_ISSUE_LINK_EXAMPLE                    | Manual setup steps        |
+| Symphony domain                              | Manual setup steps        |
+| Symphony host image                          | Manual setup steps        |
+| Symphony network inputs                      | Configuration file values |
+| Symphony Terraform backend                   | Configuration file values |
+| Symphony TLS certificate                     | Configuration file values |
+| symphony-build.yml                           | Configuration file values |
+| symphony-lint.yml                            | Configuration file values |
+| symphony-test.yml                            | Configuration file values |
+| SYMPHONY_BOOTSTRAP_REPO                      | Manual setup steps        |
+| SYMPHONY_BOT_USER                            | Repository variables      |
+| SYMPHONY_EXPECTED_GOOGLE_CLIENT_EMAIL        | Manual setup steps        |
+| SYMPHONY_EXPECTED_LINEAR_EMAIL               | Manual setup steps        |
+| SYMPHONY_EXPECTED_LINEAR_EMAIL_REGEX_FIXTURE | Manual setup steps        |
+| SYMPHONY_GIT_AUTHOR_EMAIL                    | Manual setup steps        |
+| SYMPHONY_GIT_AUTHOR_EMAIL_REGEX_FIXTURE      | Manual setup steps        |
+| SYMPHONY_GOOGLE_SA_SECRET_ID                 | Manual setup steps        |
+| SYMPHONY_HUMAN_LEAD                          | Repository variables      |
+| SYMPHONY_KEYS_SECRET_ID                      | Manual setup steps        |
+| SYMPHONY_REPOSITORY_OWNER                    | Repository variables      |
+| SYMPHONY_RUNTIME_REPO                        | Manual setup steps        |
+| TEAM_FIXTURE_IDENTIFIER                      | Manual setup steps        |
+| TEAM_FIXTURE_SYMBOL                          | Manual setup steps        |
+| TEAM_ROUTING_COMPARISON                      | Manual setup steps        |
+| TEAM_ROUTING_SYMBOL                          | Manual setup steps        |
+| Terraform state bucket                       | Manual setup steps        |
+| Terraform state object key                   | Manual setup steps        |
+| Tooling dependency commands                  | Configuration file values |
+| TOOLING_PACKAGE_SCOPE                        | Manual setup steps        |
+| TOOLING_ROOT_PACKAGE                         | Manual setup steps        |
+| WORKPAD_REQUIREMENT_KEY                      | Manual setup steps        |
 
 ### Repository variables
 
@@ -504,10 +503,9 @@ Optional. Default: unset (AMI update PRs have no assignee). Project metadata sti
 
 Set the SYMPHONY_REPOSITORY_OWNER Actions variable; export it for command-line helpers. Replace example-org in static repository examples. Format: a GitHub organization or user login.
 
-The hosted workflow's `hooks.after_run --repo` argument is a static `example-org/example-repo` placeholder, paired with its `hooks.after_create` clone URLs; supply the same owner there. Event workflows use their existing repository context. Keep event and host regression fixtures synthetic.
+The bundled workflow resolves the repository from the task/project and leaves hooks as no-ops. Operator-supplied label-repair hooks need the resolved target and its bound credentials. Event workflows use their existing repository context. Keep event and host regression fixtures synthetic.
 
 Required when using the described integration. The shipped `example-org` text is a placeholder, not a live account or repository.
-
 
 ### Repository secrets
 
@@ -554,7 +552,6 @@ workflow consumes this secret.
 `GOOGLE_SA_KEY` — google docs reader credential.
 
 Setting location: GitHub repository Settings → Secrets and variables → Actions → Secrets, under this exact name. Format: The complete Google service-account JSON document, including its private key; share required source documents with that service account. Required when enabling the workflow(s) that reference it; no default. Ordinary tooling build/test/lint jobs do not require this credential. Supply your own value; never put it in a checked-in configuration file.
-
 
 ### Configuration file values
 
@@ -696,19 +693,14 @@ render worker slots and the freshness wrapper. Optional `SYMPHONY_WORKER_SLOTS`
 wins over the tag. `SYMPHONY_SERVICE_PORT` defaults to 4000 and must agree with
 network and workflow settings.
 
-The supplied workflow is also the setting location for adopter clone and
-build/test/lint setup hooks. The bundled npm setup and routing helper are
-retained examples, not a requirement on the product language. Match workflow
-schema, maturity behavior and service command-line options to the external
-runtime selected by the operator. The renderer does not configure those policies.
-
-Optional hook defaults in the bundled profile: `after_create` checks credentials,
-clones `main` and runs `npm install`; `before_run` invokes Misc routing;
-`after_run` invokes PR label repair with explicit issue/repository arguments;
-`before_remove` runs `true`. Set shell commands in the operator-owned profile;
-label repair needs process tokens and project-color metadata as described in
-its separate entry. Its failures are logged and ignored under the runtime's
-best-effort contract. Misc routing retains a synthetic team predicate.
+The bundled `after_create`, `before_run`, `after_run` and `before_remove`
+hooks all run `true`. The installed repository skill resolves checkout,
+credentials and setup from the task/project. Configure optional environment
+hooks in the operator-owned profile and match its schema, maturity behavior and
+service options to the selected runtime. The renderer does not configure those
+policies. Optional label repair needs the resolved target's credentials and
+project-color metadata as described in its separate entry; failures remain
+best-effort. Misc routing is disabled unless the operator enables it.
 
 The hosted `codex.command` defaults to `gpt-6-astra` with
 `model_reasoning_effort=xhigh`; both are policy strings in that workflow.
@@ -830,7 +822,7 @@ Input: `tooling-directory` is an optional repository-relative directory string, 
 
 Secrets: none to supply or inherit. The automatic `GITHUB_TOKEN` needs `contents: read` for checkout; grant that permission in the caller. Outputs: no named workflow outputs; the job result reports success or failure. The npm download cache does not pin dependency resolution. No lockfile is shipped, so `npm install` resolves the declared ranges and creates a local lockfile under the tooling `.npmrc` policy.
 
-The test target selects both tooling workspace Jest suites, guardrail and project-color TypeScript tests, and Node tests in `scripts/`, `scripts/symphony/`, and `.github/workflows/scripts/`. Host installer, infrastructure helper and runtime bundle suites are separate opt-in jobs with additional prerequisites; see `docs/engineering/symphony/tooling-setup.md` and `scripts/symphony/runtime-bundle/README.md`. Retained suites may need later setup corrections.
+The test target selects both tooling workspace Jest suites, guardrail and project-color TypeScript tests, and Node tests in `scripts/`, `scripts/symphony/`, and `.github/workflows/scripts/`. The workflow contract and host-rendering tests also run in CI. Other host installer, infrastructure helper and runtime bundle suites remain opt-in with additional prerequisites; see `docs/engineering/symphony/tooling-setup.md` and `scripts/symphony/runtime-bundle/README.md`. Retained suites may need later setup corrections.
 
 Optional: caller triggers and additional jobs default to none. `workflow_call` alone does not run on push. This complete caller example opts into push and pull request events when the tooling occupies the repository root:
 
@@ -864,7 +856,6 @@ import `js-yaml`, which the tooling manifests do not directly declare. Root
 TypeScript checking covers `scripts/**/*.ts`, not `.mjs` helpers. No direct
 dependency or broader compiler scope is added here; declaring the command
 selection does not establish a passing installation or suite.
-
 
 ### Manual setup steps
 
@@ -1049,7 +1040,7 @@ Setting: keep `non-DEMO` consistent with the example in `docs/engineering/sympho
 
 `LINEAR_STATE_TEAM` — Identify the example team whose workflow state names are described.
 
-Setting: replace the `DEMO` example team in your adopted `WORKFLOW.md`, hosted `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`, and the linked review/project-workflow guides; configure actual states in Linear team workflow settings. Format: an uppercase team key. Required for live team setup; `DEMO` is synthetic. Retain the documented Active/Rework fallback semantics.
+Setting: replace the `DEMO` example team in your operator-owned workflow based on `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`, and the linked review/project-workflow guides; configure actual states in Linear team workflow settings. Format: an uppercase team key. Required for live team setup; `DEMO` is synthetic. Retain the documented Active/Rework fallback semantics.
 
 <!-- redaction:a-tool-linear-team-key -->
 
@@ -1218,9 +1209,9 @@ Setting location: configure `hooks.after_run` in an operator-owned workflow
 selected by `SYMPHONY_WORKFLOW_SOURCE`. The included CLI accepts exactly
 `--issue DEMO-123 --repo example-org/example-repo` in that order. Shapes:
 uppercase issue identifier and GitHub `owner/repository` string. Both are
-required for a call, with no default or repository inference; the bundled hook
-uses the issue workspace basename and a static synthetic repository argument.
-Installer repository variables do not substitute this hook text.
+required for a call, with no default or repository inference. Bundled hooks are
+no-ops. An operator-supplied hook must resolve the actual target and use its
+bound credentials; installer repository variables do not substitute hook text.
 
 Supply secret token strings in the hook process environment: `LINEAR_API_TOKEN`
 (fallback `LINEAR_API_KEY`) for Linear issue/project/attachment reads, and
@@ -1348,7 +1339,7 @@ Setting location: adopter-owned issue/project descriptions, plans, and directory
 
 `Repository workflow profile` — tell the Symphony runtime which repository, workspace, issue states and setup commands to use.
 
-Setting location: an adopter-owned YAML-frontmatter Markdown profile based on `WORKFLOW.md`, supplied to the selected runtime. Required before running workers: repository clone URL, `tracker.team_key`, credentials and `workspace.root` path. Optional defaults: clone branch `main`, retained tracker state lists, and no product install command. Put any setup command in `hooks.after_create`, for example a repository-specific bootstrap script. Model/server/concurrency fields retain their template defaults. Hosted bundle profiles have a separate installation contract; verify the external runtime's profile interface during setup.
+Setting location: `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`, or an operator-owned override supplied explicitly to the selected runtime. Configure `tracker.team_key`, credentials and `workspace.root` before running workers. The installed repository skill resolves the target from the issue/project and uses its configured base or GitHub default branch. Bundled hooks are no-ops; operator overrides may supply environment-specific setup. See the local invocation and host migration guidance above.
 
 <!-- redaction:b-tool-linear-lifecycle -->
 
@@ -1436,7 +1427,7 @@ Required for the feature described above; the example is synthetic and must be s
 
 Set SYMPHONY_BOOTSTRAP_REPO to owner/repository in the installer environment. Replace example-repo in static clone/workspace examples. Format: example-org/example-repo; also select SYMPHONY_BOOTSTRAP_REF.
 
-In the hosted `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`, set `hooks.after_run`'s `--repo example-org/example-repo` argument to the same intended repository as the clone URLs in `hooks.after_create`. Keep the corresponding host test expectations synthetic. This hook consumes its explicit argument; setting the installer variable alone does not replace the static workflow placeholder.
+The authoritative `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md` has no static repository hook. If an operator-owned override enables `hooks.after_run` label repair, supply the resolved task repository and its bound credentials. The helper consumes an explicit `--repo owner/repository` argument; installer variables do not rewrite it. Keep test fixtures synthetic.
 
 Required when using the described integration. The shipped `example-repo` text is a placeholder, not a live account or repository.
 

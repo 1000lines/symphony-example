@@ -153,45 +153,42 @@ test("hosted workflow requests GPT-6 Astra with xhigh reasoning", async () => {
   assert.doesNotMatch(workflow, /model="gpt-5\.5"/);
 });
 
-test("canonical and hosted workflows share the required PR label publishing contract", async () => {
-  const [canonical, hosted] = await Promise.all([
-    readFile(join(repoRoot, "WORKFLOW.md"), "utf8"),
-    readFile(workflowPath, "utf8"),
-  ]);
-  const labelContract = (text) =>
-    text.slice(
-      text.indexOf("- Every Symphony-managed PR requires"),
-      text.indexOf("- Assign the PR to the project")
-    );
-  const contract = labelContract(hosted);
-  assert.equal(labelContract(canonical), contract);
+test("authoritative workflow requires target-scoped PR labels and leaves hooks to operators", async () => {
+  const workflow = await readFile(workflowPath, "utf8");
+  assert.equal(await pathExists(join(repoRoot, "WORKFLOW.md")), false);
+  const contract = workflow.slice(
+    workflow.indexOf("- Every Symphony-managed PR requires"),
+    workflow.indexOf("- Assign the PR to the project")
+  );
   for (const phrase of [
     "both `symphony` and the owning Linear",
     "project's `project-color` GitHub label",
     "additional project-required",
     "Do not infer it from a branch name, issue label, or a default",
-    "ensure-pr-labels.mjs --issue TEAM-123 --repo OWNER/REPO",
+    'node "$SYMPHONY_TOOLING_ROOT/scripts/symphony/ensure-pr-labels.mjs" --issue TEAM-123 --repo OWNER/REPO',
     "gh api --method POST repos/OWNER/REPO/issues/PR_NUMBER/labels",
     "labels --paginate --jq '.[].name'",
     "actual API/readback failure",
-    "Hook failures are logged and ignored by Symphony",
-    "Automatic repair is not\n  evidence that labeling succeeded",
+    "The bundled `hooks.after_run` is a no-op",
+    "its bound credentials. Hook failures are logged and ignored by Symphony",
+    "Automatic repair is not evidence that labeling succeeded",
   ]) {
     assert.ok(
       contract.includes(phrase),
       `Missing PR label guidance: ${phrase}`
     );
   }
-  assert.match(
-    hosted,
-    /  before_run: \|\n    node scripts\/symphony\/route-misc-project-on-ticket-start\.mjs/
-  );
-  assert.match(
-    hosted,
-    /  after_run: \|\n    node scripts\/symphony\/ensure-pr-labels\.mjs/
-  );
-  assert.match(hosted, /  after_create: \|/);
-  assert.match(hosted, /  before_remove: \|\n    true/);
+  for (const hook of [
+    "after_create",
+    "before_run",
+    "after_run",
+    "before_remove",
+  ]) {
+    assert.ok(workflow.includes(`  ${hook}: |\n    true\n`));
+  }
+  assert.match(workflow, /installed `symphony-repository` skill/);
+  assert.match(workflow, /target's GitHub default branch/);
+  assert.doesNotMatch(workflow, /default to `main`|configured, use `main`/);
 });
 
 test("supported common discovery has no private runtime skill bodies", async () => {

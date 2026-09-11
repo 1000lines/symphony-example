@@ -126,9 +126,10 @@ alter the currently working server.
 
 - Jeremy's September 9 request and follow-up about hard-coded wake options:
   authoritative scope, preserved above.
-- `MIGRATION.md`, `WORKFLOW.md`, and
-  `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`: current deployment and
-  execution contract; read during setup.
+- `MIGRATION.md` and both workflow profiles were read during setup. The root
+  copy was subsequently removed in 100-27; current execution guidance lives in
+  `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`. Historical inputs remain
+  available in the [source ledger](hackathon-ready-design.md).
 - `.github/workflows/cadence-ai-review-trigger.yml`, Cadence event/handoff and
   Symphony CI/wakeup workflows: current implementation; inspected during setup.
 - `docs/engineering/symphony/project-workflow.md` and `docs/symphony-plans/`:
