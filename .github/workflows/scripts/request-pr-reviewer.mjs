@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+
+import { prepareReviewRequestReceipt } from "./cadence-review-request-receipt.mjs";
 
 const API_BASE = "https://api.github.com";
 
@@ -141,6 +143,7 @@ export const requestReviewers = async ({
   reviewers,
   dismissApprovals = false,
   dismissMessage = "Review is stale because a new review-causing event is queued; re-review is requested.",
+  eventContext,
   fetchImpl = fetch,
   log = console.log,
 }) => {
@@ -167,6 +170,29 @@ export const requestReviewers = async ({
   const reviewerSet = new Set(reviewerLogins);
   const dismissed = [];
   const dismissFailed = [];
+
+  if (eventContext && reviewers.length !== 1) {
+    throw new Error("Event coalescing requires exactly one Cadence reviewer.");
+  }
+  const receipt = eventContext
+    ? await prepareReviewRequestReceipt({
+        ...eventContext,
+        reviewer: reviewers[0],
+        pullPath,
+        request: (options) => apiRequest({ ...options, token, fetchImpl }),
+        list: (path) => listAll({ token, path, fetchImpl }),
+      })
+    : null;
+  if (receipt?.skipReason) {
+    return {
+      requested: false,
+      removedExistingRequest: false,
+      dismissedApprovalCount: 0,
+      dismissFailedCount: 0,
+      alreadyRequested: false,
+      skipReason: receipt.skipReason,
+    };
+  }
 
   if (dismissApprovals) {
     const reviews = await listAll({
@@ -240,6 +266,7 @@ export const requestReviewers = async ({
   }
 
   let alreadyRequested = false;
+  await receipt?.start();
   try {
     await apiRequest({
       token,
@@ -249,6 +276,9 @@ export const requestReviewers = async ({
       fetchImpl,
     });
   } catch (error) {
+    // A rejected request can retry. Transport failures or 5xx responses may
+    // have accepted the POST; leave that receipt pending for timeline recovery.
+    if (error.status >= 400 && error.status < 500) await receipt?.retry();
     if (!isAlreadyRequestedReviewError(error.message)) {
       throw error;
     }
@@ -258,6 +288,8 @@ export const requestReviewers = async ({
   if (alreadyRequested || existingRequestStillPresent) {
     throw noFreshReviewRequestError(reviewers);
   }
+
+  await receipt?.complete();
 
   return {
     requested: !alreadyRequested,
@@ -287,6 +319,15 @@ const main = async () => {
     dismissApprovals:
       String(process.env.DISMISS_APPROVALS).toLowerCase() === "true",
     dismissMessage: process.env.DISMISS_MESSAGE,
+    eventContext:
+      process.env.COALESCE_REVIEW_EVENT === "true"
+        ? {
+            payload: JSON.parse(
+              readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+            ),
+            eventName: process.env.GITHUB_EVENT_NAME,
+          }
+        : undefined,
   });
 
   setOutput("requested", String(result.requested));
