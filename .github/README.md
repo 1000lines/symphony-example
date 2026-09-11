@@ -1,10 +1,11 @@
 # Controller CI
 
 [`workflows/ci.yml`](workflows/ci.yml) runs the tooling build, lint, test and
-changed-Markdown checks on every push and on opened, synchronized and reopened
-pull requests. Drafts and documentation changes use the same jobs. There are no
-branch, path or draft filters. Duplicate events for the same repository, head
-and event type replace the earlier run; push and PR runs remain separate.
+changed-Markdown checks on pushes to `main` and on opened, synchronized and
+reopened pull requests. PRs have no branch, path or draft filters; drafts and
+documentation changes use the same jobs. Task branch pushes are covered by the
+PR event. Duplicate events for the same repository, head and event type replace
+the earlier run.
 
 ## Tested commit and credentials
 
@@ -58,10 +59,11 @@ and `markdown`. Missing, failed, canceled or skipped children fail the aggregate
 The run summary reports each actual child result. Baseline failures remain
 visible; do not add `continue-on-error` or suppress a suite to obtain green CI.
 
-The configured end-to-end run budget is 120 minutes for the consuming
-reconciler, including queue and dependency waits. GitHub does not provide a
-workflow-level timeout here; the five-minute aggregate timeout starts when its
-job executes after its dependencies finish.
+GitHub does not provide a workflow-level timeout here; the five-minute aggregate
+timeout starts when its job executes after its dependencies finish. The CI timer
+rechecks pending or missing checks without an overall deadline. See the
+[authoritative workflow](../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md#ci-timer-evaluation)
+for the per-ticket wait contract.
 
 ## Validation and evidence handoff
 
@@ -99,9 +101,10 @@ App ID alone does not establish workflow provenance. A missing, stale or
 non-successful check cannot satisfy the requirement; review/router checks
 are separate from this allowlist.
 
-Keep the initial PR draft and the issue Inactive while CI or review is pending.
+Keep the initial PR draft. Pending CI uses `Unhappy` with `wake:15m`; after CI
+succeeds, remove the wake label and use `Inactive` for review.
 After human acceptance/merge, record another exact-SHA run on `main`.
 DEPLOY owns required-check settings and App-authored docs/code rehearsal;
-this ticket does not change branch rules or workflow enablement. The bootstrap
-branch push run is evidence for its creating PR; a future default-branch
-dispatch is not.
+branch rules and workflow enablement require separate setup. Use the actual PR
+run as evidence for a task branch; a future default-branch dispatch is not proof
+for its creating PR.

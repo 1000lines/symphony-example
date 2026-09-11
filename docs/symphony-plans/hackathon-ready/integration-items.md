@@ -6,6 +6,10 @@ tickets, together with their manifest branch/PR/state policy and the
 [common execution contract](execution-contract.md). Paths are relative to the
 item's repository unless qualified. No new shared schema is defined here.
 
+Workflow path maintenance (100-27): current edits and validation below target
+only `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`. The original plan
+listed a root copy as well; that file has been removed.
+
 ## CODEX
 
 ```yaml
@@ -239,7 +243,6 @@ summary:
   consumer to describe the implemented CI/check contract and deployment prerequisites.
 creates: []
 edits:
-  - WORKFLOW.md
   - scripts/symphony/runtime-bundle/workflow/WORKFLOW.md
   - scripts/symphony/runtime-bundle/codex/AGENTS.md
   - scripts/symphony/runtime-bundle/manifest.json
@@ -268,7 +271,6 @@ edits:
   - scripts/symphony/runtime-bundle/skills/symphony-finalize-project/SKILL.md
   - scripts/symphony/runtime-bundle/skills/symphony-proof-of-work/SKILL.md
 owned_files:
-  - WORKFLOW.md
   - scripts/symphony/runtime-bundle/workflow/WORKFLOW.md
   - scripts/symphony/runtime-bundle/codex/AGENTS.md
   - scripts/symphony/runtime-bundle/manifest.json
@@ -316,7 +318,7 @@ acceptance_checks:
 validation_commands:
   - node --test scripts/symphony/runtime-bundle/runtime-bundle.integration.test.mjs
     scripts/symphony/host/hosted-runtime-integration.test.mjs
-  - npx prettier --check WORKFLOW.md scripts/symphony/runtime-bundle/workflow/WORKFLOW.md
+  - npx prettier --check scripts/symphony/runtime-bundle/workflow/WORKFLOW.md
     docs/engineering/review docs/engineering/symphony/project-workflow.md
 delivery_notes:
   Estimate 450–800 changed lines; ticket-template-contract. Own prose and profile

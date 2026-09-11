@@ -84,16 +84,13 @@ test("renders service units with runtime paths and worker settings", async () =>
     assert.match(workflow, /\n  host: "::"\n/);
     assert.match(workflow, /codex-with-runtime-bundle\.sh --enable apps/);
     assert.match(workflow, /Only after the Codex workpad ID is pinned/);
-    assert.match(
-      workflow,
-      /  before_run: \|\n    node scripts\/symphony\/route-misc-project-on-ticket-start\.mjs/
-    );
-    assert.match(
-      workflow,
-      /  after_run: \|\n    node scripts\/symphony\/ensure-pr-labels\.mjs --issue "\$\(basename "\$PWD"\)" --repo example-org\/example-repo\n/
-    );
-    assert.match(workflow, /  after_create: \|/);
-    assert.match(workflow, /  before_remove: \|\n    true/);
+    for (const hook of ["after_create", "before_run", "after_run", "before_remove"]) {
+      assert.ok(
+        workflow.includes(`  ${hook}: |\n    true\n`),
+        `Rendered ${hook} must remain a no-op`
+      );
+    }
+    assert.ok(service.includes(` ${env.SYMPHONY_CONFIG_DIR}/WORKFLOW.md\n`));
     assert.doesNotMatch(workflow, /Worker slots:/);
 
     const reconcile = await readFile(
@@ -263,7 +260,7 @@ test("reconcile runtime-bundle freshness check delegates to the installed runner
   }
 });
 
-test("CI timer profiles retain their state contract after host rendering", async (t) => {
+test("authoritative CI timer workflow retains its state contract after host rendering", async (t) => {
   const tempRoot = await mkdtemp(join(tmpdir(), "symphony-ci-timer-"));
   t.after(() => rm(tempRoot, { recursive: true, force: true }));
   const repoRoot = dirname(dirname(dirname(hostDir)));
@@ -271,29 +268,30 @@ test("CI timer profiles retain their state contract after host rendering", async
   const stateDir = join(tempRoot, "state");
   await mkdir(configDir);
   await mkdir(stateDir);
-  for (const source of ["WORKFLOW.md", "scripts/symphony/runtime-bundle/workflow/WORKFLOW.md"]) {
-    const result = runBash(`source "${configStep}"; render_workflow_config`, {
-      SYMPHONY_WORKFLOW_SOURCE: join(repoRoot, source),
-      SYMPHONY_CONFIG_DIR: configDir,
-      SYMPHONY_BOOTSTRAP_STATE_DIR: stateDir,
-      SYMPHONY_WORKER_SLOTS: "9",
-    });
-    assert.equal(result.status, 0, result.stderr);
-    const rendered = await readFile(join(configDir, "WORKFLOW.md"), "utf8");
-    const { tracker, agent } = yaml.load(rendered.split(/^---\s*$/m)[1]);
-    assert.deepEqual(tracker.daemon_states, ["Unhappy"]);
-    assert.deepEqual(tracker.daemon_dispatch_states, ["Evaluating"]);
-    assert.equal(tracker.daemon_default_wake, "15m");
-    assert.ok(tracker.active_states.includes("Active"));
-    for (const state of tracker.daemon_dispatch_states) {
-      assert.ok(tracker.active_states.includes(state));
-      assert.ok(!tracker.terminal_states.includes(state));
-    }
-    for (const state of tracker.daemon_states) {
-      assert.ok(!tracker.active_states.includes(state));
-      assert.ok(!tracker.terminal_states.includes(state));
-    }
-    assert.equal(agent.max_concurrent_agents, 9);
-    assert.equal(agent.max_concurrent_agents_by_state.Evaluating, 1);
+  const result = runBash(`source "${configStep}"; render_workflow_config`, {
+    SYMPHONY_WORKFLOW_SOURCE: join(
+      repoRoot,
+      "scripts/symphony/runtime-bundle/workflow/WORKFLOW.md"
+    ),
+    SYMPHONY_CONFIG_DIR: configDir,
+    SYMPHONY_BOOTSTRAP_STATE_DIR: stateDir,
+    SYMPHONY_WORKER_SLOTS: "9",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const rendered = await readFile(join(configDir, "WORKFLOW.md"), "utf8");
+  const { tracker, agent } = yaml.load(rendered.split(/^---\s*$/m)[1]);
+  assert.deepEqual(tracker.daemon_states, ["Unhappy"]);
+  assert.deepEqual(tracker.daemon_dispatch_states, ["Evaluating"]);
+  assert.equal(tracker.daemon_default_wake, "15m");
+  assert.ok(tracker.active_states.includes("Active"));
+  for (const state of tracker.daemon_dispatch_states) {
+    assert.ok(tracker.active_states.includes(state));
+    assert.ok(!tracker.terminal_states.includes(state));
   }
+  for (const state of tracker.daemon_states) {
+    assert.ok(!tracker.active_states.includes(state));
+    assert.ok(!tracker.terminal_states.includes(state));
+  }
+  assert.equal(agent.max_concurrent_agents, 9);
+  assert.equal(agent.max_concurrent_agents_by_state.Evaluating, 1);
 });

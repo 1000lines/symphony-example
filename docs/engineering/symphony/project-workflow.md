@@ -1,10 +1,9 @@
 # Symphony Project Workflow
 
 This document expands the state and handoff contract in
-[WORKFLOW.md](../../../WORKFLOW.md). Hosted Symphony loads the
-[runtime-bundle workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md).
-Their prose shares the same contract; configuration and hooks are
-environment-specific.
+[authoritative workflow](../../../scripts/symphony/runtime-bundle/workflow/WORKFLOW.md).
+Hosted installation and local invocation use this same source; operators may
+supply environment-specific overrides as described in [tooling setup](./tooling-setup.md#repository-workflow-and-guardrails).
 
 ## Required Project Metadata
 
@@ -18,15 +17,16 @@ human-lead: Full Name
 ```
 
 `project-code`, `project-color`, and `human-lead` are required.
-`base-branch` is optional and defaults to `main`. It is the branch point,
+`base-branch` is optional and defaults to the target's GitHub default branch. It is the branch point,
 PR base, and validation target. Missing metadata requires a workpad question
 before implementation.
 
-The hosted ticket-start hook routes unprojected issues from the configured team to the uniquely
+An operator-enabled ticket-start hook can route unprojected issues from the configured team to the uniquely
 resolved active project with `project-code: misc`, `project-color: blue`, and
 `base-branch: main`. It preserves existing project assignments and issues from other teams. Missing or ambiguous misc metadata fails visibly. The
 [misc routing guide](./misc-project-routing.md) describes the helper and its
 evidence; the helper does not create a project or guess from its display name.
+The authoritative workflow's hooks are no-ops; routing is optional.
 
 ## State Meanings
 
@@ -125,7 +125,7 @@ workflow leaves it alone. Pending CI uses `Unhappy` with `wake:15m`.
 
 The server's existing timer wakes `Unhappy` into `Evaluating` after approximately
 15 minutes, allowing for jitter, polling, dependency gates, and capacity. The
-profiles limit concurrent evaluations to one. An Evaluating worker checks only
+authoritative workflow limits concurrent evaluations to one. An Evaluating worker checks only
 its current ticket's PR and records the result in the Codex workpad: conflict or
 failure becomes Active, success becomes Inactive, and pending checks return to
 Unhappy with wake:15m. It preserves unrelated labels and rereads the issue and

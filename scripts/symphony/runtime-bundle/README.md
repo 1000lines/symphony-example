@@ -26,6 +26,54 @@ the bundle freshness digest. Use a new source commit for a changed release:
 an already staged repository SHA is reused. These checks do not establish that
 the runtime can start or that external services are configured.
 
+## Workflow source migration
+
+`workflow/WORKFLOW.md` in this bundle is the single repository source for hosted
+and local execution. The former root `WORKFLOW.md` has been removed. Host
+installation still renders `/etc/symphony/WORKFLOW.md` from the staged bundle,
+falling back to this bundle's source before staging; the rendered file and staged
+release are installation artifacts, not independently maintained profiles.
+The systemd service passes that rendered path explicitly. There is no fallback
+to a root workflow. Replace local commands that pass the deleted root
+`WORKFLOW.md` or rely on implicit path discovery with an explicit source path; use
+the [local invocation](../../../docs/engineering/symphony/tooling-setup.md#repository-workflow-and-guardrails).
+
+`SYMPHONY_WORKFLOW_SOURCE` selects a complete operator-owned override for the host
+renderer and documented local invocation. It takes precedence over the default;
+no merging or automatic migration occurs. Remove an override that only selected
+the old root path, or update it to the nested source. For customized files,
+compare against the authoritative source and retain deliberate environment
+settings. The old `after_create` hook cloned a fixed repository and required
+`GITHUB_TOKEN`, `LINEAR_API_TOKEN`, and an executable `GIT_ASKPASS`. Move that setup
+to repository discovery and bound credentials, install the repository skill, and
+make shared tooling available through `SYMPHONY_TOOLING_ROOT`. Review the worker
+model change from GPT-5.5 to GPT-6 Astra, both with xhigh reasoning.
+Repository-specific hooks remain an operator choice.
+Default hooks are no-ops; required PR labels are verified during publication.
+
+If the selected source is missing, host rendering aborts with `workflow source
+is missing` before replacing `/etc/symphony/WORKFLOW.md`. The last rendered file
+remains intact; a failed render does not update or reload the running service.
+
+The retained CI profile uses `Unhappy` with `wake:15m`, dispatches `Evaluating`,
+and caps concurrent evaluations at one. Supply `Active`, `Inactive`, `Unhappy`,
+`Evaluating`, and the `wake:15m` label in the configured Linear team before
+enabling CI reconciliation. The GitHub workflow requires the wake label even
+when removing it on success or failure. Reconcile older overrides that still
+disable these states or tell workers to sleep while CI runs; otherwise they
+will not provide the server timer behavior described by the source profile.
+
+For an existing host, `scripts/symphony/host/install-runtime.sh
+--runtime-bundle-refresh` runs `05-source`, `45-runtime-bundle`, `80-config`, and
+`90-provenance`. It stages the selected source and renders
+`/etc/symphony/WORKFLOW.md`; it does not restart the service. Select an accepted
+source and refresh and reload through the authorized deployment procedure.
+Running only `45-runtime-bundle` does not render the workflow. Custom overrides
+and later reconciliation need the same explicit source setting. A source edit,
+merge, or fixture test is not
+proof that a running host loaded the new workflow; deployment is a separate
+operator action with its own evidence.
+
 ## Repository discovery and onboarding
 
 The hosted `symphony-repository` skill resolves each target from its Linear
@@ -199,6 +247,20 @@ remains later work.
 Fixture switches such as `SYMPHONY_SKIP_RUNTIME_INSTALL` are not usable runtime
 defaults; that switch produces a stub executable.
 
+## PR label repair
+
+The worker uses `node "$SYMPHONY_TOOLING_ROOT/scripts/symphony/ensure-pr-labels.mjs"`
+with `--issue TEAM-123 --repo owner/repository` for the resolved target. It reads
+`project-color` from the owning Linear project, adds missing `symphony` and color
+labels to the uniquely associated open PR, and verifies them by readback. Labels
+must already exist. Use the target's bound GitHub credentials and Linear read
+access (`LINEAR_API_TOKEN`, falling back to `LINEAR_API_KEY`).
+
+The bundled `after_run` hook is a no-op. Operators who enable optional hook
+repair must resolve the same issue/repository and bind the matching credentials;
+installer repository inputs do not rewrite hook text. A best-effort hook result
+does not replace the worker's explicit publication verification.
+
 ## Workflow, bundle and credentials
 
 `SYMPHONY_WORKFLOW_SOURCE` optionally selects an operator-owned Markdown workflow.
@@ -207,17 +269,19 @@ back to the source bundle. A supplied file needs YAML frontmatter with exactly
 one indented numeric `max_concurrent_agents` line and one `command: codex` line
 so the renderer can substitute worker slots and the freshness wrapper.
 
-Configure the supplied workflow's `tracker` team/state/maturity mappings,
-`workspace.root`, clone repository/branch, `hooks`, `codex` command and `server`
-settings for the adopter. The bundled hooks default to `true`; the repository skill selects checkout,
-setup and publication steps after reading the issue/project context. Configure these shell commands in the
-operator's workflow file. Misc routing still has a synthetic team predicate and
-must be assessed before enabling it for another team. These hooks do not define
-a required product language or application CI.
+Configure `tracker` team/state/maturity mappings, `workspace.root`, `hooks`,
+the `codex` command and `server` settings in an operator-owned override as needed.
+The bundled hooks default to `true`; the repository skill selects checkout,
+setup and publication steps after reading the issue/project context. Optional
+misc routing reads `linear.teamKey` from the checkout's `.symphony.cfg.json` and
+accepts `lookup.teamKey` in exported functions; assess its project/color policy
+before enabling it. These hooks do not define a required product language or
+application CI.
 
-Shared review/wakeup helpers choose `Active` first and legacy `Rework` only when
-`Active` is absent; configure these names in the Linear team, not just runtime
-state lists. The DAG parser no longer accepts integration-branch/frontier
+The shared review wake helper chooses `Active` first and legacy `Rework` only
+when `Active` is absent. The CI YAML instead requires the exact states and wake
+label listed in the migration section. Configure these in Linear, not just
+runtime state lists. The DAG parser no longer accepts integration-branch/frontier
 policies. The profile still carries `mature` and maturity state lists: these
 require a compatible external runtime and explicit project policy, not a
 replacement integration queue. Projects that disable maturity must arrange a

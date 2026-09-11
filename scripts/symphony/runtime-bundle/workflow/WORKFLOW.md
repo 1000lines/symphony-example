@@ -77,7 +77,8 @@ that software-engineering change directly and keep scope tied to the ticket.
 
 Symphony is the execution harness: isolated workspace, Linear/GitHub state
 transitions, PR evidence, CI, and human handoff. Reuse existing shared planning
-tooling, including `tools/symphony-dag/` for DAG validation and payload rendering.
+tooling, including `$SYMPHONY_TOOLING_ROOT/tools/symphony-dag/` for DAG validation
+and payload rendering.
 Raise process gaps through the PR proposal guidance below; do not change
 Symphony's planning/review process or build parallel project-local planning
 infrastructure without human direction. Project-specific implementation tooling
@@ -125,7 +126,8 @@ a new project after the current project finishes.
 `repository` selects the project target without a central allowlist. Resolve an
 omitted value from the project's GitHub links or explicit human task direction.
 
-`base-branch` is optional and defaults to the target's GitHub default branch. It names the branch Symphony
+`base-branch` is optional and defaults to the target's GitHub default branch.
+It names the branch Symphony
 uses for clean task branches and GitHub PR bases. Record the selected base
 branch in the Codex workpad and PR body for each task.
 
@@ -188,8 +190,9 @@ eligible PR assignees; the bridge records a routing gap if none exists. Human
 approval with notes receives a Cadence re-look without directly waking Linear.
 
 The GitHub wakeup workflow resolves the current PR's ticket from the repository
-team config. It gives an Active worker up to one minute to finish and otherwise
-leaves Active work alone. Inactive tickets with conflicts move to Active with a
+team config, using the PR title prefix, then the branch. It gives an Active
+worker up to one minute to finish and otherwise leaves Active work alone.
+Inactive tickets with conflicts move to Active with a
 Cadence workpad instruction. Pending CI waits in Unhappy with wake:15m; current
 CI completion moves the ticket to Inactive on success or Active on failure.
 Current required external-check failures also move waiting tickets to Active.
@@ -227,8 +230,9 @@ When dispatched in `Evaluating`, check only this ticket before implementing:
 ## Project Branching Model
 
 Task branches start from the selected `base-branch` and open PRs against that
-same branch. When no `base-branch` is configured, use `main`. Graph edges,
-sequencing notes, and soft dependencies do not change branch ancestry.
+same branch. When no `base-branch` is configured, use the target's GitHub default
+branch. Graph edges, sequencing notes, and soft dependencies do not change
+branch ancestry.
 
 Do not commit predecessor work that is not already on the selected base branch.
 If a ticket cannot be compiled, tested, or reviewed without upstream code,
@@ -297,7 +301,7 @@ For coding tickets spawned from a DAG plan:
 - Use Symphony's injected `linear_graphql` tool for Linear reads and writes.
   If `linear_graphql` is unavailable before the Codex workpad is pinned, fail
   closed and do not update another comment.
-- At the beginning of every hosted issue turn, after fetching the Linear issue,
+- At the beginning of every Symphony issue turn, after fetching the Linear issue,
   state, and comments but before planning, prerequisite checks, repository work,
   blocker handling, or state classification:
   1. Find the active comment whose first non-blank line is exactly
@@ -323,8 +327,9 @@ For coding tickets spawned from a DAG plan:
 - Keep a single pinned Linear workpad comment headed `## Codex Workpad`.
 - State assumptions and success criteria before coding.
 - Before creating a task branch or PR, select the project base branch from
-  `base-branch` or `base_branch` metadata and default to `main` when the field
-  is absent. Record the selected base branch in the Codex workpad.
+  `base-branch` or `base_branch` metadata and use the target's GitHub default
+  branch when the field is absent. Record the selected base branch in the
+  Codex workpad.
 - Before spawning Linear issues or opening PRs, identify the project
   `human-lead` from project metadata or explicit issue/fan-out metadata. Assign
   generated Linear issues and GitHub PRs to that human lead when the matching
@@ -465,9 +470,10 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
   Record the verified result or actual API/readback failure in the Codex
   workpad; intended future actions are not evidence. Handle missing metadata,
   missing labels, or API failures through the existing blocker handling.
-- Hosted `hooks.after_run` invokes the same helper as a best-effort safety net.
-  Hook failures are logged and ignored by Symphony. Automatic repair is not
-  evidence that labeling succeeded, an immediate PR-created event hook, a strict
+- The bundled `hooks.after_run` is a no-op. An operator-owned workflow may
+  invoke the same helper as a best-effort safety net using the resolved target
+  and its bound credentials. Hook failures are logged and ignored by Symphony.
+  Automatic repair is not evidence that labeling succeeded, an immediate PR-created event hook, a strict
   review/merge gate, or a crash-proof guarantee. It does not change Linear states.
 - Assign the PR to the project `human-lead` when the GitHub identity is known.
   Request human review only after Cadence and Symphony reach closure, or after

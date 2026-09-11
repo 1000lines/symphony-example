@@ -53,7 +53,7 @@ limited to durable guidance or template updates. Apply required project labels.
 ## Validation Expectations
 
 - Markdown formatting passes.
-- Guidance examples are internally consistent with `WORKFLOW.md`.
+- Guidance examples are internally consistent with `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`.
 - Any generated template changes still include title, scope, assumptions,
   success criteria, labels, dependencies, workpad expectations, PR expectations,
   and validation expectations.

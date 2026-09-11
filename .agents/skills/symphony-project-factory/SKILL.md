@@ -63,7 +63,7 @@ set of required sources:
   prior PR, or other source material the human names.
 - Prior fan-out examples relevant to the request, including committed plans in
   `docs/symphony-plans/` and old project plans the current issue names.
-- `WORKFLOW.md`.
+- `scripts/symphony/runtime-bundle/workflow/WORKFLOW.md`.
 - `.agents/skills/karpathy-guidelines/SKILL.md`.
 - Existing `.agents/skills/*/SKILL.md` frontmatter conventions and any local
   Symphony skills that the new project's starter tickets will reference.
@@ -150,11 +150,11 @@ explicitly requests that ticket. Scope confirmation alone is insufficient.
 
 Use only these three templates for the default starter ticket set:
 
-| Template | Default title | Creation status | Status after setup |
-| --- | --- | --- | --- |
-| `requirements-and-design.md` | `Create requirements & design doc` | `Backlog` | `Active`, unless the human explicitly requests a hold |
-| `plan-project.md` | `Plan project - seed ticket` | `Backlog` | `Active`, held by requirements/design until Done |
-| `trigger-fan-out.md` | `Trigger fan out` | `Backlog` | `Active`, held by the planning relation until Done |
+| Template                     | Default title                      | Creation status | Status after setup                                    |
+| ---------------------------- | ---------------------------------- | --------------- | ----------------------------------------------------- |
+| `requirements-and-design.md` | `Create requirements & design doc` | `Backlog`       | `Active`, unless the human explicitly requests a hold |
+| `plan-project.md`            | `Plan project - seed ticket`       | `Backlog`       | `Active`, held by requirements/design until Done      |
+| `trigger-fan-out.md`         | `Trigger fan out`                  | `Backlog`       | `Active`, held by the planning relation until Done    |
 
 Stage all seeds outside the dispatch queue, create the two blocker relations,
 and read back the tickets and relation direction before activating anything.
@@ -319,11 +319,11 @@ linear-team: DEMO
 
 Starter ticket payloads:
 
-| Title                              | Initial status           | Labels | Template                     | Default blocker relation           |
-| ---------------------------------- | ------------------------ | ------ | ---------------------------- | ---------------------------------- |
-| `Create requirements & design doc` | `Backlog`, then `Active` after setup verification unless held | `blue` | `requirements-and-design.md` | none |
-| `Plan project - seed ticket` | `Backlog`, then `Active` after relation verification unless held | `blue` | `plan-project.md` | blocked by requirements-and-design |
-| `Trigger fan out` | `Backlog`, then `Active` after relation verification unless held | `blue` | `trigger-fan-out.md` | blocked by plan-project |
+| Title                              | Initial status                                                   | Labels | Template                     | Default blocker relation           |
+| ---------------------------------- | ---------------------------------------------------------------- | ------ | ---------------------------- | ---------------------------------- |
+| `Create requirements & design doc` | `Backlog`, then `Active` after setup verification unless held    | `blue` | `requirements-and-design.md` | none                               |
+| `Plan project - seed ticket`       | `Backlog`, then `Active` after relation verification unless held | `blue` | `plan-project.md`            | blocked by requirements-and-design |
+| `Trigger fan out`                  | `Backlog`, then `Active` after relation verification unless held | `blue` | `trigger-fan-out.md`         | blocked by plan-project            |
 
 ## Write-Capable Payload Fixture
 
@@ -407,12 +407,12 @@ These examples assume required inputs and write prerequisites are resolved.
 They describe expected payloads, not instructions to alter the named projects
 or tickets while maintaining this skill.
 
-| Human request                                                                                                                                                                                                                      | Expected factory output                                                                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Human request                                                                                                                                                                                                                            | Expected factory output                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | “Create Sample Tooling Export and its seed tickets. The brief includes constructing the final extraction artifact, Example Reviewer review, publishing the approved extraction, and removing private scaffolding after the public push.” | Project metadata/brief preserving all outcomes, exactly the three planning seeds, and two seed blocker relations. Defer wrap-up like DEMO-543–545 to Symphony's human-reviewed plan; no wrap-up tickets at setup. |
-| “Create the project and get it going.”                                                                                                                                                                                             | The same three seeds and two seed blockers, using the requested initial states; no extra tickets.                                                                                                                |
-| “The existing project's brief also includes deployment and cleanup. Make its tickets Active.”                                                                                                                                      | Apply the requested state changes to existing tickets. Preserve the brief; do not create deploy, cleanup, or other tickets.                                                                                      |
-| “Move DEMO-534 into the not-yet-started SampleMetrics project.”                                                                                                                                                                        | Update only DEMO-534's project membership. No replacement issue, sibling moves, or inferred additions.                                                                                                            |
+| “Create the project and get it going.”                                                                                                                                                                                                   | The same three seeds and two seed blockers, using the requested initial states; no extra tickets.                                                                                                                 |
+| “The existing project's brief also includes deployment and cleanup. Make its tickets Active.”                                                                                                                                            | Apply the requested state changes to existing tickets. Preserve the brief; do not create deploy, cleanup, or other tickets.                                                                                       |
+| “Move DEMO-534 into the not-yet-started SampleMetrics project.”                                                                                                                                                                          | Update only DEMO-534's project membership. No replacement issue, sibling moves, or inferred additions.                                                                                                            |
 
 For the explicit DEMO-534 move request, the mutation is an update, with no
 `issueCreate` or unrelated field changes:
