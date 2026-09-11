@@ -131,7 +131,7 @@ export async function finishCheck(
   github,
   request,
   appId,
-  { result, ranReview, baseline, reviewer } = {}
+  { result, ranReview, baseline, reviewer, readyGraphql } = {}
 ) {
   const checks = await checksForRequest(github, request, appId);
   const check = checks.find((item) => item.external_id === request.externalId);
@@ -188,6 +188,7 @@ export async function finishCheck(
     summary =
       "Cadence stopped without another review (for example, the review-loop cap). Inspect the workflow handoff.";
   }
+  let handoffError;
   if (conclusion === "success" && pr.draft) {
     // Recheck immediately before publication; a changed head is never readied.
     const { data: current } = await github.rest.pulls.get({
@@ -199,10 +200,40 @@ export async function finishCheck(
       conclusion = "cancelled";
       summary = "PR closed or head changed before the human handoff.";
     } else if (current.draft) {
-      await github.graphql(
-        `mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }`,
-        { id: current.node_id }
-      );
+      try {
+        // Only the repository workflow identity may ready a draft. Never fall
+        // back to the shared Cadence App used for reads and check publication.
+        if (!readyGraphql) throw new Error("Missing readiness client");
+        const response = await readyGraphql(
+          `mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }`,
+          { id: current.node_id }
+        );
+        if (
+          response?.markPullRequestReadyForReview?.pullRequest?.isDraft !==
+          false
+        )
+          throw new Error("GitHub did not confirm readiness");
+        summary =
+          "Cadence found no outstanding findings. GitHub confirmed the draft is ready for human review.";
+      } catch (error) {
+        const denied =
+          [401, 403].includes(error?.status) ||
+          error?.errors?.some((item) =>
+            ["FORBIDDEN", "UNAUTHORIZED"].includes(item.type)
+          );
+        handoffError =
+          `Cadence approved ${
+            request.head
+          }, but markPullRequestReadyForReview ${
+            denied ? "was denied" : "was not confirmed"
+          } for ${owner}/${repo}#${number} using repository GITHUB_TOKEN. ` +
+          "Repository operator: verify contents:write and pull-requests:write on the finish job and reusable-workflow callers, and the effective token permissions in the job log. " +
+          "Keep the shared Cadence App grants unchanged. After fixing access, rerun all jobs for a fresh guarded verdict; do not merge automatically.";
+        conclusion = "failure";
+        summary = `Review approved; marking ready failed.\n\n[Failed operation: markPullRequestReadyForReview](${
+          request.runUrl
+        })\n\n${error?.message || String(error)}\n\n${handoffError}`;
+      }
     }
   }
   await update(
@@ -214,6 +245,7 @@ export async function finishCheck(
     summary,
     review?.html_url
   );
+  return { conclusion, summary, handoffError };
 }
 
 // workflow_run completion also runs when cancellation prevented any final job.

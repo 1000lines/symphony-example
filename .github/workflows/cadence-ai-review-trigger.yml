@@ -24,8 +24,6 @@ on:
         type: string
   workflow_call:
     secrets:
-      CADENCE_BOT_GITHUB_TOKEN:
-        required: true
       CADENCE_AI_REVIEW_ANTHROPIC_API_KEY:
         required: true
       CADENCE_LINEAR_API_TOKEN:
@@ -226,8 +224,27 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-metadata: read
-          permission-pull-requests: read
+          permission-pull-requests: write
+          permission-issues: write
+          permission-contents: read
+          permission-actions: read
           permission-checks: write
+
+      - name: Verify Cadence publishing identity
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          CADENCE_APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const slug = process.env.CADENCE_APP_SLUG;
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug || '')) throw new Error('Missing or invalid minted Cadence App slug');
+            const { data } = await github.request('GET /installation/repositories');
+            const target = `${context.repo.owner}/${context.repo.repo}`;
+            if (data.total_count !== 1 || data.repositories?.[0]?.full_name !== target) {
+              throw new Error('Cadence App token must be scoped to the target repository');
+            }
+            core.exportVariable('CADENCE_REVIEWER_LOGIN', `${slug}[bot]`);
 
       - name: Start accepted check
         id: started
@@ -265,7 +282,7 @@ jobs:
       - name: Fetch PR metadata and labels
         id: pr
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         run: |
@@ -358,7 +375,7 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           TRIGGER_SOURCE: ${{ inputs.trigger_source || format('{0}.{1}', github.event_name, github.event.action) }}
         with:
-          github-token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const { planStaleApprovalVisibility } = await import(
               `${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-ai-review-route-event.mjs`
@@ -366,7 +383,7 @@ jobs:
             const { owner, repo } = context.repo;
             const number = Number(process.env.PR_NUMBER);
             const triggerSource = process.env.TRIGGER_SOURCE || "";
-            const bot = (await github.rest.users.getAuthenticated()).data.login;
+            const bot = process.env.CADENCE_REVIEWER_LOGIN;
             const visibleReviewRequest =
               triggerSource === "pull_request_target.review_requested";
             const reviews = await github.paginate(github.rest.pulls.listReviews, {
@@ -487,7 +504,7 @@ jobs:
         id: request_humans
         if: steps.plan.outputs.request_human_review == 'true'
         env:
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           ASSIGNEES_JSON: ${{ steps.pr.outputs.assignees_json }}
@@ -685,7 +702,7 @@ jobs:
         uses: anthropics/claude-code-action@30544b674398ee15c84819bd87caf8a87e8c7b55 # v1.0.154
         with:
           anthropic_api_key: ${{ secrets.CADENCE_AI_REVIEW_ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
           # Allow only GitHub-identified bot initiators; humans retain the Action's write check.
           allowed_bots: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.actor.type == 'Bot' && github.event.workflow_run.actor.login || steps.app-token.outputs.app-slug }}
           prompt: |
@@ -720,7 +737,7 @@ jobs:
         env:
           CLAUDE_CODE_EFFORT_LEVEL: low
           CADENCE_CLAUDE_MODEL: ${{ vars.CADENCE_CLAUDE_MODEL }}
-          GH_TOKEN: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           LINEAR_API_TOKEN: ${{ secrets.CADENCE_LINEAR_API_TOKEN }}
 
       - name: Verify review outcomes (no false-green; block request-changes)
@@ -730,11 +747,11 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           CADENCE_REVIEW_OUTCOME: ${{ steps.cadence_review.outcome }}
         with:
-          github-token: ${{ secrets.CADENCE_BOT_GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const verifyCadenceAiReview = require("./.github/workflows/scripts/verify-cadence-ai-review.cjs");
 
-            await verifyCadenceAiReview({ github, context, core, reviewOutcome: process.env.CADENCE_REVIEW_OUTCOME });
+            await verifyCadenceAiReview({ github, context, core, reviewer: process.env.CADENCE_REVIEWER_LOGIN, reviewOutcome: process.env.CADENCE_REVIEW_OUTCOME });
 
       - name: Fail if stale Cadence approval could not be dismissed or re-requested
         if: always() && steps.plan.outputs.run_claude == 'true' && steps.review_state.outputs.stale_approval == 'true' && steps.stale_approvals.outputs.failed_count != '0'
@@ -747,10 +764,15 @@ jobs:
   finish:
     name: "Publish Cadence result for PR #${{ inputs.pr_number || github.event.pull_request.number }}"
     needs: [accept, review]
-    if: always() && needs.accept.outputs.check_id != ''
+    if: always() && github.ref == 'refs/heads/main' && needs.accept.outputs.check_id != ''
     environment: cadence-controller
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # GitHub gates draft readiness on contents:write. Limit it to this trusted
+    # repository job; the shared Cadence App has no contents-write grant.
+    permissions:
+      contents: write
+      pull-requests: write
     concurrency:
       group: cadence-check-publication-${{ github.repository }}-pr-${{ inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
@@ -769,7 +791,7 @@ jobs:
           private-key: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-pull-requests: write
+          permission-pull-requests: read
           permission-checks: write
       - name: Finish advisory check and hand clean drafts to humans
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
@@ -778,12 +800,18 @@ jobs:
           REVIEW_RESULT: ${{ needs.review.result }}
           RAN_REVIEW: ${{ needs.review.outputs.ran_review }}
           REVIEW_BASELINE: ${{ needs.review.outputs.baseline }}
+          HANDOFF_TOKEN: ${{ github.token }}
+          CADENCE_REVIEWER_LOGIN: ${{ steps.app-token.outputs.app-slug }}[bot]
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const { finishCheck } = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/cadence-review-check.mjs`);
-            await finishCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}', {
+            const handoffGithub = new github.constructor({ auth: process.env.HANDOFF_TOKEN, baseUrl: process.env.GITHUB_API_URL });
+            const outcome = await finishCheck(github, JSON.parse(process.env.CHECK_REQUEST), '${{ vars.CADENCE_APP_ID }}', {
               result: process.env.REVIEW_RESULT, ranReview: process.env.RAN_REVIEW,
               baseline: process.env.REVIEW_BASELINE === '' ? undefined : Number(process.env.REVIEW_BASELINE),
-              reviewer: process.env.CADENCE_REVIEWER,
+              reviewer: process.env.CADENCE_REVIEWER_LOGIN,
+              readyGraphql: handoffGithub.graphql,
             });
+            if (outcome) await core.summary.addRaw(`${outcome.summary}\n`).write();
+            if (outcome?.handoffError) core.setFailed(outcome.handoffError);

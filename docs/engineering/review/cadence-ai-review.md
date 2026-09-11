@@ -166,8 +166,9 @@ check, including feedback on the same head; the workflow run, attempt and PR
 identify it. Retrying the same admission does not reset a completed check.
 
 Publication requires a new Cadence verdict after this request started, at its
-accepted head. A clean approval yields `success`; findings or a review-loop
-stop yield `action_required`. Failed execution or a missing new verdict yields
+accepted head. A clean approval with a successful handoff (or an already-ready
+PR) yields `success`; findings or a review-loop stop yield `action_required`.
+Failed execution or a missing new verdict yields
 `failure`. Closed PRs, changed heads and requests superseded by newer accepted
 work are cancelled. Check summaries link the workflow and, when available, the
 review. Older requests cannot overwrite a newer request's pending check.
@@ -176,8 +177,46 @@ A clean current-head verdict marks a draft PR ready for human review when no
 newer accepted request exists. Already-ready PRs need no transition; findings
 leave a draft unchanged. Admission and final publication share a short native
 per-PR concurrency group; review execution uses its existing separate queue.
-The final job mints a fresh App token and rechecks the head before readying a
-draft. GitHub does not offer a head-conditional draft-to-ready mutation, so a
+The final job uses a fresh Cadence App token for PR/review reads and check
+publication (`pull-requests:read`, `checks:write`). A separate API client uses
+the repository's automatic `GITHUB_TOKEN` for `markPullRequestReadyForReview`.
+The finish job requests `contents:write` and `pull-requests:write`; the event
+and manual reusable-workflow callers must permit both, since a callee cannot
+increase its caller's permissions. Other jobs retain their narrower grants.
+The privileged finish job runs only on trusted `main`, checks out `main`
+without persisted credentials, and rechecks the head before readying a draft.
+It does not execute PR code, write contents, change workflows, or merge.
+The shared Cadence App does not need an additional grant or credential.
+
+A denied or unconfirmed ready mutation completes the advisory check as
+`failure`, retains the clean review link, and fails publication with “Review
+approved; marking ready failed” in the check and Actions summary. The diagnostic
+links the failed operation's workflow attempt and includes the API error.
+Completion recovery preserves that summary; it does not infer an approval from
+older reviews when no verified verdict was recorded.
+It never falls back to a different actor or
+claims a ready handoff without GitHub confirming `isDraft: false`. The operator
+should check the finish job and caller permission blocks, then the job log's
+effective `GITHUB_TOKEN Permissions`. After correcting access, rerun **all** jobs
+to acquire a new guarded verdict; rerunning only publication cannot revive a
+completed check. Keep the shared App grants unchanged.
+
+[PR #34's publication job](https://github.com/1000lines/symphony-example/actions/runs/34612573918/job/103307363013)
+demonstrates that the Cadence App's `pull-requests:write` and `checks:write`
+token was denied with GraphQL `FORBIDDEN`. GitHub documents that PR authors and
+repository writers can [change the PR stage](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/changing-the-stage-of-a-pull-request);
+PR write alone is not sufficient evidence of that capability. The repository
+workflow's proposed contents-write grant still requires live verification on
+the deployed workflow; local fixtures do not establish GitHub authorization.
+
+For rollout, record the deployed main SHA, actual draft PR/head, fresh Cadence
+review, Actions actor/effective grants, mutation result and completed advisory
+check. Exercise the denied case with contents read and PR write, then the same
+operation with the finish job's grants. Confirm findings, a superseded same-head
+request, changed head and closed PR never become ready. Preserve the protected
+environment's main-only policy; a PR checkout is not deployment evidence.
+
+GitHub does not offer a head-conditional draft-to-ready mutation, so a
 push concurrent with that last API call remains a platform race; its own check
 and review still belong to the new head.
 
@@ -261,11 +300,6 @@ Human feedback routing and the single-PR review trigger require the protected
 Repository secrets:
 
 - `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key for the review.
-- `CADENCE_BOT_GITHUB_TOKEN`: the legacy reviewer/trigger bot's GitHub token (classic, `repo`
-  scope). Used for the legacy review action's `github_token` and its publishing
-  calls. Human feedback acquisition and permission checks use the existing
-  Cadence App installation token instead. The bot account has **Triage**
-  repository access, so its approvals do not count toward required reviews.
 - `CADENCE_LINEAR_API_TOKEN`: Linear API token used by
   `scripts/fetch-linear-issue.mjs` to read issue context, by
   `scripts/cadence-linear-workpad.mjs` to write the Cadence workpad, and by the
@@ -283,8 +317,9 @@ Variables. Identity values must name the accounts behind the supplied tokens:
 
 - `SYMPHONY_BOT_USER`: coding bot GitHub login. Required for live attribution;
   synthetic fallback `example-symphony-bot`.
-- `CADENCE_REVIEWER`: review bot GitHub login. Required for live review;
-  synthetic fallback `example-cadence-bot`.
+- `CADENCE_REVIEWER`: legacy review-request login and actor exclusion;
+  synthetic fallback `example-cadence-bot`. Publishing identity is derived from
+  the minted App, independently of this compatibility setting.
 - `SYMPHONY_REPOSITORY_OWNER`: GitHub organization slug used for team lookup.
   Optional in workflows (default: `github.repository_owner`); export it for
   standalone helpers, whose fallback `example-org` is synthetic.
@@ -304,9 +339,14 @@ Review model variable:
 
 ## Identities
 
-- **Review bot**: the account named by `CADENCE_REVIEWER` authors reviews via
-  `CADENCE_BOT_GITHUB_TOKEN`. `example-cadence-bot` and `cadence@example.invalid`
-  are synthetic login/contact examples.
+- **Review App**: the configured Cadence App authors reviews with a short-lived,
+  single-repository installation token. The trusted token Action's `app-slug`
+  determines `CADENCE_REVIEWER_LOGIN` (`<app-slug>[bot]`) for Claude, verification,
+  advisory results and Linear handoff. Native review requires no
+  `CADENCE_BOT_GITHUB_TOKEN`; manual PR-list reads use `GITHUB_TOKEN`.
+  The review token requests metadata, contents and Actions read plus
+  pull-requests, issues and checks write from the existing App installation.
+  Draft readiness uses the separate repository `GITHUB_TOKEN`.
 - **Google service account**: its own `<service-account>@<project>.iam.gserviceaccount.com` email reads
   design docs. Share each doc, folder, or shared drive with that email as
   Viewer. This is a distinct identity from the GitHub bot.
@@ -396,15 +436,17 @@ and no `human-needed` findings, otherwise `COMMENT`. `REQUEST_CHANGES` is never
 used. Posting output as PR reviews (not plain conversation comments) keeps the
 event surface `pull_request_review`.
 
-The reviewer bot has **Triage** (not Write) repository access, so its `APPROVE`
-shows as an approval signal but does **not** count toward branch-protection
-required reviews; a human approval is still required to merge. (Confirmed: a
-Triage-role classic token can post reviews via the API.)
+Cadence's App approval is advisory; the project still requires human acceptance
+before merge. It does not authorize automatic merge or replace required CI.
 
-Reviews are submitted from one verified context. In a fan-out, workers return
-review bodies and the orchestrator posts after confirming `gh api user` matches
-the reviewer identity. A mismatch, such as a token falling back to another
-login, aborts the review submission.
+Reviews are submitted from one verified context. The trusted workflow verifies
+its installation token is scoped to the target and derives the expected bot
+login from the token Action's App slug. In a fan-out, workers return review bodies
+and the orchestrator publishes using that token. Installation tokens use
+`GET /installation/repositories` for access preflight, not the user-token-only
+`GET /user` endpoint. Missing identity or access aborts publication. The outcome
+verifier accepts only `APPROVED` or `COMMENTED` reviews from that App at the
+current head; advisory publication also requires a new verdict after admission.
 
 ## Human Review And Follow-Up Routing
 

@@ -243,9 +243,13 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
   context,
   core,
   reviewOutcome,
+  reviewer,
 }) {
   const { owner, repo } = context.repo;
-  const bot = (await github.rest.users.getAuthenticated()).data.login;
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*\[bot\]$/.test(reviewer || "")) {
+    core.setFailed("A trusted Cadence App reviewer login is required.");
+    return;
+  }
 
   const number = Number(process.env.PR_NUMBER);
   if (!Number.isInteger(number) || number <= 0) {
@@ -266,7 +270,7 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
     pull_number: number,
     per_page: 100,
   });
-  const mine = reviews.filter((review) => review.user?.login === bot);
+  const mine = reviews.filter((review) => review.user?.login === reviewer);
   for (const review of mine) {
     if (review.state === "CHANGES_REQUESTED") {
       await github.rest.pulls.dismissReview({
@@ -285,8 +289,7 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
   const validCurrentHeadReview = mine.some(
     (review) =>
       review.commit_id === pr.head.sha &&
-      review.state !== "DISMISSED" &&
-      review.state !== "CHANGES_REQUESTED"
+      ["APPROVED", "COMMENTED"].includes(review.state)
   );
   if (!validCurrentHeadReview) {
     unreviewed.push(`#${number} (head ${pr.head.sha.slice(0, 8)})`);
@@ -295,7 +298,9 @@ const verifyCadenceAiReview = async function verifyCadenceAiReview({
   const problems = [];
   if (reviewOutcome !== "success") {
     problems.push(
-      `Cadence AI review Action outcome: ${reviewOutcome || "unknown"}. Review execution did not succeed; inspect the Run Cadence AI review step.`
+      `Cadence AI review Action outcome: ${
+        reviewOutcome || "unknown"
+      }. Review execution did not succeed; inspect the Run Cadence AI review step.`
     );
   }
   if (unreviewed.length > 0) {
