@@ -104,6 +104,11 @@ jobs:
   review:
     needs: route
     if: needs.route.outputs.should_request_review == 'true'
+    # Permit the callee's finish job to ready drafts with this repository token.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: ./.github/workflows/cadence-ai-review-trigger.yml
     with:
       pr_number: ${{ needs.route.outputs.pr_number }}
