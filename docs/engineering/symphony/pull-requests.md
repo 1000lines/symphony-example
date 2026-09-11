@@ -5,7 +5,7 @@ When the target has none, use the shared
 [PR template](../../../.github/pull_request_template.md)
 at `$SYMPHONY_TOOLING_ROOT/.github/pull_request_template.md`.
 It follows the concise Context, TL;DR, Summary,
-Alternatives and Test Plan structure of the
+Alternatives and Test Plan (headed `Tested` here) structure of the
 [Symphony reference](https://github.com/1000lines/symphony/blob/main/.github/pull_request_template.md).
 Remove instructions and unused optional sections; a published PR should have
 finished prose, a real diagram and concrete evidence.
@@ -64,9 +64,9 @@ Status classes, including neutral `default`, must not set `stroke` or
 `stroke-width`: class styles can override the separate current-node outline.
 Use a separator such as `#123 — In progress` in labels; Mermaid interprets
 `#123;` as a character escape, hiding the PR number.
-Keep the small legend disconnected from the plan. Label nodes without PRs
+Omit the legend; status labels explain the colors. Label nodes without PRs
 “no PR yet”; use “no PR — not planned” for accepted no-PR work. For standalone
-work, retain just the current task and legend, with no dependency arrows.
+work, retain just the current task, with no dependency arrows.
 
 For every node with a PR, use Mermaid's supported URL form:
 `click NODE href "https://github.com/OWNER/REPO/pull/NUMBER" "Open PR" _blank`.
@@ -117,13 +117,16 @@ formatter is available only in the shared tooling checkout, invoke
 while staying in the target checkout. The whitespace check must compare the
 target PR's revision range in that checkout. Other target repositories use
 their own commands. Do not copy the
-reference repository's Elixir command. Record commands, outcomes, tested SHA,
-CI run links, material limitations and the next handoff in Test plan and the
-Codex workpad. Pending or stale checks are not passes.
+reference repository's Elixir command. Keep full commands, outcomes, tested SHA,
+CI run links, limitations and handoff details in the Codex workpad. In `Tested`,
+summarize relevant results once, link current-head CI/artifacts and the workpad,
+and include only commands needed to assess the change. Avoid repeated command
+lists or a routine checklist for every PR. Keep material limitations and the
+next handoff visible. Pending or stale checks are not passes.
 
 Open the actual PR conversation in GitHub after saving the body. Confirm that
 Mermaid renders a diagram, inspect the completed/in-progress/neutral colors,
-current-node outline/text and legend, and click the PR nodes to verify their
+current-node outline/text, and click the PR nodes to verify their
 destinations. Check both a planned multi-node example and a standalone example
 when changing the template. A PR that changes the template may include a clearly
 labeled, dated example based on an actual planned PR, avoiding changes to the

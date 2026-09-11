@@ -493,18 +493,21 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
     project goal (or commissioned standalone issue goal), and why it matters to
     users or the business, followed by a one-sentence TL;DR;
   - a Mermaid progress diagram of the current accepted plan, with verified PR
-    links, completed/in-progress colors, neutral other states, a legend and an
+    links, completed/in-progress colors, neutral other states and an
     independent current-PR outline/text. Mark nodes without PRs explicitly;
     standalone work uses one current task node without invented dependencies;
   - a `## Summary` section with the big-picture context first, then concise
     implementation bullets, and Alternatives only for useful tradeoffs;
-  - a `## Test plan` or `## Tested` section with concrete validation evidence;
+  - a concise `## Tested` section (`## Test plan` is also accepted) with relevant
+    results and evidence links; keep full command logs in the Codex workpad;
     and
   - the selected base branch.
 - For UI, CLI and API PRs, read the target's PR template when present and follow
   `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/pull-requests.md`. Fill the
   body explicitly; pass a prepared file with `--body-file` or its contents as
-  the API `body`. Remove instructions and empty optional sections. After PR
+  the API `body`. Remove the scaffold's HTML-comment delimiters before adding
+  Mermaid edges, then fill the diagram. Remove instructions and empty optional
+  sections. After PR
   creation, use the returned URL to add the current node's real link, update
   the body and read it back. Verify the saved diagram and links on GitHub;
   record the accepted plan revision, status-check time and rendering evidence.
