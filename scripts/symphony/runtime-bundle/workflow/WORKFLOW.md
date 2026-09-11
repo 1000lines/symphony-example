@@ -392,9 +392,10 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
 - Before returning to review, update the Codex workpad review-comment ledger so
   incoming, addressed, deferred, and blocked comments are each accounted for.
 - Before each rework handoff, refresh the linked PR's Context, TL;DR, Summary
-  and progress diagram from the current accepted plan and verified PR/issue
+  and progress from the current accepted plan and verified PR/issue
   statuses. Replans and observed PR status changes require a body update even
-  when no code changes. Keep the current-node highlight independent of status.
+  when no code changes. Reapply the diagram threshold below; keep the current-node
+  highlight independent of status when a diagram qualifies.
 - For changed plans, use `symphony-replan`: do small node additions, deletions,
   or splits directly, adding a Linear ticket if needed. For larger changes,
   create a replanning ticket from the planning template and a dependent fan-out
@@ -512,10 +513,12 @@ passed locally`. Use the target's documented container or a compatible pinned
   - near the top, a short Context explaining what changes, the specific linked
     project goal (or commissioned standalone issue goal), and why it matters to
     users or the business, followed by a one-sentence TL;DR;
-  - a Mermaid progress diagram of the current accepted plan, with verified PR
+  - a Mermaid progress diagram only when the current accepted plan has at least
+    three meaningful nodes and two genuine edges, with verified PR
     links, completed/in-progress colors, neutral other states and an
     independent current-PR outline/text. Mark nodes without PRs explicitly;
-    standalone work uses one current task node without invented dependencies;
+    omit the diagram otherwise and use a short progress sentence if useful.
+    Do not invent nodes or dependencies to meet the threshold;
   - a `## Summary` section with the big-picture context first, then concise
     implementation bullets, and Alternatives only for useful tradeoffs;
   - a concise `## Tested` section (`## Test plan` is also accepted) with relevant
@@ -525,11 +528,12 @@ passed locally`. Use the target's documented container or a compatible pinned
 - For UI, CLI and API PRs, read the target's PR template when present and follow
   `$SYMPHONY_TOOLING_ROOT/docs/engineering/symphony/pull-requests.md`. Fill the
   body explicitly; pass a prepared file with `--body-file` or its contents as
-  the API `body`. Remove the scaffold's HTML-comment delimiters before adding
-  Mermaid edges, then fill the diagram. Remove instructions and empty optional
-  sections. After PR
-  creation, use the returned URL to add the current node's real link, update
-  the body and read it back. Verify the saved diagram and links on GitHub;
+  the API `body`. Omit the diagram scaffold unless it meets the threshold above.
+  For qualifying diagrams, remove the scaffold's HTML-comment delimiters before
+  adding Mermaid edges, then fill the diagram. Remove instructions and empty optional
+  sections. After PR creation, add the current node's real link when a diagram
+  qualifies, using the returned URL, then update the body and read it back.
+  Verify the saved body and any diagram and links on GitHub;
   record the accepted plan revision, status-check time and rendering evidence.
   Refresh on subsequent handled status/replan events; when no worker handles
   a later event, hand body maintenance to the PR owner. CI success alone never

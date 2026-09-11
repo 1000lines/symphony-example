@@ -8,7 +8,8 @@ It follows the concise Context, TL;DR, Summary,
 Alternatives and Test Plan (headed `Tested` here) structure of the
 [Symphony reference](https://github.com/1000lines/symphony/blob/main/.github/pull_request_template.md).
 Remove instructions and unused optional sections; a published PR should have
-finished prose, a real diagram and concrete evidence.
+finished prose, concrete evidence and a progress diagram only when it qualifies
+under the threshold below.
 
 ## Explain the value
 
@@ -27,6 +28,15 @@ so Jeremy can judge why a change matters and navigate related work without
 reading the code.”
 
 ## Show the accepted plan
+
+Include a progress diagram only when the accepted plan has **at least three
+meaningful nodes and two genuine edges**. Omit it otherwise, including for
+standalone work, two-node plans, or three nodes with fewer than two edges.
+Use a short progress sentence if useful; remove the Progress section if unused.
+Do not invent nodes or dependencies to meet the threshold. Apply the same rule
+to PR templates and guidance inherited by the Copier template.
+
+For qualifying diagrams, follow the guidance below.
 
 Link the current accepted plan revision and record the UTC time at which status
 was checked. Read accepted replans and fresh human decisions too. Copy that
@@ -65,8 +75,7 @@ Status classes, including neutral `default`, must not set `stroke` or
 Use a separator such as `#123 — In progress` in labels; Mermaid interprets
 `#123;` as a character escape, hiding the PR number.
 Omit the legend; status labels explain the colors. Label nodes without PRs
-“no PR yet”; use “no PR — not planned” for accepted no-PR work. For standalone
-work, retain just the current task, with no dependency arrows.
+“no PR yet”; use “no PR — not planned” for accepted no-PR work.
 
 For every node with a PR, use Mermaid's supported URL form:
 `click NODE href "https://github.com/OWNER/REPO/pull/NUMBER" "Open PR" _blank`.
@@ -78,17 +87,19 @@ Do not use JavaScript callbacks, HTML links in labels or custom renderer setting
 ## Publish and refresh
 
 1. Read the target repository's template (or the shared fallback above) and write
-   a filled body to a local file. Remove the scaffold's separate HTML-comment
-   delimiters **before** adding nodes or edges: Mermaid arrows contain `-->`,
+   a filled body to a local file. Omit the diagram scaffold unless it meets the
+   threshold above. For qualifying diagrams, remove the scaffold's separate
+   HTML-comment delimiters **before** adding nodes or edges: Mermaid arrows contain `-->`,
    which would end an enclosing comment prematurely. Remove instruction comments.
    For CLI, pass it with `gh pr create --draft --base "$base" --body-file "$body_file"`;
    for API, send its exact contents as the PR `body`. Do not rely on automatic
    UI insertion, `--fill` or commit messages to populate the description.
-2. Before creation, the current node may honestly say “no PR yet” and have no
-   link. Capture the returned PR URL, add the actual number and Mermaid click
+2. For qualifying diagrams, before creation the current node may honestly say
+   “no PR yet” and have no link. Capture the returned PR URL, add the actual number and Mermaid click
    link, then update using `gh pr edit "$pr_url" --body-file "$body_file"` or the
    REST pull-request update endpoint. Read back the stored body.
 3. Before each publish/rework handoff, re-read the accepted plan and node statuses.
+   Reapply the diagram threshold; add or remove the diagram as appropriate.
    Update Context, TL;DR, Summary, topology, labels and links together when scope
    changes. Reflect observed draft/ready, review, closed, reopened and merged
    transitions. A changed plan or status can require a body-only edit.
@@ -124,11 +135,13 @@ and include only commands needed to assess the change. Avoid repeated command
 lists or a routine checklist for every PR. Keep material limitations and the
 next handoff visible. Pending or stale checks are not passes.
 
-Open the actual PR conversation in GitHub after saving the body. Confirm that
-Mermaid renders a diagram, inspect the completed/in-progress/neutral colors,
-current-node outline/text, and click the PR nodes to verify their
-destinations. Check both a planned multi-node example and a standalone example
-when changing the template. A PR that changes the template may include a clearly
+Open the actual PR conversation in GitHub after saving the body. For qualifying
+diagrams, confirm that Mermaid renders, inspect the completed/in-progress/neutral
+colors and current-node outline/text, and click the PR nodes to verify their
+destinations. When changing the template, manually check that one- and two-node
+plans and three nodes with fewer than two edges omit the diagram, while a real
+three-node/two-edge plan qualifies. Do not add validation machinery for this
+guidance. A PR that changes the template may include a clearly
 labeled, dated example based on an actual planned PR, avoiding changes to the
 source PR's body solely for demonstration.
 Record the PR URL, body revision/time, browser, link destinations and result;

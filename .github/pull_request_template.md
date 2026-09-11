@@ -15,11 +15,16 @@ Base: <!-- selected base branch -->
 
 ## Progress
 
-<!-- Link the current accepted plan and state when PR/issue statuses were checked.
+<!-- Include a progress diagram only when the accepted plan has at least three
+meaningful nodes and two genuine edges. Otherwise remove the diagram scaffold
+and its explanation; use a short progress sentence if useful, or remove this section.
+Do not invent nodes or dependencies to meet the threshold.
+For a qualifying diagram, link the current accepted plan and state when PR/issue
+statuses were checked.
 First remove the separate HTML-comment delimiter lines around the scaffold below.
 Only then add nodes or edges: Mermaid arrows contain the closing-comment sequence.
-For a project DAG, replace CURRENT with its actual nodes/edges and verified PR
-links; preserve the styles. For standalone work, keep one task node.
+Replace CURRENT with the plan's actual nodes/edges and verified PR links;
+preserve the styles. The single node below is a style scaffold, not a publishable diagram.
 Label each node with its issue, short purpose, PR number or "no PR yet", and state.
 After creation, add: click CURRENT href "ACTUAL_PR_URL" "Open current PR" _blank
 Never guess a PR URL. Refresh this graph and the summary on replan/status changes.
