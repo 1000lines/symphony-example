@@ -401,6 +401,38 @@ allocation when a Symphony push arrives on a PR already carrying
 for direct and matrix invocations. Human comments and reviews always route
 through and reset the loop back to `cadence-loop-1`.
 
+### Accepted feedback acknowledgement
+
+After the event router accepts eligible feedback and verifies the author's
+current repository write access, the configured Cadence App adds 👀 to that
+item. This means “seen and accepted for processing”; it does not indicate
+approval or completion. The acknowledgement runs in the routing job, before
+the reusable review job waits in its per-PR concurrency queue. Ignored and
+unauthorized events receive no acknowledgement.
+
+The workflow uses GitHub's native
+[`addReaction` mutation](https://docs.github.com/en/graphql/reference/reactions#addreaction)
+with `EYES` and the verified item's node ID. It supports PR conversation
+comments (`IssueComment`), submitted review bodies
+([`PullRequestReview`](https://docs.github.com/en/graphql/reference/pulls#pullrequestreview))
+and inline review comments (`PullRequestReviewComment`), including accepted
+edits. A submitted review body is a `Reactable` node; the REST review-comment
+reactions endpoint addresses inline comments, not that body. No fallback
+conversation comment is needed. Repeated delivery adds the same App reaction
+instead of toggling or creating another acknowledgement. API failures produce
+a step warning and run summary without preventing the queued review.
+
+The existing `cadence-controller` App token requests `issues: write` and
+`pull_requests: write` for the target repository; the routing job's automatic
+GitHub token remains read-only. No new credential is required. Because routing
+loads the default branch, live acceptance follows deployment to `main`: while
+a review is running, submit an authorized conversation comment and review,
+verify each item's Cadence 👀 and the queued run, then rerun the routing job
+and verify one reaction per item from that App. Retain the item URLs, routing
+run summaries/reaction IDs and queue timestamps; also verify ignored or
+unauthorized feedback receives no reaction. Local fixtures do not establish
+that live evidence.
+
 ## Request-Changes Enforcement
 
 Three layers keep `REQUEST_CHANGES` off:

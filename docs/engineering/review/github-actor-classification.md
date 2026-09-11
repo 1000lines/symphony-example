@@ -176,8 +176,10 @@ no organization Members or repository Administration permission is needed.
 The [GitHub endpoint documentation](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user)
 specifies App installation token support and `Metadata: read` for permission
 lookups. [Conversation comment reads](https://docs.github.com/en/rest/issues/comments#get-an-issue-comment)
-also accept Pull requests permission, so no Issues grant is added to the App
-token. The existing workflow token still handles review-request deletion to
+also accept Pull requests permission. The event router additionally requests
+`Issues: write` for [accepted-feedback reactions](./cadence-ai-review.md#accepted-feedback-acknowledgement)
+as the configured Cadence App; authority checks still precede acknowledgement.
+The existing workflow token still handles review-request deletion to
 preserve the current event-loop behavior.
 
 The review trigger admits App-originated review requests to a guard that checks
