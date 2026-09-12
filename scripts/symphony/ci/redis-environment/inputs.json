@@ -1,0 +1,84 @@
+{
+  "schema": "redis-environment/v1",
+  "source": "41585545ee8284d3a51797fdfa1ff995866ab558",
+  "platform": "linux/amd64",
+  "compose": {
+    "version": "2.39.4",
+    "sha256": "7af95166a730b87e172d4fc9aefea8725d3c6c7327d59149267b452114ddb7d4"
+  },
+  "images": {
+    "library/python:3.10-bookworm": {
+      "ref": "library/python@sha256:94c362db08c5b38857943d31b10558ff1856e918605c474d205d72a534929d4e"
+    },
+    "library/python:3.11-bookworm": {
+      "ref": "library/python@sha256:35d3a4a3d5e42e02ab916d44513a050689f12c0533d45598d229672503fe77ca"
+    },
+    "library/python:3.12-bookworm": {
+      "ref": "library/python@sha256:581429e3df12d76e6af4be5ab7d0e7fc2013eb57dc23d2de691411c8efdbb970"
+    },
+    "library/python:3.13-bookworm": {
+      "ref": "library/python@sha256:933b46a028fd786c9c3d426ebabc237e29a15912231ea8de576e95f0e4f41a4c"
+    },
+    "library/python:3.14-bookworm": {
+      "ref": "library/python@sha256:ecac9e212daacda8a702eae372fceebc0ee36f5805abe087880367e8d061fa5b"
+    },
+    "library/pypy:3.10-bookworm": {
+      "ref": "library/pypy@sha256:561e43edba15cf42380165f336ac8bafd8245adbd150d8ffe1439c708d0a7683"
+    },
+    "library/pypy:3.11-bookworm": {
+      "ref": "library/pypy@sha256:7670cfb80d068a3102e8abb84d0c339ac0ab3d75291377c3d8121894eb9929fa"
+    },
+    "redislabs/client-libs-test:8.10.0": {
+      "ref": "redislabs/client-libs-test@sha256:d349c6875600403edaa02fa0e7f6f79b6fab74c0e490822b0c37d8d85f6f0d89"
+    },
+    "redislabs/client-libs-test:8.8.0": {
+      "ref": "redislabs/client-libs-test@sha256:319b628cb1f3347ac22c883860d7db10bec69948bbd0f9aee4d676899285cde4"
+    },
+    "redislabs/client-libs-test:8.6.3": {
+      "ref": "redislabs/client-libs-test@sha256:adacb737b2fb2d3af13c174d8dff3aaaa568c3d71d8442c71c2f4e1c658029ff"
+    },
+    "redislabs/client-libs-test:8.4.3": {
+      "ref": "redislabs/client-libs-test@sha256:f197b4e7cb3fcc579c80137dd93b18667e87d315aa8588071125117a91402a12",
+      "dataVolume": true
+    },
+    "redislabs/client-libs-test:8.2.6": {
+      "ref": "redislabs/client-libs-test@sha256:6b46280e521cc542d0da8bf110731127b7892efa716cf91e9a658b4361a2f175",
+      "dataVolume": true
+    },
+    "redislabs/client-libs-test:8.0.6": {
+      "ref": "redislabs/client-libs-test@sha256:59d7b984e44cc23f080de72f29f2427ef159656184e6e75360bc82a6f1a3a820",
+      "dataVolume": true
+    },
+    "redislabs/client-libs-test:7.4.9": {
+      "ref": "redislabs/client-libs-test@sha256:bc45dc80848d1c818e330fa24d3c1958ea3ebf37aeaa931a2ec68c8397c15d4f",
+      "dataVolume": true
+    },
+    "redislabs/client-libs-test:7.2.14": {
+      "ref": "redislabs/client-libs-test@sha256:58b1a5f3ba536b7cde2acccb6846d01a2d82e5e3ef295e173a1b5ea092dd8016",
+      "dataVolume": true
+    },
+    "redislabs/client-libs-test:rs-7.4.0-v8": {
+      "ref": "redislabs/client-libs-test@sha256:b44db722c9a9f280685e97547ec95e4fdf984505e2e24b9e9de19202a462048e"
+    },
+    "redislabs/client-libs-test:rs-7.2.0-v20": {
+      "ref": "redislabs/client-libs-test@sha256:e38ffd865fb1262cf1bacab7e455e7850c19b50d765db63e5016a7f9d40153b6"
+    },
+    "redislabs/client-resp-proxy:latest": {
+      "ref": "redislabs/client-resp-proxy@sha256:dd4d42aa066a613c8951c9dc56110d13112068cdf10c137b30e24ba0f1bd52d6"
+    }
+  },
+  "sources": {
+    "AGENTS.md": "c726ba5cb8b2a35b3e7c5aa21cfa89bb06a3bd1452f7de31730c6dd99ed1c871",
+    "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
+    "docker-compose.yml": "d3f7a49c652121ea5ed0ad714e93bcb1938793b011e6b6c88a8fc3944eb967e8",
+    "dockers/sentinel.conf": "53fb3e07edef7755155d1fe165f9a9963c9f369445dcc241a71b3637163ed8f9",
+    "tasks.py": "793c085395b71d1a1046ccffa0350819e8e9146f62fd451baa2dbd2d9320cb2d",
+    "dev_requirements.txt": "96116f0e839153ad4917d0be19d39425d490d0980af176a8c77fc8dd27554bda",
+    "pyproject.toml": "a537cda80b3b5c4486e9b8e6a88e0549b5aee528c50d561ad28462081c0990e5",
+    ".github/workflows/integration.yaml": "4a551009c440e9ab18e74edcaafb6d6c9932096cc76864dd565f1b3e5c62d8ca",
+    ".github/workflows/install_and_test.sh": "249a203dd8916311d32c8a14f95304883d5027907f3283a76dfd8de440935fd2",
+    ".github/actions/run-tests/action.yml": "d1c13bc7e03e1cda00c0da9ce834e2529b7a819440ec4733771198e884da2f39",
+    "tests/conftest.py": "a232ad3888cfc5d75fdb92b510e425dc873d0d33d89c543178f375602a4357e3",
+    "tests/maint_notifications/proxy_server_helpers.py": "2d79d2091f1e99ca7881f3cc0869d69f4f9c2a56b414d591094bbcf4314dd33c"
+  }
+}
