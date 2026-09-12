@@ -1,6 +1,10 @@
 name: Symphony Client Wakeups
 
 on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "7,22,37,52 * * * *"
   pull_request_target:
     types: [opened, synchronize, reopened, edited, labeled]
   workflow_run:
@@ -28,7 +32,8 @@ jobs:
         contains(fromJSON('["pull_request","push","workflow_dispatch"]'), github.event.workflow_run.event)) ||
       (github.event_name == 'check_run' &&
         github.event.check_run.check_suite.app.slug != 'github-actions') ||
-      github.event_name == 'status'
+      github.event_name == 'status' ||
+      github.event_name == 'push' || github.event_name == 'schedule'
     uses: 1000lines/symphony-client-workflows/.github/workflows/symphony-linear-wakeups.yml@alpha
     with:
       target-repository: "1000lines/symphony-example"

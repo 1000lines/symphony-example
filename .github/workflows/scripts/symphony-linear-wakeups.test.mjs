@@ -1785,7 +1785,8 @@ test("workflow boundary supports native and reusable CI without reviewer secrets
     workflows: ["*"],
     types: ["completed"],
   });
-  assert.equal(caller.on.schedule, undefined);
+  assert.deepEqual(caller.on.push, { branches: ["main"] });
+  assert.deepEqual(caller.on.schedule, [{ cron: "7,22,37,52 * * * *" }]);
   assert.deepEqual(Object.keys(caller.jobs.wake.secrets), ["CADENCE_LINEAR_API_TOKEN"]);
   assert.equal(caller.jobs.wake.with["target-repository"], "1000lines/symphony-example");
   assert.equal(caller.jobs.wake.with["target-default-branch"], "main");

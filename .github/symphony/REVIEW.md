@@ -29,14 +29,35 @@ Handoff and cleanup receive only their own named secrets; ingress receives none.
 Store secrets at repository scope or in organization secrets selected for this
 repository. Keep `cadence-controller` restricted to the repository's default
 branch and free of shadowing environment secrets. Configure `CADENCE_APP_ID`,
-`SYMPHONY_BOT_USER` and `CADENCE_REVIEWER` as repository Actions variables.
+`SYMPHONY_BOT_USER` and `CADENCE_REVIEWER` as repository Actions variables or
+organization variables granted to this repository.
 
 The shared workflow and helper revision must match. After the reviewed workflow
 release, propagate caller updates through Copier, inspect the generated diff,
 and verify a real App-authored PR review/check and Linear handoff. Generated
-files and fixture tests do not establish live readiness. Guided provisioning
-and readiness verification belong to [100-62](https://linear.app/1000lines/issue/100-62).
+files and fixture tests do not establish live readiness. Use the
+[onboarding skill](../../.agents/skills/cadence-onboarding/SKILL.md) for secure
+provisioning and readiness verification.
 
 Keep reviewer implementation in the shared workflows. App/Linear credentials
 and optional provider keys must be explicitly mapped at each review boundary.
 The author and reviewer remain distinct; human acceptance owns merge and Done.
+
+## Current Cadence status
+
+The pinned shared status-comment revision lets Cadence edit one App-owned
+PR comment as reviews queue, run, complete or fail. It shows the current verdict,
+a brief assessment and up to three findings, with links to the head, run and
+formal review. Detailed history remains in reviews, runs and the Linear workpad.
+
+The footer uses observed model/token usage when the provider exposes it and
+measured review duration. Requested models are labeled separately; unavailable
+measurements are omitted. Codex's pinned Action currently supplies no structured
+observed model or token counts. Elapsed provider-step time can include setup.
+
+Admission, review start, completion and recovery request the existing Cadence
+App's PR-write grant for comment edits; no new App installation grant or secret
+is needed. Keep the generated caller and helper revision matched. When adopting this template revision, apply the caller changes through Copier
+and verify one
+live App-authored comment is edited across reviews. Generated-file validation does not establish live deployment; the root client
+may still use its separately recorded older template source.

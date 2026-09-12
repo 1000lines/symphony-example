@@ -104,7 +104,15 @@ maturity for request-changes, rejected/stale acceptance evidence or similarly
 severe regression; ordinary edits alone do not revoke it. Human acceptance owns
 Done. Use the shared Cadence acceptance contract for freshness and provenance.
 
-Select validation from the target's `ci.mode` (omitted means `native`).
+Select validation from the selected-base `ci.mode` (omitted means `native`),
+then apply explicit ticket Docker requirements. An explicit ticket Docker
+requirement takes precedence over native/remote defaults for that workload,
+even after native checks pass. Record the configured mode, effective mode and
+override source (issue section or human comment URL) in the workpad and evidence.
+Use the ticket's explicit executable/argument arrays and accepted workload
+recipes under `SYMPHONY_TOOLING_ROOT`; the reader does not wrap native commands
+in Docker or rewrite repository configuration. Without an override, retain the
+selected mode's behavior below.
 For native mode, validate **local → Docker for environment gaps → mandatory CI**;
 record `Docker: skipped — passed locally` when local checks pass. For `docker`,
 run the configured image-build and container commands using the client's Dockerfile;

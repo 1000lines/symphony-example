@@ -18,9 +18,9 @@ permissions:
 
 jobs:
   review:
-    uses: 1000lines/symphony-client-workflows/.github/workflows/cadence-ai-review-trigger.yml@ac15fc1567865eb738cd53409c6fddf297e78a09
+    uses: 1000lines/symphony-client-workflows/.github/workflows/cadence-ai-review-trigger.yml@ddc9eb0f2a1a24643b6350db9003ed27089548a6
     with:
-      helpers-ref: ac15fc1567865eb738cd53409c6fddf297e78a09
+      helpers-ref: ddc9eb0f2a1a24643b6350db9003ed27089548a6
       pr_number: ${{ inputs.pr_number || format('{0}', github.event.pull_request.number) }}
     secrets:
       CADENCE_APP_PRIVATE_KEY: ${{ secrets.CADENCE_APP_PRIVATE_KEY }}

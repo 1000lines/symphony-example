@@ -1,24 +1,17 @@
 # Symphony client
 
 Repository: "1000lines/symphony-example". Default branch: "main".
-Linear team: "100". Each issue supplies its own project;
-this repository can serve multiple projects.
+Linear team: "100"; each issue supplies its project in this shared repository.
 
-Read the target's README, AGENTS.md and CLAUDE.md when present. Use the build and
-test argument arrays in `.symphony.cfg.json`; preserve existing setup, lint and
-application CI. Omitted `ci.mode` means native validation. Run available local
-checks, use Docker for environment gaps, and require CI on the published head.
-The initial `ci.requiredChecks: []` is **unconfigured**, never passing evidence.
-Record the target's observed check names, workflow paths and producing App IDs
-before activation. Keep the Cadence advisory check outside required checks.
+Read README, AGENTS.md and CLAUDE.md when present. Use `.symphony.cfg.json` command
+arrays; preserve setup/lint/application CI. Validate locally, then Docker for gaps,
+then mandatory published-head CI. Empty `ci.requiredChecks` is **unconfigured**:
+record observed check names/workflow paths/App IDs before activation. Cadence is advisory.
 
-The optional command CI and native CI wakeup callers use reviewed shared code.
-Omit `symphony-client-ci.yml` when existing application CI covers the commands;
-otherwise keep its command arrays aligned with config and provide any required
-application setup. It runs the exact PR head with no named secrets. Wakeups pass
-only `CADENCE_LINEAR_API_TOKEN` and use trusted source helpers, reading config
-from this repository's default branch. Record actual check/workflow/App evidence
-before activation; the generated empty required-check list is not a CI contract.
+Command CI and native wakeups use reviewed shared code. Omit `symphony-client-ci.yml`
+when application CI covers the commands; otherwise align its arrays with config and
+supply application setup. It tests the exact head without named secrets. Wakeups
+pass only `CADENCE_LINEAR_API_TOKEN`; trusted helpers read default-branch config.
 
 Select `ci.mode` during onboarding without changing the eight Copier answers:
 
@@ -28,19 +21,51 @@ Select `ci.mode` during onboarding without changing the eight Copier answers:
   arrays to build and run it. The field does not wrap commands automatically.
   Mount only the issue workspace, use its UID/GID, remove task containers and
   record image digest/results. No generic Dockerfile is supplied.
-- `remote`: run useful available checks and record missing tools, then publish
-  for mandatory current-head GitHub CI. Fix known failures; unrun checks are not
-  passes. No host toolchain installation or Docker setup is required.
+- `remote`: run available checks, record missing tools and fix known failures, then
+  publish for mandatory current-head CI. Unrun checks are not passes; no host/Docker setup.
 
 GitHub CI needs its own working toolchain/commands in every mode. Required CI
 pending or missing uses Unhappy with `wake:15m`; failures return nonterminal
 tickets to Active; passing checks return them to Inactive for review. Preserve
 terminal states and current-head guards. Live mode/bridge proof remains CT-A.
 
-The generated review event, direct/manual, handoff and cleanup callers use
-explicit named secrets and the same reviewed shared workflow/helper revision.
-Ingress remains secret-free. Follow the review context for provider selection
-and report live execution separately from generated-file verification.
+Review event/manual, handoff and cleanup callers share a reviewed workflow/helper
+revision and explicit named secrets. Ingress is secret-free. Follow review context
+for provider selection; report live execution separately from generated files.
+
+Run the [PR guidance](docs/engineering/symphony/pull-requests.md) fetch/render
+commands on creation and every refresh; retain generated state colors and links.
+
+## Merge conflict wakeups
+
+`Symphony Client Wakeups` checks labeled, same-repository open PRs on
+`pull_request_target` and default-branch pushes; pushes select PRs targeting that
+branch without needing a new head. Recovery at minutes 7, 22, 37 and 52 UTC also
+checks other bases and retries unknown mergeability. GitHub may delay schedules
+or disable them after inactivity; recovery has no guaranteed 15-minute deadline.
+
+Publish the accepted bridge to `symphony-client-workflows@alpha`, install the
+caller on the default branch, and enable Actions/schedules. Map only
+`CADENCE_LINEAR_API_TOKEN`: its owner needs issue/team/project reads, Cadence
+workpad writes and team issue-state updates. Record the authenticated owner;
+no display-name gate. Grant contents/PR/checks/statuses/Actions read only.
+No PR write, App key or provider secret is needed. Helpers use the fixed trusted
+shared repository/ref, read default-branch config and never execute PR code.
+
+Keep config team, title/branch ticket, project metadata and symphony/project-color
+labels consistent; ambiguous/mismatched associations fail closed. Preserve
+terminal issues and closed/merged PRs; leave active workers for later recovery.
+Confirmed conflicts wake waiting issues to Active (legacy Rework). Cadence workpad
+and Actions summary record issue, identity source, actor, PR/head/base, run URL,
+resolution instruction and confirmed mutation/skip. Repository/PR/head receipts
+survive event-history rotation and base changes; only new heads become eligible again.
+CI delegates conflicts to this bridge, never parking them on successful checks.
+Unknown CI mergeability uses Unhappy + wake:15m; Symphony's timer rechecks PR/CI
+without another GitHub event. Symphony resolves conflicts.
+
+For live proof, advance a disposable task-linked PR's base with a conflict while
+its issue is Inactive. Retain the push/recovery run and matching Active mutation,
+then verify the unchanged-head duplicate skip. Render/API fixtures are separate proof.
 
 ## Client session skills
 
@@ -49,26 +74,30 @@ Load these skills from this generated client in the human-operated session:
 - [Project factory](.agents/skills/symphony-project-factory/SKILL.md), retaining
   its `templates/` directory; invoke only when a human requests project setup.
 - [Linear GraphQL](.agents/skills/linear-graphql/SKILL.md), retaining
-  `agents/openai.yaml` and `scripts/linear-graphql.mjs`. Factory operations require
-  the injected `linear_graphql` tool; the fallback script does not replace it.
-- [Replan](scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md), loaded
-  explicitly from this nested location with the client
-  [replanning guide](docs/engineering/symphony/replanning.md) and factory templates.
+  `agents/openai.yaml` and `scripts/linear-graphql.mjs`. Prefer injected
+  `linear_graphql`; when absent in a human-operated factory session, use the
+  authenticated script with the same identity/preflight/staging/readback guards.
+  Auth failure stops dependent writes without switching identity or transport;
+  hosted workers retain injected auth. Already-authorized writes need no extra confirmation.
+- Load [Replan](scripts/symphony/runtime-bundle/skills/symphony-replan/SKILL.md) from
+  its nested path with the [guide](docs/engineering/symphony/replanning.md) and factory templates.
 
 Keep a separate [reviewed tooling checkout](https://github.com/1000lines/symphony-example/tree/fd383f5760a2ba62ea6f6295bd6dd21cc0cb9e9e)
-with its own locked dependencies and CT-C mode-aware config reader. Verify the
-hosted reader supports `ci.mode` before enabling an explicit mode on that host. `SYMPHONY_TOOLING_ROOT` names that checkout;
-external workflow guidance, color helper, DAG tooling and proof/review guides
-resolve there. Client plans and skill-relative resources resolve in this client.
-Record both checkout refs/locations and the loaded skill/resource paths. The
-client repository and its Linear projects remain the operation's targets.
+with locked dependencies and the CT-C reader; verify hosted `ci.mode` support before
+setting it. `SYMPHONY_TOOLING_ROOT` resolves workflow/color/DAG/proof/review tooling;
+client plans and skill resources resolve locally. Record both refs/locations and
+loaded resource paths; the client repository and its Linear projects remain targets.
 
-[CT-O's setup and invocation procedure](https://linear.app/1000lines/issue/100-54)
-will verify initial, repeated and additional-project loading, including replan's
-nested path. Copying these files does not install or run the skills. Keep the
-project factory out of the unattended hosted worker profile.
+[CT-O](https://linear.app/1000lines/issue/100-54) verifies initial/repeated/additional-project
+loading, including nested replan. Copying skills does not install/run them;
+keep the project factory out of the unattended hosted worker profile.
 
 ## Review and App setup
+
+Use the [Cadence onboarding skill](.agents/skills/cadence-onboarding/SKILL.md) for credential
+names/scopes, App installation/grants and environment admission. `Symphony Client Setup`
+checks repository/protected-job credentials without AI review; complete onboarding
+requires installed callers and a real review/check/Linear handoff.
 
 Author App: "1000lines-symphony". Reviewer App: "1000lines-cadence".
 Reviewer choice: "codex"; see [review context](.github/symphony/REVIEW.md).
@@ -76,14 +105,11 @@ Provision credentials separately from answers and commands. At runtime an OpenAI
 key selects Codex (including when both keys exist), otherwise an Anthropic key
 selects Claude. Neither key fails early; authentication failures never fall back.
 
-Public MVP forks use the accepted existing Cadence App; installation does not
-provide the named Actions secrets. Direct/private targets use the inert
-[App manifest](.github/symphony/cadence-app-manifest.json) in the operator's
-[GitHub manifest registration flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest).
-It requests repository read access and PR/issue/check write access, with no
-webhook receiver or subscribed events; native GitHub Actions provide delivery.
-The owner verifies the created App's grants/IDs and provisions secrets through
-CT-O. Rendering is not App registration or credential provisioning.
+Public MVP forks use the existing Cadence App; installation supplies no Actions secrets.
+Direct/private targets use the inert [App manifest](.github/symphony/cadence-app-manifest.json)
+in the [registration flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest):
+repository read, PR/issue/check write, no webhooks/subscriptions; native Actions deliver events.
+The owner verifies App grants/IDs and provisions credentials via onboarding; rendering does neither.
 
 ## Source and license
 
