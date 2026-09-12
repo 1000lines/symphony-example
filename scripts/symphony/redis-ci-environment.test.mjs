@@ -1,7 +1,9 @@
 import yaml from "js-yaml";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import {
   copyFileSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -52,6 +54,7 @@ test("complete pinned topology retains every profile, healthcheck, TLS setting a
     selected,
     anchor: "abc123",
     project: "drc-100-88-test-cell",
+    attempt: randomUUID(),
     uid: 993,
     gid: 993,
   });
@@ -133,7 +136,8 @@ test("rejects changed source, floating images, missing inventory, unknown axes a
   assert.throws(() => within(source, resolve(source, "../outside")));
   writeFileSync(resolve(source, "docker-compose.yml"), "services: {}\n");
   assert.throws(
-    () => render(source, { lock: inputs, anchor: "abc123" }),
+    () =>
+      render(source, { lock: inputs, anchor: "abc123", attempt: randomUUID() }),
     /Compose source drift/
   );
 });
@@ -144,6 +148,7 @@ test("partial startup, health failure and cancellation retain original failure a
       const { workspace, source } = fixture(t);
       const output = resolve(workspace, "output");
       mkdirSync(output);
+      cpSync(source, resolve(output, "source"), { recursive: true });
       const project = identity("100-88", "test", failure);
       const lockFile = resolve(output, "environment-lock.json");
       writeFileSync(lockFile, JSON.stringify(inputs));
@@ -151,6 +156,7 @@ test("partial startup, health failure and cancellation retain original failure a
       writeFileSync(composeFile, "{}");
       const state = {
         project,
+        attempt: randomUUID(),
         output,
         prepared: true,
         uid: 993,
@@ -163,7 +169,7 @@ test("partial startup, health failure and cancellation retain original failure a
       };
       if (failure === "check") state.anchor = "a".repeat(64);
       writeFileSync(resolve(output, "state.json"), JSON.stringify(state));
-      const owned = new Set();
+      const owned = new Set(state.anchor ? [state.anchor] : []);
       const unrelated = "c".repeat(64);
       let canceled = false;
       let logs = 0;
@@ -177,7 +183,17 @@ test("partial startup, health failure and cancellation retain original failure a
           return {
             code: owned.has(args[1]) ? 0 : 1,
             stdout: JSON.stringify([
-              { Config: { Labels: { "drc.owner": project } } },
+              {
+                Config: {
+                  Labels: {
+                    "drc.owner": project,
+                    "drc.attempt": state.attempt,
+                  },
+                  User: `${state.uid}:${state.gid}`,
+                },
+                HostConfig: {},
+                Mounts: [],
+              },
             ]),
           };
         if (args[0] === "logs") logs++;
@@ -211,6 +227,11 @@ test("partial startup, health failure and cancellation retain original failure a
       );
       const recorded = readJson(resolve(output, "state.json"));
       assert.ok(recorded.failure.message);
+      if (failure === "check")
+        assert.match(recorded.failure.message, /Incomplete topology/);
+      if (failure === "up") assert.match(recorded.failure.message, /exited 23/);
+      if (failure === "cancel")
+        assert.equal(recorded.failure.message, "Operation cancelled");
       assert.equal(recorded.cleanup.exit, 0);
       assert.deepEqual(recorded.cleanup.remaining, []);
       assert.equal(owned.size, 0);
@@ -222,11 +243,12 @@ test("cleanup continues after one removal fails and reports remaining resources"
   const output = resolve(workspace, "output");
   mkdirSync(output);
   const project = identity("100-88", "test", "cleanup");
+  const attempt = randomUUID();
   const ids = ["a".repeat(64), "b".repeat(64)];
   const remaining = new Set(ids);
   writeFileSync(
     resolve(output, "state.json"),
-    JSON.stringify({ project, output, resourceIds: ids, commands: [] })
+    JSON.stringify({ project, attempt, output, resourceIds: ids, commands: [] })
   );
   const removed = [];
   const execute = async (_program, args) => {
@@ -235,7 +257,11 @@ test("cleanup continues after one removal fails and reports remaining resources"
       return {
         code: 0,
         stdout: JSON.stringify([
-          { Config: { Labels: { "drc.owner": project } } },
+          {
+            Config: {
+              Labels: { "drc.owner": project, "drc.attempt": attempt },
+            },
+          },
         ]),
       };
     if (args[0] === "rm") {
@@ -296,4 +322,168 @@ test("a colliding identity fails preparation without deleting the existing envir
   );
   assert.equal(calls.length, 1);
   assert.equal(readJson(resolve(output, "state.json")).cleanup, undefined);
+});
+
+function preparedOutput(workspace, source, name) {
+  const output = resolve(workspace, name);
+  mkdirSync(output);
+  cpSync(source, resolve(output, "source"), { recursive: true });
+  const lock = resolve(output, "environment-lock.json");
+  writeFileSync(lock, JSON.stringify(inputs));
+  writeFileSync(resolve(output, "compose.json"), "{}");
+  const state = {
+    project: identity("100-88", "test", "startup-collision"),
+    attempt: randomUUID(),
+    output,
+    prepared: true,
+    uid: process.getuid(),
+    gid: process.getgid(),
+    selected: selections("8.8.0", "3.10", "plain"),
+    resourceIds: [],
+    commands: [],
+    lockHash: sha256(readFileSync(lock)),
+    composeHash: sha256("{}"),
+  };
+  writeFileSync(resolve(output, "state.json"), JSON.stringify(state));
+  return {
+    workspace,
+    source,
+    output,
+    lock,
+    issue: "100-88",
+    run: "test",
+    cell: "startup-collision",
+  };
+}
+
+function dockerFixture() {
+  const containers = new Map();
+  const calls = [];
+  let sequence = 0;
+  const add = (name, labels) => {
+    const id = (++sequence).toString(16).padStart(64, "0");
+    containers.set(id, {
+      Name: name,
+      Config: { Labels: labels },
+      data: "retained",
+    });
+    return id;
+  };
+  const execute = async (_program, args) => {
+    calls.push(args);
+    if (args[0] === "create") {
+      const name = args[args.indexOf("--name") + 1];
+      if ([...containers.values()].some((item) => item.Name === name))
+        return { code: 1, stdout: "", stderr: "container name conflict" };
+      const labels = Object.fromEntries(
+        args.flatMap((arg, i) =>
+          arg === "--label" ? [args[i + 1].split("=")] : []
+        )
+      );
+      return { code: 0, stdout: add(name, labels) };
+    }
+    if (args[0] === "inspect")
+      return {
+        code: containers.has(args[1]) ? 0 : 1,
+        stdout: JSON.stringify([containers.get(args[1])]),
+      };
+    if (args[0] === "ps") {
+      const filters = args
+        .filter((arg) => arg.startsWith("label="))
+        .map((arg) => arg.slice(6).split("="));
+      return {
+        code: 0,
+        stdout: [...containers]
+          .filter(([, item]) =>
+            filters.every(([key, value]) => item.Config.Labels[key] === value)
+          )
+          .map(([id]) => id)
+          .join("\n"),
+      };
+    }
+    if (args.includes("up")) {
+      const topology = readJson(args[args.indexOf("--file") + 1]);
+      for (const [name, service] of Object.entries(topology.services))
+        add(`${topology.name}-${name}`, {
+          ...service.labels,
+          "com.docker.compose.project": topology.name,
+        });
+    }
+    if (args.includes("down")) {
+      const project = args[args.indexOf("--project-name") + 1];
+      for (const [id, item] of containers)
+        if (item.Config.Labels["com.docker.compose.project"] === project)
+          containers.delete(id);
+    }
+    if (args[0] === "rm") containers.delete(args.at(-1));
+    return { code: 0, stdout: "" };
+  };
+  return { containers, calls, add, execute };
+}
+
+test("duplicate prepared outputs cannot clean another attempt after a startup conflict or stale down", async (t) => {
+  const { workspace, source } = fixture(t);
+  const first = preparedOutput(workspace, source, "first");
+  const second = preparedOutput(workspace, source, "second");
+  const docker = dockerFixture();
+  await lifecycle("up", first, docker.execute);
+  const original = structuredClone(docker.containers);
+  await assert.rejects(
+    lifecycle("up", second, docker.execute),
+    /create exited 1/
+  );
+  assert.equal(
+    readJson(resolve(second.output, "state.json")).cleanup,
+    undefined
+  );
+  await lifecycle("down", second, docker.execute);
+  assert.deepEqual(docker.containers, original);
+  assert.ok(!docker.calls.some((args) => args.includes("down")));
+  await lifecycle("down", first, docker.execute);
+  assert.equal(docker.containers.size, 0);
+  await lifecycle("up", second, docker.execute);
+  const replacement = structuredClone(docker.containers);
+  await lifecycle("down", first, docker.execute);
+  assert.deepEqual(docker.containers, replacement);
+  await lifecycle("down", second, docker.execute);
+  assert.equal(docker.containers.size, 0);
+});
+
+test("cleanup refuses project-wide down when a foreign attempt shares its Compose label", async (t) => {
+  const { workspace, source } = fixture(t);
+  const options = preparedOutput(workspace, source, "foreign-project-member");
+  const docker = dockerFixture();
+  await lifecycle("up", options, docker.execute);
+  const state = readJson(resolve(options.output, "state.json"));
+  const foreign = docker.add("foreign", {
+    "drc.owner": state.project,
+    "drc.attempt": randomUUID(),
+    "com.docker.compose.project": state.project,
+  });
+  await lifecycle("down", options, docker.execute);
+  assert.deepEqual([...docker.containers.keys()], [foreign]);
+  assert.ok(!docker.calls.some((args) => args.includes("down")));
+});
+
+test("cancellation immediately after anchor creation retains its ID and cleans it", async (t) => {
+  const { workspace, source } = fixture(t);
+  const options = preparedOutput(workspace, source, "cancel-create");
+  const docker = dockerFixture();
+  let canceled = false;
+  await assert.rejects(
+    lifecycle(
+      "up",
+      { ...options, cancelled: () => canceled },
+      async (program, args) => {
+        const result = await docker.execute(program, args);
+        if (args[0] === "create") canceled = true;
+        return result;
+      }
+    ),
+    /Operation cancelled/
+  );
+  const state = readJson(resolve(options.output, "state.json"));
+  assert.ok(state.anchor);
+  assert.equal(state.cleanup.exit, 0);
+  assert.equal(docker.containers.size, 0);
 });

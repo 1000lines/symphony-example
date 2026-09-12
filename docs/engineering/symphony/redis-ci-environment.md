@@ -77,6 +77,17 @@ identity before starting another attempt. `down` can operate after the original
 upstream checkout has disappeared. It never requires the lock to validate
 successfully before cleaning up its recorded resources.
 
+Each fresh output records a unique `state.attempt`. Containers carry both
+`drc.owner=state.project` and `drc.attempt=state.attempt`. Successful creation of
+the uniquely named anchor claims the identity for startup. Two outputs may be
+prepared before either starts; a colliding startup fails without cleaning the
+running attempt. Cleanup discovers and verifies both labels, runs Compose down
+only while holding its own anchor and verifying every project container, and
+removes the anchor last. Without that claim it removes only verified attempt
+IDs. Repeating an old output's `down` cannot remove a newer attempt using the
+same identity. Historical state files without an attempt token are rejected;
+replay their dependency locks through a fresh `prepare` to use this interface.
+
 The generated Compose file retains all eight upstream services, their profiles,
 dependencies, TLS inputs, mounts and healthchecks. It removes fixed names,
 published ports and service networks. All services join a namespace anchor
@@ -140,7 +151,8 @@ node "$env_cli" prepare --workspace "$PWD" --source "$PWD/redis-py" \
 resource IDs, selected interpreter image and runner contract. Downstream
 containers mount the output directory at `/work`, work in `/work/source`,
 join `container:<anchor ID>`, use the same UID/GID and bounded resources, and
-carry the exact `drc.owner` label from `state.project`. Use the explicit
+carry `drc.owner` from `state.project` and `drc.attempt` from `state.attempt`;
+both labels are required for discovery and cleanup. Use the explicit
 `state.runner.environment` allowlist, including workspace-local PATH/HOME,
 `PIP_NO_INDEX`, `PIP_FIND_LINKS`, `PIP_CONSTRAINT` and `PIP_BUILD_CONSTRAINT`.
 Those variables reach nested venv/pip/build subprocesses too. Do not inherit

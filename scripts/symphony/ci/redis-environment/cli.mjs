@@ -2,6 +2,7 @@
 import yaml from "js-yaml";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
@@ -53,6 +54,7 @@ export async function lifecycle(operation, options, execute) {
     ? readJson(stateFile)
     : {
         project,
+        attempt: randomUUID(),
         output,
         uid: process.getuid(),
         gid: process.getgid(),
@@ -60,6 +62,7 @@ export async function lifecycle(operation, options, execute) {
         commands: [],
       };
   assert.equal(state.project, project, "Output belongs to another identity");
+  assert.match(state.attempt, /^[a-f0-9-]{36}$/, "Missing attempt ownership");
   assert.equal(
     state.output,
     output,
@@ -91,7 +94,9 @@ export async function lifecycle(operation, options, execute) {
       ended: new Date().toISOString(),
     });
     save();
-    if (!cleaning) assert.ok(!options.cancelled?.(), "Operation cancelled");
+    // Persist successful creates before cancellation can trigger cleanup.
+    if (!cleaning && !(program === "docker" && args[0] === "create"))
+      assert.ok(!options.cancelled?.(), "Operation cancelled");
     if (check && result.code !== 0)
       throw new Error(
         `${program} ${args[0]} exited ${result.code}; see ${record.log}`
@@ -119,24 +124,26 @@ export async function lifecycle(operation, options, execute) {
     const result = await docker(["inspect", id], false);
     return result.code === 0 ? JSON.parse(result.stdout)[0] : null;
   };
-  const ownedIds = async () => {
+  const ownedIds = async (attemptOnly = true) => {
     const result = await docker([
       "ps",
       "-aq",
       "--no-trunc",
       "--filter",
       `label=drc.owner=${project}`,
+      ...(attemptOnly
+        ? ["--filter", `label=drc.attempt=${state.attempt}`]
+        : []),
     ]);
     return result.stdout.trim().split(/\s+/).filter(Boolean);
   };
+  const isOwned = (resource) =>
+    resource?.Config.Labels?.["drc.owner"] === project &&
+    resource.Config.Labels["drc.attempt"] === state.attempt;
   const remove = async (id) => {
     const resource = await inspect(id);
     if (!resource) return 0;
-    assert.equal(
-      resource.Config.Labels?.["drc.owner"],
-      project,
-      "Refusing unrelated resource removal"
-    );
+    assert.ok(isOwned(resource), "Refusing unrelated attempt removal");
     return (await docker(["rm", "-f", "-v", id], false)).code;
   };
   const down = async () => {
@@ -150,11 +157,25 @@ export async function lifecycle(operation, options, execute) {
     for (const id of state.resourceIds) {
       const item = await inspect(id);
       if (item) {
-        assert.equal(item.Config.Labels?.["drc.owner"], project);
+        assert.ok(isOwned(item), "Refusing unrelated attempt cleanup");
         await docker(["logs", id], false);
       }
     }
+    const anchor = state.anchor && (await inspect(state.anchor));
+    let exclusive = isOwned(anchor);
+    if (exclusive) {
+      const members = await docker([
+        "ps",
+        "-aq",
+        "--no-trunc",
+        "--filter",
+        `label=com.docker.compose.project=${project}`,
+      ]);
+      for (const id of members.stdout.trim().split(/\s+/).filter(Boolean))
+        if (!isOwned(await inspect(id))) exclusive = false;
+    }
     if (
+      exclusive &&
       existsSync(composeFile) &&
       sha256(readFileSync(composeFile)) === state.composeHash
     )
@@ -164,10 +185,15 @@ export async function lifecycle(operation, options, execute) {
     else {
       state.cleanup.composeExit = null;
       state.cleanup.composeSkipped =
-        "Missing or changed rendered Compose; using recorded IDs";
+        "No exclusive anchor ownership or unchanged Compose; using attempt IDs";
     }
-    for (const id of state.resourceIds) {
+    // Hold the exclusive name until every service/runner removal has finished.
+    for (const id of state.resourceIds.filter((id) => id !== state.anchor)) {
       const exit = await remove(id);
+      state.cleanup.exit ||= exit;
+    }
+    if (state.anchor) {
+      const exit = await remove(state.anchor);
       state.cleanup.exit ||= exit;
     }
     state.cleanup.remaining = await ownedIds();
@@ -176,14 +202,14 @@ export async function lifecycle(operation, options, execute) {
       "ls",
       "-q",
       "--filter",
-      `label=com.docker.compose.project=${project}`,
+      `label=drc.attempt=${state.attempt}`,
     ]);
     const volumes = await docker([
       "volume",
       "ls",
       "-q",
       "--filter",
-      `label=com.docker.compose.project=${project}`,
+      `label=drc.attempt=${state.attempt}`,
     ]);
     state.cleanup.networks = networks.stdout.trim();
     state.cleanup.volumes = volumes.stdout.trim();
@@ -209,6 +235,8 @@ export async function lifecycle(operation, options, execute) {
       name,
       "--label",
       `drc.owner=${project}`,
+      "--label",
+      `drc.attempt=${state.attempt}`,
       "--user",
       `${state.uid}:${state.gid}`,
       "--cpus",
@@ -264,7 +292,7 @@ export async function lifecycle(operation, options, execute) {
         "Use a fresh output for each attempt"
       );
       assert.deepEqual(
-        await ownedIds(),
+        await ownedIds(false),
         [],
         "Clean recorded orphan resources before reusing an identity"
       );
@@ -460,6 +488,7 @@ export async function lifecycle(operation, options, execute) {
           selected,
           anchor: `${project}-anchor`,
           project,
+          attempt: state.attempt,
           uid: state.uid,
           gid: state.gid,
         })
@@ -506,13 +535,14 @@ export async function lifecycle(operation, options, execute) {
           !state.anchor,
           "Use a fresh identity/output for the next startup"
         );
-        cleanupOnFailure = true;
         const result = await docker([
           "create",
           "--name",
           `${project}-anchor`,
           "--label",
           `drc.owner=${project}`,
+          "--label",
+          `drc.attempt=${state.attempt}`,
           "--user",
           `${state.uid}:${state.gid}`,
           "--cpus",
@@ -534,6 +564,12 @@ export async function lifecycle(operation, options, execute) {
         assert.match(state.anchor, /^[a-f0-9]{64}$/);
         state.resourceIds.push(state.anchor);
         save();
+        cleanupOnFailure = true;
+        assert.deepEqual(
+          (await ownedIds(false)).sort(),
+          (await ownedIds()).sort(),
+          "Clean recorded orphan resources before reusing an identity"
+        );
         await docker(["start", state.anchor]);
         json(
           composeFile,
@@ -542,6 +578,7 @@ export async function lifecycle(operation, options, execute) {
             selected: state.selected,
             anchor: state.anchor,
             project,
+            attempt: state.attempt,
             uid: state.uid,
             gid: state.gid,
           })
@@ -564,6 +601,10 @@ export async function lifecycle(operation, options, execute) {
       } else if (operation === "check") {
         assert.ok(state.anchor, "No recorded namespace anchor");
         cleanupOnFailure = true;
+        assert.ok(
+          isOwned(await inspect(state.anchor)),
+          "Lost anchor ownership"
+        );
         const resources = await ownedIds();
         const found = [];
         for (const id of resources) {

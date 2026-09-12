@@ -76,8 +76,12 @@ export function selections(redis, python, parser) {
   return selected;
 }
 
-export function render(source, { lock, selected, anchor, project, uid, gid }) {
+export function render(
+  source,
+  { lock, selected, anchor, project, attempt, uid, gid }
+) {
   validateLock(lock);
+  assert.match(attempt, /^[a-f0-9-]{36}$/, "Missing attempt ownership");
   assert.match(anchor, /^[a-z0-9-]+$/);
   const original = readFileSync(resolve(source, "docker-compose.yml"), "utf8");
   assert.equal(
@@ -108,7 +112,7 @@ export function render(source, { lock, selected, anchor, project, uid, gid }) {
     const image = lock.images[selected[role]];
     service.image = image.id || image.ref;
     service.user = `${uid}:${gid}`;
-    service.labels = { "drc.owner": project };
+    service.labels = { "drc.owner": project, "drc.attempt": attempt };
     service.cpus = name.startsWith("cluster") ? 1 : 0.5;
     service.mem_limit = name.startsWith("cluster") ? "768m" : "256m";
     service.pids_limit = 256;

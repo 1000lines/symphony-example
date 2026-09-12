@@ -58,11 +58,7 @@
         "resolution": "retained pycparser wheel; probe6-pypy310 passed"
       },
       {
-        "attempts": [
-          "redis8-4-3",
-          "redis8-2-6",
-          "redis8-0-6"
-        ],
+        "attempts": ["redis8-4-3", "redis8-2-6", "redis8-0-6"],
         "cause": "image VOLUME /data created daemon storage",
         "resolution": "workspace binds and declared-volume validation; all five affected images passed probe7"
       }
@@ -130,109 +126,77 @@
       "ref": "redislabs/client-libs-test@sha256:d349c6875600403edaa02fa0e7f6f79b6fab74c0e490822b0c37d8d85f6f0d89",
       "id": "sha256:cd5ae2314a132560b5266bcd0f99b495cd4df3f0bd7c0eae9b4dd581f4cf23ec",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
       "declaredVolumes": []
     },
     "redislabs/client-libs-test:8.8.0": {
       "ref": "redislabs/client-libs-test@sha256:319b628cb1f3347ac22c883860d7db10bec69948bbd0f9aee4d676899285cde4",
       "id": "sha256:b3f46f5abcec644f1468d0567297be0fdc046f579e43d922e15e75689ebfce2b",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
       "declaredVolumes": []
     },
     "redislabs/client-libs-test:8.6.3": {
       "ref": "redislabs/client-libs-test@sha256:adacb737b2fb2d3af13c174d8dff3aaaa568c3d71d8442c71c2f4e1c658029ff",
       "id": "sha256:1bf62e1a60d025f60d521a9fb4b084c8e5f060a1b72c3e3112350408225c22fa",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
       "declaredVolumes": []
     },
     "redislabs/client-libs-test:8.4.3": {
       "ref": "redislabs/client-libs-test@sha256:f197b4e7cb3fcc579c80137dd93b18667e87d315aa8588071125117a91402a12",
       "id": "sha256:ee7e73af913b1409136476100bd9b88c567544c076eb4d9379ee9c28fe877ad2",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
-      "declaredVolumes": [
-        "/data"
-      ]
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
+      "declaredVolumes": ["/data"]
     },
     "redislabs/client-libs-test:8.2.6": {
       "ref": "redislabs/client-libs-test@sha256:6b46280e521cc542d0da8bf110731127b7892efa716cf91e9a658b4361a2f175",
       "id": "sha256:f5579ee8b287c0eded4b7e2682beef2d35d2acabc5aa32d85f2f1f261a2d34f9",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
-      "declaredVolumes": [
-        "/data"
-      ]
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
+      "declaredVolumes": ["/data"]
     },
     "redislabs/client-libs-test:8.0.6": {
       "ref": "redislabs/client-libs-test@sha256:59d7b984e44cc23f080de72f29f2427ef159656184e6e75360bc82a6f1a3a820",
       "id": "sha256:4d6824d25164ebec4c4438791dc75f75d26fc7a33d3211aa0a00c5479bba5481",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
-      "declaredVolumes": [
-        "/data"
-      ]
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
+      "declaredVolumes": ["/data"]
     },
     "redislabs/client-libs-test:7.4.9": {
       "ref": "redislabs/client-libs-test@sha256:bc45dc80848d1c818e330fa24d3c1958ea3ebf37aeaa931a2ec68c8397c15d4f",
       "id": "sha256:146f3614c08d4a17be97ff6b9805318673c8e7a5fe368c19610856485ff1231a",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
-      "declaredVolumes": [
-        "/data"
-      ]
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
+      "declaredVolumes": ["/data"]
     },
     "redislabs/client-libs-test:7.2.14": {
       "ref": "redislabs/client-libs-test@sha256:58b1a5f3ba536b7cde2acccb6846d01a2d82e5e3ef295e173a1b5ea092dd8016",
       "id": "sha256:60b7cacde48d28ac80d2248a828bb20afcc6240712b704f00c5c8702b27c2a76",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
-      "declaredVolumes": [
-        "/data"
-      ]
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
+      "declaredVolumes": ["/data"]
     },
     "redislabs/client-libs-test:rs-7.4.0-v8": {
       "ref": "redislabs/client-libs-test@sha256:b44db722c9a9f280685e97547ec95e4fdf984505e2e24b9e9de19202a462048e",
       "id": "sha256:fd71cbaba368af7d54c763187c598202010f785ed5c6a236377ec61089aa63a5",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
       "declaredVolumes": []
     },
     "redislabs/client-libs-test:rs-7.2.0-v20": {
       "ref": "redislabs/client-libs-test@sha256:e38ffd865fb1262cf1bacab7e455e7850c19b50d765db63e5016a7f9d40153b6",
       "id": "sha256:70f072544268c6e199a0f944e0451d25698eb61e782fff3af3d1529eb8ebfbf4",
       "architecture": "amd64",
-      "entrypoint": [
-        "/opt/redis/scripts/entrypoint.sh"
-      ],
+      "entrypoint": ["/opt/redis/scripts/entrypoint.sh"],
       "declaredVolumes": []
     },
     "redislabs/client-resp-proxy:latest": {
       "ref": "redislabs/client-resp-proxy@sha256:dd4d42aa066a613c8951c9dc56110d13112068cdf10c137b30e24ba0f1bd52d6",
       "id": "sha256:9823db309b5d593490accf8038b3cea616c186548ae980aab225736fc6178743",
       "architecture": "amd64",
-      "entrypoint": [
-        "./resp-proxy"
-      ],
+      "entrypoint": ["./resp-proxy"],
       "declaredVolumes": []
     }
   },
@@ -694,5 +658,53 @@
     "Initial wheel resolution uses the public index. Replay uses retained SHA-256-checked wheels with no container network.",
     "Bootstrap provenance readback was unavailable (PermissionError errno 13); Jeremy and DEPLOY own host installation/reload evidence.",
     "Required current-head GitHub CI and Cadence review are tracked in the PR and Codex workpad."
-  ]
+  ],
+  "ownershipFix": {
+    "finding": "AR-100-88-isolation-F1",
+    "originalReviewedCommit": "3c0bd2f6fb67269cd792f1b8d0e606c942dd62ed",
+    "implementationFiles": {
+      "inputs.json": "87d2c88fb443aabe8c7b6ec374d4bbc3997bd5cb839bc393e4575d75722547cf",
+      "topology.mjs": "abbaf997c32a8f0583a1a6ff00d6dd43fa86c99057d05510953e14b01b5da6b6",
+      "prepare-python.py": "dc78bcd8bfd45f4777b0767e8fea12859d47fae2ad6bbcfbdcfd1682282c2f57",
+      "check.py": "f45552c7fe342a996c0e2a76e4611e61e3c6127c284891bb1aa9c490b3b0b6c7",
+      "cli.mjs": "9087bfa800e0920228eba2332cf1b4e3726d7b656589b604e954c6386e7c8fd3",
+      "upstream-compose.yml": "d3f7a49c652121ea5ed0ad714e93bcb1938793b011e6b6c88a8fc3944eb967e8",
+      "upstream-sentinel.conf": "53fb3e07edef7755155d1fe165f9a9963c9f369445dcc241a71b3637163ed8f9"
+    },
+    "result": "passed",
+    "localTests": {
+      "passed": 11,
+      "failed": 0,
+      "command": "node --test scripts/symphony/redis-ci-environment.test.mjs"
+    },
+    "liveProbe": {
+      "identity": "drc-100-88-ownership1-py310",
+      "result": "passed",
+      "checks": [
+        "two completed preparations with the same issue/run/cell",
+        "first startup passes; second startup fails on anchor name without cleanup",
+        "second explicit down preserves all nine first-attempt container IDs and Redis value",
+        "first-attempt topology check passes",
+        "both attempts down; no remaining task containers",
+        "host port 4000 unchanged; every baseline unrelated container survives"
+      ],
+      "originalHarnessExit": 1,
+      "observationCorrection": {
+        "originalFailure": "AssertionError: exact host-container inventory equality",
+        "cause": "A new unrelated container appeared while the probe ran.",
+        "survivalAssertion": "Every baseline container ID remains in the final observed set.",
+        "newUnrelatedIds": [
+          "5bfba5d72145c93f5ec1fe14b95341b0794f1da375ac22abd4861a7f90e61419"
+        ]
+      }
+    },
+    "artifact": {
+      "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/1a16282a-5c9a-4669-a90c-cb361b6bd86c/3624d584-20da-4a36-95e2-b6cc1c44ed67",
+      "size": 120951,
+      "sha256": "c261e6c93bc91f8a68072d5bb333fad4858f5a2484efa3c81f58e393bbd42117",
+      "uploadHttp": 200,
+      "readbackHttp": 200
+    },
+    "limitation": "The original compatibility archive and implementation hashes above remain historical. This follow-up validates ownership and one replayed CPython 3.10/plain topology; it does not repeat the environment inventory or full Redis matrix."
+  }
 }
