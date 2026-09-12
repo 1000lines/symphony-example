@@ -125,15 +125,46 @@ test("unknown active project colors are reported", () => {
       state: "started",
       content: metadata({
         "project-code": "unknown-color",
-        "project-color": "magenta",
+        "project-color": "not-a-color",
         "human-lead": "Example Lead",
       }),
     }),
   ]);
 
   assert.equal(result.available, false);
-  assert.match(result.reason, /unknown color "magenta"/);
+  assert.match(result.reason, /unknown color "not-a-color"/);
   assert.equal(result.audit.problems[0].type, "unknown-color");
+});
+
+test("selection continues into the expanded palette when the original nine are occupied", () => {
+  const originalColors = [
+    "pink",
+    "cyan",
+    "blue",
+    "green",
+    "orange",
+    "red",
+    "yellow",
+    "purple",
+    "teal",
+  ];
+  const result = selectAvailableProjectColor(
+    originalColors.map((color) =>
+      project({
+        name: color,
+        state: "started",
+        content: metadata({
+          "project-code": color,
+          "project-color": color,
+          "human-lead": "Example Lead",
+        }),
+      })
+    )
+  );
+
+  assert.equal(result.available, true);
+  assert.equal(result.color, "magenta");
+  assert.deepEqual(result.audit.usedColors, originalColors);
 });
 
 test("all supported colors unavailable returns a concrete reason", () => {

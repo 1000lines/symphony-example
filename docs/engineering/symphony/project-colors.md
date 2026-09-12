@@ -1,17 +1,34 @@
 # Symphony Project Colors
 
 Symphony project colors are short labels used to distinguish active Symphony
-project lanes in GitHub and Linear. The supported colors are:
+project lanes in GitHub and Linear. The 24 supported colors are:
 
-1. `pink`
-2. `cyan`
-3. `blue`
-4. `green`
-5. `orange`
-6. `red`
-7. `yellow`
-8. `purple`
-9. `teal`
+| Color      | Hex       | RGB           |
+| ---------- | --------- | ------------- |
+| `pink`     | `#FF69B4` | 255, 105, 180 |
+| `cyan`     | `#00BCD4` | 0, 188, 212   |
+| `blue`     | `#4EA7FC` | 78, 167, 252  |
+| `green`    | `#2EA44F` | 46, 164, 79   |
+| `orange`   | `#F97316` | 249, 115, 22  |
+| `red`      | `#D73A4A` | 215, 58, 74   |
+| `yellow`   | `#FFD33D` | 255, 211, 61  |
+| `purple`   | `#8250DF` | 130, 80, 223  |
+| `teal`     | `#14B8A6` | 20, 184, 166  |
+| `magenta`  | `#C026D3` | 192, 38, 211  |
+| `indigo`   | `#4338CA` | 67, 56, 202   |
+| `navy`     | `#1E3A8A` | 30, 58, 138   |
+| `lavender` | `#A78BFA` | 167, 139, 250 |
+| `burgundy` | `#881337` | 136, 19, 55   |
+| `coral`    | `#FB7185` | 251, 113, 133 |
+| `peach`    | `#FDBA74` | 253, 186, 116 |
+| `amber`    | `#D97706` | 217, 119, 6   |
+| `gold`     | `#B59B00` | 181, 155, 0   |
+| `lime`     | `#84CC16` | 132, 204, 22  |
+| `olive`    | `#6B7C32` | 107, 124, 50  |
+| `mint`     | `#6EE7B7` | 110, 231, 183 |
+| `forest`   | `#166534` | 22, 101, 52   |
+| `brown`    | `#92400E` | 146, 64, 14   |
+| `slate`    | `#64748B` | 100, 116, 139 |
 
 Each color has a canonical hex in `SYMPHONY_PROJECT_COLOR_HEX`
 (`scripts/symphony/project-colors.ts`), matching the Linear color-lane label
