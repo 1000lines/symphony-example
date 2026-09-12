@@ -15,7 +15,8 @@ test("review callers delegate to matching shared workflow/helper revisions with 
     ["cadence-ai-review-trigger", "review", reviewSecrets],
     ["cadence-ai-review", "review", reviewSecrets],
     ["cadence-linear-rework", "handoff", ["CADENCE_APP_PRIVATE_KEY", "CADENCE_LINEAR_API_TOKEN"]],
-    ["cadence-review-check-cleanup", "cleanup", ["CADENCE_APP_PRIVATE_KEY", "CADENCE_LINEAR_API_TOKEN"]],
+    // Template main pins ddc9eb0: cleanup only accepts the App key at that revision.
+    ["cadence-review-check-cleanup", "cleanup", ["CADENCE_APP_PRIVATE_KEY"]],
   ];
   const refs = new Set();
   for (const [name, jobName, secrets] of mappings) {
