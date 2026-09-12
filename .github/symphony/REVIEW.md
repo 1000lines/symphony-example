@@ -45,19 +45,31 @@ The author and reviewer remain distinct; human acceptance owns merge and Done.
 
 ## Current Cadence status
 
-The pinned shared status-comment revision lets Cadence edit one App-owned
-PR comment as reviews queue, run, complete or fail. It shows the current verdict,
-a brief assessment and up to three findings, with links to the head, run and
-formal review. Detailed history remains in reviews, runs and the Linear workpad.
+The pinned shared revision edits one App-owned PR comment as reviews queue,
+run, complete or fail. It is the only human-facing review message: status,
+verdict, concise findings and measured footer, with head/run/workpad links.
+Both providers return the existing incremental Linear workpad payload; native
+completion persists it, verifies the current head, and publishes the assessment.
+Clean approval keeps only a bodyless APPROVE record for approval tracking.
+Non-approval publishes no formal review. Historical reviews remain unchanged.
 
-The footer uses observed model/token usage when the provider exposes it and
-measured review duration. Requested models are labeled separately; unavailable
-measurements are omitted. Codex's pinned Action currently supplies no structured
-observed model or token counts. Elapsed provider-step time can include setup.
+The existing check retains the verified assessment and measurements for comment
+retry/recovery; the existing Linear workpad retains detailed findings/history.
+Completion and cleanup invoke the existing Linear/human handoff directly, without
+review prose or a COMMENT event. Actionable findings wake Active; approval or
+human-needed findings request eligible PR assignees. Keep current-head/App/run,
+stable-comment and terminal-state guards intact.
 
-Admission, review start, completion and recovery request the existing Cadence
-App's PR-write grant for comment edits; no new App installation grant or secret
-is needed. Keep the generated caller and helper revision matched. When adopting this template revision, apply the caller changes through Copier
-and verify one
-live App-authored comment is edited across reviews. Generated-file validation does not establish live deployment; the root client
-may still use its separately recorded older template source.
+The footer uses observed model/token usage when exposed and measured duration.
+Requested models are labeled separately; unavailable measurements are omitted.
+Codex's pinned Action exposes no structured observed model or token counts.
+Elapsed provider-step time can include setup.
+
+Cleanup now needs the existing `CADENCE_LINEAR_API_TOKEN` explicitly forwarded
+alongside `CADENCE_APP_PRIVATE_KEY`; no new secret or App grant is needed.
+Keep generated workflow/helper refs matched and apply caller changes through
+Copier after shared-code acceptance. On one live PR, verify approval,
+non-approval, a subsequent review and failure/recovery: retain the same comment
+ID, App author, absent duplicate review text, check/run links and confirmed
+Linear handoff. Fixtures and generated files do not establish live deployment;
+the caller must run from the trusted default branch.

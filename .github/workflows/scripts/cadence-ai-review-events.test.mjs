@@ -15,7 +15,7 @@ test("review callers delegate to matching shared workflow/helper revisions with 
     ["cadence-ai-review-trigger", "review", reviewSecrets],
     ["cadence-ai-review", "review", reviewSecrets],
     ["cadence-linear-rework", "handoff", ["CADENCE_APP_PRIVATE_KEY", "CADENCE_LINEAR_API_TOKEN"]],
-    ["cadence-review-check-cleanup", "cleanup", ["CADENCE_APP_PRIVATE_KEY"]],
+    ["cadence-review-check-cleanup", "cleanup", ["CADENCE_APP_PRIVATE_KEY", "CADENCE_LINEAR_API_TOKEN"]],
   ];
   const refs = new Set();
   for (const [name, jobName, secrets] of mappings) {
