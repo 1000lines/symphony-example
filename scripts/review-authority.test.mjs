@@ -295,12 +295,12 @@ test("bodyless changes-requested reviews accept GitHub null bodies but reject ma
   }
 });
 
-test("feedback callers use pinned trusted helpers and explicit App secrets without PAT fallback", () => {
+test("feedback callers use trusted main helpers and explicit App secrets without PAT fallback", () => {
   for (const name of ["cadence-linear-rework", "cadence-ai-review-events"]) {
     const workflow = yaml.load(readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8"));
     const job = workflow.jobs[name === "cadence-ai-review-events" ? "review" : "handoff"];
     assert.equal(job.uses, `1000lines/symphony-client-workflows/.github/workflows/${name}.yml@${job.with["helpers-ref"]}`);
-    assert.match(job.with["helpers-ref"], /^[a-f0-9]{40}$/);
+    assert.equal(job.with["helpers-ref"], "main");
     assert.equal(job.secrets.CADENCE_APP_PRIVATE_KEY, "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
     assert.doesNotMatch(JSON.stringify(job), /CADENCE_BOT_GITHUB_TOKEN|permission-administration|permission-members/);
     assert.equal(job.steps, undefined);
