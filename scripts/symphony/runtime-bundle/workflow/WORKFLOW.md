@@ -285,8 +285,11 @@ For DAG planning or replanning tickets:
   `relatedIssueId` is the blocked ticket, and `type` is `blocks`.
 - Keep branch ancestry out of DAG plan data. Graph edges drive dispatch and
   relation payloads only; they do not change task branch bases.
-- Record draft/ready transition, current-SHA review requirement, and
-  fail-closed behavior for missing labels, states, SHAs, or relation targets.
+- Resolve required GitHub label definitions during fan-out preflight, creating
+  absent labels under the label-setup rules below before issue/relation writes.
+  Missing labels that the worker can create do not require an operator ticket.
+- Record draft/ready transition, current-SHA review requirement, and fail-closed
+  behavior for unresolved label requirements, states, SHAs, or relation targets.
 
 For coding tickets spawned from a DAG plan:
 
@@ -485,24 +488,41 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
 - Read `project-color` from the owning Linear project's description/content.
   Do not infer it from a branch name, issue label, or a default. Missing or
   conflicting project metadata is a labeling failure.
+- Create missing GitHub labels required by the current issue, project metadata,
+  or accepted fan-out plan using the existing repository permissions. This is
+  routine task setup and does not require separate human approval. Resolve the
+  exact names from those sources; preserve existing label definitions.
+- Before applying labels, check each repository definition with
+  `gh api repos/OWNER/REPO/labels/LABEL`, URL-encoding the label name. If a label
+  is absent, confirm repository access and create it with
+  `gh api --method POST repos/OWNER/REPO/labels -f name=LABEL`.
+  Use the specified color/description when available; for project colors use
+  `SYMPHONY_PROJECT_COLOR_HEX` from the shared project color helper. Otherwise
+  use repository conventions or GitHub's defaults. Read back every created
+  definition. If another worker created it first, read and reuse that label.
+  A denied request or failed readback is a blocker; do not expand token scopes.
 - Apply and verify the two shared labels with
   `node "$SYMPHONY_TOOLING_ROOT/scripts/symphony/ensure-pr-labels.mjs" --issue TEAM-123 --repo OWNER/REPO`,
   substituting the current issue and intended repository. The helper verifies a
-  unique open PR association, checks missing labels exist, adds them, and reads
-  them back. A `no-open-pr` result does not complete publishing when a PR was
+  unique open PR association, checks label definitions exist, adds missing PR
+  labels, and reads them back. If its preflight finds an absent definition,
+  create and verify that required label as above, then rerun the helper.
+  A `no-open-pr` result does not complete publishing when a PR was
   expected; resolve the association before handoff.
 - For additional required labels, use GitHub's narrow REST endpoints: confirm
   each exists with `gh api repos/OWNER/REPO/labels/LABEL`, then add with
   `gh api --method POST repos/OWNER/REPO/issues/PR_NUMBER/labels -f 'labels[]=LABEL'`.
   URL-encode label names in paths. Avoid `gh pr edit --add-label`, which can
-  require broader organization queries. Do not create missing labels, replace
-  the label set, or expand token scopes.
+  require broader organization queries. Preserve unrelated labels; do not
+  replace the label set or expand token scopes.
 - Before claiming publishing or handoff complete, read back the actual labels
   with `gh api repos/OWNER/REPO/issues/PR_NUMBER/labels --paginate --jq '.[].name'`
   and verify `symphony`, `project-color`, and every additional required label.
   Record the verified result or actual API/readback failure in the Codex
   workpad; intended future actions are not evidence. Handle missing metadata,
-  missing labels, or API failures through the existing blocker handling.
+  unresolved label requirements, or API failures through the existing blocker
+  handling. An absent required GitHub label alone is a setup task, not a reason
+  to wait for another ticket when the current worker can create it.
 - The bundled `hooks.after_run` is a no-op. An operator-owned workflow may
   invoke the same helper as a best-effort safety net using the resolved target
   and its bound credentials. Hook failures are logged and ignored by Symphony.

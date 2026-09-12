@@ -203,6 +203,16 @@ branch color and CLI guesses are not color authorities. The helper takes an
 explicit repository and issue, requires Linear read and GitHub label-write
 access, and adds missing labels only after verifying a unique open PR.
 
+Workers may create missing GitHub labels required by their issue, project
+metadata, or accepted plan using existing repository permissions, without a
+separate human approval. Check for an existing definition first, create only
+absent required labels, and read them back before applying them. Preserve
+existing definitions and unrelated PR labels. The helper validates definitions;
+if one is absent, the worker creates and verifies it, then reruns the helper.
+Use the project's specified color/description or existing conventions. Missing
+requirements, denied API access, and failed readback remain blockers; a missing
+label that the worker can create does not require an onboarding dependency.
+
 The optional `.github/workflows/symphony-linear-wakeups.yml` handles same-repository
 PR events, completed `CI` runs triggered by `pull_request`, and failed external
 required checks/statuses. It selects one open PR with the `symphony` label at
