@@ -8,9 +8,11 @@ the PR against its Linear acceptance criteria and linked design docs before huma
 review. Its automated scope is Symphony-managed PRs. It is separate from
 ordinary human PR review and from the general review-agent methodology.
 
-The review logic lives in the `cadence-ai-review` skill
-(`.claude/skills/cadence-ai-review/`). The GitHub workflows provision
-credentials and run Claude Code against that skill. Cadence writes detailed
+The generated callers load review implementation from the shared workflow
+repository at their recorded workflow/helper ref. The local
+`cadence-ai-review` skill (`.claude/skills/cadence-ai-review/`) remains retained
+tooling. Follow the [client review context](../../../.github/symphony/REVIEW.md)
+for the current provider contract and credential setup. Cadence writes detailed
 review state to one Linear comment headed `## Cadence Workpad`, then posts one
 concise GitHub PR review per completed pass (`APPROVE` when clean, otherwise `COMMENT`;
 never `REQUEST_CHANGES`).
@@ -19,7 +21,7 @@ never `REQUEST_CHANGES`).
 
 Normal human handoff requires passing required CI and a fresh Cadence review of
 the current PR head, a closed mandatory-feedback ledger, a clean task branch,
-and a PR marked ready from draft. The Claude runner publishes `APPROVE` when
+and a PR marked ready from draft. The selected reviewer publishes `APPROVE` when
 there are no blocker or human-needed findings, otherwise `COMMENT`. Record the
 reviewer, reviewed SHA, verdict and matching Cadence workpad. Human approval and
 merge own final acceptance; Cadence approval does not replace required human
@@ -120,27 +122,29 @@ rather than through hidden Symphony or Cadence-only decisions:
 
 ## Dispatch And PR Selection
 
-The event bridge and manual PR matrix both call
-[the existing reviewer](../../../.github/workflows/cadence-ai-review-trigger.yml)
-through GitHub's native `workflow_call`. Normal routing does not remove and
-re-add a bot review request. The reviewer already reads current PR state, runs
-Claude, updates its workpad and applies its existing review cap and handoff.
+The event, single-PR and group/manual entry points are generated callers of
+`1000lines/symphony-client-workflows`. Their shared workflow and helper pins must
+match; the [consumer census](../../symphony-plans/client-template/consumer-census.md)
+records the current refs and retained filenames. Normal routing does not remove
+and re-add a bot review request. The shared reviewer reads current PR state,
+runs the selected provider, updates its workpad and applies the review cap and handoff.
 
 Events first run the secret-free `cadence-review-ingress.yml`. Its JSON title
 contains selectors, never authority. The `workflow_run` consumers execute on
 trusted `main`, read current PR/feedback through `actions/github-script`, and
 verify the original author's write permission. A failed or denied router cannot
-start the dependent review job. Keep `cadence-controller` restricted to `main`.
+start the dependent review job. Keep `cadence-controller` restricted to the
+repository's default branch.
 
 The reusable call retains the caller's event and actor. GitHub-identified bot
 initiators may enter the provider's bot allowlist; humans still pass the provider's
 independent write-permission check. Reviews use the configured publishing
-credential. Both callers use `secrets: inherit`: explicit mappings left the
-protected environment key empty in live reusable runs, matching
-[actions/runner#4453](https://github.com/actions/runner/issues/4453).
-Inheritance exposes repository secrets to the trusted reviewer; its main-only
-`cadence-controller` environment supplies the signing key. Keep the key there,
-not in repository secrets or job outputs.
+credential. Generated cross-repository callers explicitly map App, Linear and
+provider secrets; handoff and cleanup receive only their required subset.
+Provision those names at repository scope or in organization secrets selected
+for the client, following its review context. Keep the protected environment
+free of shadowing secrets. The internal inheritance workaround in historical
+PR #29 is not this client interface.
 See [GitHub's reusable workflow secret rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow).
 Manual calls and legacy review requests
 retain their existing actor checks. All review execution requires `refs/heads/main`.
@@ -244,7 +248,7 @@ The stale-approval fallback runs inside the reviewer.
 
 CI wakeups and `cadence-linear-rework.yml` keep their existing responsibilities.
 There is no second CI evaluator, Linear state machine or human-invitation engine.
-Review execution uses Claude. Deployment evidence includes an authorized
+Review execution uses the selected provider. Deployment evidence includes an authorized
 feedback event, an unauthorized author, and a manual selection, with Actions
 links and actual handoff results. Local tests do not prove live environment
 admission or provider execution.
@@ -292,14 +296,18 @@ Set these values in Settings → Secrets and variables → Actions → Secrets.
 Required when using the workflow that consumes them; there are no credential
 defaults. All values come from adopter-owned accounts. Never commit them.
 
-Human feedback routing and the single-PR review trigger require the protected
-`cadence-controller` Environment's `CADENCE_APP_ID` variable and
-`CADENCE_APP_PRIVATE_KEY` secret. See the
+Human feedback routing and review use the repository Actions variable
+`CADENCE_APP_ID` and explicitly forwarded `CADENCE_APP_PRIVATE_KEY` secret.
+Use repository/selected organization secrets as described in the client review
+context; an environment-only key does not supply the generated caller mapping. See the
 [App permission requirements](./github-actor-classification.md#app-installation-and-rollout).
 
 Repository secrets:
 
-- `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key for the review.
+- `CADENCE_OPENAI_API_KEY`: Codex API key. The adopted contract selects Codex
+  when it is present, including when both provider keys are supplied.
+- `CADENCE_AI_REVIEW_ANTHROPIC_API_KEY`: Claude API key, selected when the
+  OpenAI key is absent. Neither key fails early; provider failure never falls back.
 - `CADENCE_LINEAR_API_TOKEN`: Linear API token used by
   `scripts/fetch-linear-issue.mjs` to read issue context, by
   `scripts/cadence-linear-workpad.mjs` to write the Cadence workpad, and by the
@@ -332,7 +340,8 @@ Variables. Identity values must name the accounts behind the supplied tokens:
 
 Review model variable:
 
-- `CADENCE_CLAUDE_MODEL`: required Claude model for the review. The trigger
+- `CADENCE_CODEX_MODEL`: optional Codex model; the provider default applies when unset.
+- `CADENCE_CLAUDE_MODEL`: required only for Claude review. The trigger
   preflight approves `claude-opus-5` for the Opus 5 review requirement and fails
   before Claude runs when the variable is unset or points to an unapproved
   model.
@@ -510,7 +519,7 @@ conversation comment is needed. Repeated delivery adds the same App reaction
 instead of toggling or creating another acknowledgement. API failures produce
 a step warning and run summary without preventing the queued review.
 
-The existing `cadence-controller` App token requests `issues: write` and
+The configured Cadence App token requests `issues: write` and
 `pull_requests: write` for the target repository; the routing job's automatic
 GitHub token remains read-only. No new credential is required. Because routing
 loads the default branch, live acceptance follows deployment to `main`: while

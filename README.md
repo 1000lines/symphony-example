@@ -43,8 +43,11 @@ environment gaps, and always inspect required CI at the published head.
 
 Human readiness requires passing required CI and a fresh Cadence review of the
 current head, closed mandatory feedback, a clean task branch and a ready PR.
-The native workflow hooks run the Claude reviewer, which records detailed
-findings in the Cadence workpad and publishes an `APPROVE` or `COMMENT` PR review.
+The generated review callers use shared workflows and record detailed findings
+in the Cadence workpad plus an `APPROVE` or `COMMENT` PR review. Follow the
+current [client review context](.github/symphony/REVIEW.md) for provider selection,
+named secrets and Actions variables. The [finalization record](docs/symphony-plans/client-template/finalization.md)
+distinguishes accepted adoption from remaining live review and retirement proof.
 Apply blocker-side `mature` at readiness, and remove it for rejected/stale
 acceptance or severe regression, not ordinary edits alone. Human acceptance
 owns Done. The [review reference](docs/engineering/review/cadence-ai-review.md#acceptance-contract)
@@ -205,10 +208,11 @@ explicit ownership. It does not dispatch a workflow or supply product pipelines.
 The exact Linear viewer-name guard still needs the documented adopter setup;
 `LINEAR_WAKEUP_BOT_NAME` is a reference name, not an environment override.
 
-Optional Cadence automation needs GitHub, Linear, Google Docs and Claude Code
-access. Its credential entries are separate from ordinary tooling CI, which
-needs none of those supplied secrets. `CADENCE_CLAUDE_MODEL` is required for
-Cadence with no default; the retained preflight accepts only `claude-opus-5` and
+Optional Cadence automation needs GitHub, Linear and the selected provider's
+credentials; linked Google Docs additionally need document access. Use the
+current client review context above for repository/organization secret delivery.
+Ordinary tooling CI needs none of those supplied secrets. `CADENCE_CLAUDE_MODEL`
+is required only for Claude with no default; the retained preflight accepts only `claude-opus-5` and
 has no adopter override for that allowlist. A different model needs an
 adopter-owned review workflow and validation policy. Actor-team lookup also
 needs team-read access, or an adopter-owned caller supplying explicit actor
