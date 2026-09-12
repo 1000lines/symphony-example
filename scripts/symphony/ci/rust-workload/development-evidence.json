@@ -1,0 +1,92 @@
+{
+  "issue": "100-89",
+  "kind": "development evidence; not DEPLOY/V1/V2 hosted acceptance",
+  "adapterCommit": "08aacac0c23a27b6b7ccf4a4c8e88ecd4fad91f9",
+  "target": "99528c2e4da241ec2c9961d0a155357611f16a76",
+  "base": "rust@sha256:7fa728f3678acf5980d5db70960cf8491aff9411976789086676bdf0c19db39e",
+  "image": "sha256:dd672a35760c9ce995daa58e270614d3a743809024655b2080496c607d2fc99b",
+  "lockSha256": "4b12671d3a03dfe36b74a1b22405b85380341cfb8415354c8f239c8107f26ef7",
+  "toolchain": {
+    "rustc": "1.90.0 (1159e78c4 2025-09-14)",
+    "cargo": "1.90.0 (840b83a10 2025-07-30)",
+    "clippy": "0.1.90 (1159e78c47 2025-09-14)",
+    "rustfmt": "1.8.0-stable (1159e78c47 2025-09-14)"
+  },
+  "bundle": {
+    "filename": "rust-bundle-dev1.tar",
+    "sha256": "7b57720c645c837d240fd6c5d9d4f1342f9f33e5d2e2b0d31a5623ebef4d29d5",
+    "parts": [
+      {
+        "part": 0,
+        "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/75d62253-cbfc-44a3-8b1e-398da8ed4248/115c163b-4376-4add-990a-8ee5d642ed33",
+        "sha256": "1247e1412f3277ac22ec076084978d855a43b148606ef48af7446c2b7f823603",
+        "bytes": 83886080,
+        "readback": "pass"
+      },
+      {
+        "part": 1,
+        "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/75b8fa69-0a4c-46d2-8e47-3e900c9906ad/94c99175-4610-468f-b896-5fc60520e414",
+        "sha256": "fd4b37a33c6bbbc2452f3bc41c4e43e0eb2d9d72cc7f577a952c8e29a34cc28f",
+        "bytes": 83886080,
+        "readback": "pass"
+      },
+      {
+        "part": 2,
+        "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/328a798a-e28c-47bd-a57c-726899db6265/f9fee8fa-dcaf-4a11-924c-cbfc2b3d166c",
+        "sha256": "d45e84a24c067cba6245028768c5ab4c55f31c8225c7bfb277be9ee465907c2d",
+        "bytes": 83886080,
+        "readback": "pass"
+      },
+      {
+        "part": 3,
+        "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/0c8861b2-14ca-4c73-8ea0-080b8b39d127/42977c57-cce8-4f33-971f-f72120aa6e32",
+        "sha256": "e59934adb0640f8a43e59cc3c2e93cd80884c396ec86e5e573bf996aec7aa425",
+        "bytes": 71301120,
+        "readback": "pass"
+      }
+    ],
+    "reconstruct": "Concatenate parts 0 through 3 in order, verify tar SHA-256, extract into a new workspace bundle directory, then verify bundle.json file hashes."
+  },
+  "limitations": [
+    "Compose absent; Rust does not use Compose.",
+    "Installed bootstrap/runtime and host reload evidence belongs to DEPLOY.",
+    "Mandatory complete twelve-command Docker run remains unfulfilled pending an execution window or Jeremy confirmation of aggregate headroom.",
+    "main legacy branch protection REST and GraphQL readback denied to author App 4866508; Jeremy must provide required-check/review settings before readiness."
+  ],
+  "nextOwner": "Jeremy Carroll; DEPLOY, V1 and V2 after accepted implementation.",
+  "attempts": [
+    {
+      "run": "dev1",
+      "result": "fail / canceled",
+      "exit": 130,
+      "reason": "Adapter tmpfs was non-executable; fixed before dev2. SIGTERM canceled test-4, 8 commands missing.",
+      "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/ee835522-c4af-474e-99a2-e24d24bd2339/80ca8d8d-d6fd-48e3-bad0-511f7419c3aa",
+      "sha256": "fc3189ca8edaf4d51b9d6d4946ebfed151577e0f4556ca42847f42ab0b465b19",
+      "readback": "pass",
+      "cleanup": "All 9 created containers removed, cleanup exits 0, remaining IDs empty."
+    },
+    {
+      "run": "dev2",
+      "result": "canceled; mandatory full integration remains blocked",
+      "exit": 130,
+      "adapterCommit": "08aacac0c23a27b6b7ccf4a4c8e88ecd4fad91f9",
+      "reason": "Serialized behind Redis probes; no operator concurrency confirmation. Release build passed, test-3 canceled, ten commands not started.",
+      "url": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/9132e095-2c0f-43a6-878e-e5cbed2307e1/7463defe-3669-4ea5-9ece-68d0d0056de8",
+      "sha256": "6ff11ea844413867a7f77f393c784d33bd59a04c5d19772ce5ea0ec9acd058de",
+      "readback": "pass",
+      "cleanup": "All 7 created containers removed, cleanup exits 0, empty readback.",
+      "localChecks": "npm ci, build, lint, seven targeted tests, full isolated-environment npm test (670 Node tests plus workspace suites) passed."
+    }
+  ],
+  "scopedOutputCleanup": {
+    "directories": [
+      "rust-bundle-dev1/workspace",
+      "rust-run-dev1/workspace",
+      "rust-run-dev2/workspace"
+    ],
+    "operation": "Removed task-owned source copies and caches only after their durable upload and hash readback.",
+    "exit": 0,
+    "remaining": false,
+    "at": "2026-09-12T03:34:55.157273+00:00"
+  }
+}

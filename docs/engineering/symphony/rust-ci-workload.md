@@ -145,6 +145,11 @@ records the supplied projection verbatim; it does not verify a host deployment.
 Without it, the index explicitly identifies a development run with unverified
 installed refs. DEPLOY owns installation/readback; V1/V2 own hosted first/repeat
 acceptance. Local Docker execution alone does not close those obligations.
+After DEPLOY, invoke the accepted helper through
+`$SYMPHONY_TOOLING_ROOT/scripts/symphony/ci/rust-workload/runner.mjs` and copy the
+retained Cargo.lock into the receiving issue workspace for `--lock`. Keep the
+source checkout, downloaded bundle, output and provenance projection in that
+workspace; never use the installed tooling directory as a writable cache.
 
 Real upstream build/test/clippy/fmt failures belong to Jeremy. Keep their output,
 leave this issue's acceptance incomplete, and route an upstream change or
@@ -165,3 +170,26 @@ Fixture tests cover every command selection and failure position, timeout,
 cancellation, output retention, missing inventory, container collision/partial
 startup, OOM, cleanup failure and zero doc tests. They complement the mandatory
 live Docker run and current-head implementation CI.
+
+## Retained development artifacts
+
+The [development index](../../../scripts/symphony/ci/rust-workload/development-evidence.json)
+records the exact image, generated lock, artifact URLs and hashes. The replay
+archive is split into four Linear attachments. Download them in part order,
+verify each hash, concatenate parts 00–03 to `rust-bundle-dev1.tar`, verify the
+whole archive hash and extract it. Each uploaded part was downloaded again and
+verified byte for byte. The contained preparation index retains its actual
+development runner hash; the execution index identifies the tested adapter
+commit separately. These artifacts remain preparation/development proof.
+
+The first development run exposed a non-executable Docker tmpfs: rustdoc built
+examples but could not execute them. Its failure and SIGTERM cleanup are retained.
+The adapter now explicitly permits execution on its bounded tmpfs, as supported
+by [Docker's mount options](https://docs.docker.com/engine/storage/tmpfs/#options-for---tmpfs).
+The corrected attempt uses the same retained image and lock with fresh targets.
+Its release build passed, but it was paused for another issue's Redis probes
+and then canceled for handoff without concurrency confirmation. All seven
+containers were removed; ten commands never started and test-3 was canceled.
+The complete twelve-command integration run is still required before acceptance.
+Jeremy must confirm aggregate headroom or provide a clear execution window;
+resume with a new output/run identity using the retained inputs above.
