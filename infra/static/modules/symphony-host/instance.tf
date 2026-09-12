@@ -10,7 +10,7 @@ locals {
 resource "aws_instance" "symphony" {
   ami                         = local.symphony_host_ami_id
   associate_public_ip_address = false
-  instance_type               = "m7i.xlarge"
+  instance_type               = "m7i.2xlarge"
   iam_instance_profile        = aws_iam_instance_profile.symphony.name
   subnet_id                   = var.private_subnet_ids[0]
   user_data                   = file("${path.module}/files/user-data.sh")
@@ -40,7 +40,7 @@ resource "aws_instance" "symphony" {
     Name                     = local.name
     "symphony:bootstrap-ref" = var.bootstrap_ref
     "symphony:runtime-ref"   = var.runtime_ref
-    "symphony:worker-slots"  = "4"
+    "symphony:worker-slots"  = "8"
   }
 
   depends_on = [
