@@ -203,6 +203,11 @@ branch color and CLI guesses are not color authorities. The helper takes an
 explicit repository and issue, requires Linear read and GitHub label-write
 access, and adds missing labels only after verifying a unique open PR.
 
+If the helper's narrowed App token receives HTTP 403 while the existing
+task-bound App can write PR labels, follow the
+[token comparison and supported REST recovery](./pr-label-token-recovery.md).
+Rerun the helper and independently read back required and unrelated labels.
+
 Workers may create missing GitHub labels required by their issue, project
 metadata, or accepted plan using existing repository permissions, without a
 separate human approval. Check for an existing definition first, create only
