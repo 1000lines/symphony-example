@@ -25,7 +25,7 @@ test("Docker configuration uses workspace storage, survives reruns, and refuses 
     const configDir = join(root, "docker");
     const systemd = join(root, "systemd");
     await mkdir(bin);
-    for (const command of ["docker", "dockerd", "systemctl"]) {
+    for (const command of ["docker", "dockerd", "systemctl", "chgrp"]) {
       const path = join(bin, command);
       await writeFile(
         path,
@@ -43,7 +43,16 @@ test("Docker configuration uses workspace storage, survives reruns, and refuses 
       SYMPHONY_RUNTIME_GROUP: "test-workers",
       DOCKER_TEST_LOG: join(root, "calls"),
     };
-    const run = () => spawnSync("bash", [script], { env, encoding: "utf8" });
+    // Exercise daemon configuration independently of the Compose fixture suite.
+    const run = () =>
+      spawnSync(
+        "bash",
+        ["-c", 'source "$1"; configure_docker', "fixture", script],
+        {
+          env,
+          encoding: "utf8",
+        }
+      );
     const first = run();
     assert.equal(first.status, 0, first.stderr);
     const configPath = join(configDir, "daemon.json");
