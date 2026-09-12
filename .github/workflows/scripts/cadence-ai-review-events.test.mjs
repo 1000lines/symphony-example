@@ -15,7 +15,7 @@ test("review callers delegate to matching shared workflow/helper revisions with 
     ["cadence-ai-review-trigger", "review", reviewSecrets],
     ["cadence-ai-review", "review", reviewSecrets],
     ["cadence-linear-rework", "handoff", ["CADENCE_APP_PRIVATE_KEY", "CADENCE_LINEAR_API_TOKEN"]],
-    // Template main pins ddc9eb0: cleanup only accepts the App key at that revision.
+    // Shared cleanup accepts only the App key.
     ["cadence-review-check-cleanup", "cleanup", ["CADENCE_APP_PRIVATE_KEY"]],
   ];
   const refs = new Set();
@@ -24,7 +24,7 @@ test("review callers delegate to matching shared workflow/helper revisions with 
     const job = workflow.jobs[jobName];
     const [source, ref] = job.uses.split("@");
     assert.equal(source, `1000lines/symphony-client-workflows/.github/workflows/${name}.yml`);
-    assert.match(ref, /^[a-f0-9]{40}$/);
+    assert.equal(ref, "main");
     refs.add(ref);
     assert.equal(job.with["helpers-ref"], ref);
     assert.deepEqual(Object.keys(job.secrets).sort(), [...secrets].sort());
