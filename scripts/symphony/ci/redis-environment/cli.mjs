@@ -161,7 +161,11 @@ export async function lifecycle(operation, options, execute) {
       state.cleanup.composeExit = (
         await compose(["down", "--volumes", "--remove-orphans"], false)
       ).code;
-    else state.cleanup.composeExit = 1;
+    else {
+      state.cleanup.composeExit = null;
+      state.cleanup.composeSkipped =
+        "Missing or changed rendered Compose; using recorded IDs";
+    }
     for (const id of state.resourceIds) {
       const exit = await remove(id);
       state.cleanup.exit ||= exit;
@@ -247,7 +251,7 @@ export async function lifecycle(operation, options, execute) {
       oom: result.State.OOMKilled,
     };
     save();
-    await remove(id);
+    assert.equal(await remove(id), 0, "Runner cleanup failed");
     assert.equal(result.State.ExitCode, 0, `Container failed: ${id}`);
   };
 
@@ -385,6 +389,12 @@ export async function lifecycle(operation, options, execute) {
         }
       }
       state.selected = selected;
+      state.images = Object.fromEntries(
+        Object.entries(selected).map(([role, tag]) => [
+          role,
+          lock.images[tag].id,
+        ])
+      );
       state.selection = {
         redis: options.redis,
         python: options.python,
@@ -562,6 +572,17 @@ export async function lifecycle(operation, options, execute) {
           const service = item.Config.Labels?.["com.docker.compose.service"];
           if (service) {
             found.push(service);
+            const role =
+              service === "redis-stack"
+                ? "stack"
+                : service === "resp-proxy"
+                ? "proxy"
+                : "redis";
+            assert.equal(
+              item.Image,
+              lock.images[state.selected[role]].id,
+              `${service} image changed`
+            );
             assert.equal(
               item.HostConfig.NetworkMode,
               `container:${state.anchor}`
