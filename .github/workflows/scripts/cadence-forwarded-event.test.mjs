@@ -127,7 +127,7 @@ test("bot editing a human's feedback cannot supply that human's authority", asyn
   assert.equal(result.skipReason, "non-human-feedback-editor");
 });
 
-test("workflow boundaries keep ingress secret-free and delegate privileged feedback to pinned code", () => {
+test("workflow boundaries keep ingress secret-free and delegate privileged feedback to shared main", () => {
   const read = name => yaml.load(readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8"));
   const ingress = read("cadence-review-ingress");
   assert.deepEqual(ingress.permissions, {});
@@ -143,7 +143,7 @@ test("workflow boundaries keep ingress secret-free and delegate privileged feedb
   assert.equal(events.jobs.forward, undefined);
   assert.deepEqual(handoff.on.workflow_run.workflows, ["Cadence Review Ingress"]);
   for (const job of [events.jobs.review, handoff.jobs.handoff]) {
-    assert.match(job.uses, /^1000lines\/symphony-client-workflows\/\.github\/workflows\/.*@[a-f0-9]{40}$/);
+    assert.match(job.uses, /^1000lines\/symphony-client-workflows\/\.github\/workflows\/.*@main$/);
     assert.equal(job.with["helpers-ref"], job.uses.split("@")[1]);
     assert.equal(job.steps, undefined);
     assert.equal(job.secrets.CADENCE_APP_PRIVATE_KEY, "${{ secrets.CADENCE_APP_PRIVATE_KEY }}");
