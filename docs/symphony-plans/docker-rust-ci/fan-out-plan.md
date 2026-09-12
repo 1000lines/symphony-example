@@ -48,6 +48,38 @@ exceeds these estimates, explain the diff or use the existing replan rules.
 Long acceptance runtime is not a large source PR; bounded resume retains a
 complete ledger without reducing the agreed workload.
 
+## Fan-out record
+
+[100-72](https://linear.app/1000lines/issue/100-72/trigger-fan-out) executed the
+human-reviewed plan merged in [PR #54](https://github.com/1000lines/symphony-example/pull/54)
+at `dcafa8d17959762945e760bb5ddf2c38c8b6a0cb`. All eleven tickets were staged in
+Backlog, their twelve direct blocker relations read back in both directions,
+then activated. They are assigned to Jeremy Carroll with the green label.
+The graph labels below contain the resulting identifiers; node IDs, payload
+keys, branch templates and direct-edge declarations are unchanged.
+
+Mermaid click directives are omitted because the installed shared DAG parser
+rejects them. The mapping provides clickable issue links and concrete task
+branches; both committed graph copies remain synchronized. Every task branch
+and PR uses main, with branch birth on dispatch and draft PR creation.
+
+| Payload key  | Linear issue                                                                                               | Task branch                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| DRC-BOOT     | [100-87](https://linear.app/1000lines/issue/100-87/install-compose-and-preserve-explicit-docker-execution) | `symphony/docker-rust-ci/100-87/compose-and-mode`   |
+| DRC-ENV      | [100-88](https://linear.app/1000lines/issue/100-88/prepare-reproducible-isolated-redis-environments)       | `symphony/docker-rust-ci/100-88/redis-environments` |
+| DRC-RUST     | [100-89](https://linear.app/1000lines/issue/100-89/package-the-complete-pinned-rust-workload)              | `symphony/docker-rust-ci/100-89/rust-workload`      |
+| DRC-REDIS    | [100-90](https://linear.app/1000lines/issue/100-90/run-and-account-for-the-full-redis-ci-workload)         | `symphony/docker-rust-ci/100-90/redis-workload`     |
+| DRC-DEPLOY   | [100-91](https://linear.app/1000lines/issue/100-91/install-accepted-tooling-and-verify-a-new-worker)       | `symphony/docker-rust-ci/100-91/rollout`            |
+| DRC-R1       | [100-92](https://linear.app/1000lines/issue/100-92/execute-the-complete-first-hosted-redis-run)            | `symphony/docker-rust-ci/100-92/redis-first`        |
+| DRC-V1       | [100-93](https://linear.app/1000lines/issue/100-93/execute-the-complete-first-hosted-rust-run)             | `symphony/docker-rust-ci/100-93/rust-first`         |
+| DRC-REHEARSE | [100-94](https://linear.app/1000lines/issue/100-94/reconcile-bootstrap-and-recreate-cold-environments)     | `symphony/docker-rust-ci/100-94/rehearsal`          |
+| DRC-R2       | [100-95](https://linear.app/1000lines/issue/100-95/repeat-every-redis-cell-after-rehearsal)                | `symphony/docker-rust-ci/100-95/redis-repeat`       |
+| DRC-V2       | [100-96](https://linear.app/1000lines/issue/100-96/repeat-the-full-rust-workload-after-rehearsal)          | `symphony/docker-rust-ci/100-96/rust-repeat`        |
+| DRC-FINAL    | [100-97](https://linear.app/1000lines/issue/100-97/audit-acceptance-cleanup-and-human-handoff)             | `symphony/docker-rust-ci/100-97/finalize`           |
+
+Creation and activation do not establish implementation, deployment or hosted
+workload acceptance. Those obligations remain with the generated tickets.
+
 ## Sources and baseline
 
 - Read the live [project brief](https://linear.app/1000lines/project/symphony-docker-and-rust-ci-aa1fa72bda08),
@@ -125,17 +157,17 @@ resource writer overlaps. All code/evidence publication remains in symphony-exam
 ```mermaid
 %% symphony-dag/v1
 flowchart LR
-  BOOT["Round 1: DRC-BOOT: Compose + ticket Docker precedence"]
-  ENV["Round 1: DRC-ENV: Redis pinned images + isolated topology"]
-  RUST["Round 1: DRC-RUST: Rust release + 4 test/doc pairs + clippy/fmt"]
-  REDIS["Round 2: DRC-REDIS: Redis 351 cells + 2 package + 7 install runner"]
-  DEPLOY["Round 3: DRC-DEPLOY: Install accepted refs; verify new worker"]
-  R1["Round 4: DRC-R1: Hosted Redis first full run + cleanup"]
-  V1["Round 4: DRC-V1: Hosted Rust first full run + cleanup"]
-  REHEARSE["Round 5: DRC-REHEARSE: Reconcile bootstrap; cold environments"]
-  R2["Round 6: DRC-R2: Hosted Redis full repeat + cleanup"]
-  V2["Round 6: DRC-V2: Hosted Rust full repeat + cleanup"]
-  FINAL["Round 7: DRC-FINAL: Audit both runs + installed proof; human handoff"]
+  BOOT["100-87: Round 1: DRC-BOOT: Compose + ticket Docker precedence"]
+  ENV["100-88: Round 1: DRC-ENV: Redis pinned images + isolated topology"]
+  RUST["100-89: Round 1: DRC-RUST: Rust release + 4 test/doc pairs + clippy/fmt"]
+  REDIS["100-90: Round 2: DRC-REDIS: Redis 351 cells + 2 package + 7 install runner"]
+  DEPLOY["100-91: Round 3: DRC-DEPLOY: Install accepted refs; verify new worker"]
+  R1["100-92: Round 4: DRC-R1: Hosted Redis first full run + cleanup"]
+  V1["100-93: Round 4: DRC-V1: Hosted Rust first full run + cleanup"]
+  REHEARSE["100-94: Round 5: DRC-REHEARSE: Reconcile bootstrap; cold environments"]
+  R2["100-95: Round 6: DRC-R2: Hosted Redis full repeat + cleanup"]
+  V2["100-96: Round 6: DRC-V2: Hosted Rust full repeat + cleanup"]
+  FINAL["100-97: Round 7: DRC-FINAL: Audit both runs + installed proof; human handoff"]
   ENV --> REDIS
   BOOT --> DEPLOY
   REDIS --> DEPLOY
@@ -412,8 +444,9 @@ Complete owning item sections are keyed by DRC identifier in the linked file.
 100-72 resolves every key to its created/read-back UUID, then sends one
 `issueRelationCreate` input per row: `issueId` is blocker,
 `relatedIssueId` is blocked, `type: blocks`. These are the complete hard
-relations; no additional inferred blockers. There are no live downstream IDs
-yet, so planning output is inspection-only and must not be submitted as-is.
+relations; no additional inferred blockers. The keys remain the accepted plan
+identities; resolve live IDs through the fan-out record above. Do not submit
+planning keys as Linear UUIDs.
 
 | Source edge    | issueId (blocker key) | relatedIssueId (blocked key) | type   |
 | -------------- | --------------------- | ---------------------------- | ------ |
