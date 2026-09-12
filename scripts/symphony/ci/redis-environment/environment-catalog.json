@@ -1,0 +1,698 @@
+{
+  "schema": "redis-environment-catalog/v1",
+  "issue": "100-88",
+  "createdAt": "2026-09-12T04:11:27.634753+00:00",
+  "target": {
+    "repository": "redis/redis-py",
+    "sha": "41585545ee8284d3a51797fdfa1ff995866ab558"
+  },
+  "implementation": {
+    "repository": "1000lines/symphony-example",
+    "base": "main",
+    "shaBeforeEvidenceCommit": "cce86e0a5dff4521447bd98e16e20499c30d00ef",
+    "files": {
+      "check.py": "f45552c7fe342a996c0e2a76e4611e61e3c6127c284891bb1aa9c490b3b0b6c7",
+      "cli.mjs": "7b6e10fb9ad3521b9975bfcea2bf1856f9edd398ca910ae5715ac386b80a70f3",
+      "inputs.json": "87d2c88fb443aabe8c7b6ec374d4bbc3997bd5cb839bc393e4575d75722547cf",
+      "prepare-python.py": "dc78bcd8bfd45f4777b0767e8fea12859d47fae2ad6bbcfbdcfd1682282c2f57",
+      "topology.mjs": "67ff3eabfe2ec4990d389fe7abea2ab0ca8e6c9f1bfc61672473709f7fefdbd6",
+      "upstream-compose.yml": "d3f7a49c652121ea5ed0ad714e93bcb1938793b011e6b6c88a8fc3944eb967e8",
+      "upstream-sentinel.conf": "53fb3e07edef7755155d1fe165f9a9963c9f369445dcc241a71b3637163ed8f9"
+    }
+  },
+  "platform": "linux/amd64",
+  "uid": 993,
+  "gid": 993,
+  "derivedImages": [],
+  "validation": {
+    "scope": "ENV compatibility only; full Redis matrix belongs to 100-90 and acceptance tickets",
+    "result": "passed",
+    "completedAt": "2026-09-12T04:10:59.845920+00:00",
+    "expected": {
+      "imagePins": 18,
+      "interpreterParserEnvironments": 11,
+      "redisVersions": 8,
+      "isolationPairs": 1,
+      "failureCases": [
+        "health",
+        "command exit 23",
+        "SIGTERM cancellation",
+        "partial startup"
+      ]
+    },
+    "missing": [],
+    "resolvedFailures": [
+      {
+        "attempt": "probe1-py310",
+        "cause": "missing editable build dependency",
+        "resolution": "pinned editables; later preparation/replay passed"
+      },
+      {
+        "attempt": "probe3-py310",
+        "cause": "sentinel bytes/text assertion and attached Docker CLI cancellation",
+        "resolution": "decoded sentinel response and SIGKILL attached client; fresh topology and SIGTERM cancellation passed"
+      },
+      {
+        "attempt": "probe4-pypy310",
+        "cause": "bundled CFFI omitted pycparser",
+        "resolution": "retained pycparser wheel; probe6-pypy310 passed"
+      },
+      {
+        "attempts": [
+          "redis8-4-3",
+          "redis8-2-6",
+          "redis8-0-6"
+        ],
+        "cause": "image VOLUME /data created daemon storage",
+        "resolution": "workspace binds and declared-volume validation; all five affected images passed probe7"
+      }
+    ],
+    "executed": {
+      "imagePins": 18,
+      "interpreterParserEnvironments": 11,
+      "redisVersions": 8,
+      "isolationPairs": 1,
+      "failureCases": 4
+    },
+    "details": "evidence/validation.json inside the proof archive"
+  },
+  "images": {
+    "library/python:3.10-bookworm": {
+      "ref": "library/python@sha256:94c362db08c5b38857943d31b10558ff1856e918605c474d205d72a534929d4e",
+      "id": "sha256:8c905c192994d3673892750cb70742ca8739d45fdc666543c0cd9dab92a8f104",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/python:3.11-bookworm": {
+      "ref": "library/python@sha256:35d3a4a3d5e42e02ab916d44513a050689f12c0533d45598d229672503fe77ca",
+      "id": "sha256:2f88cde776ba073e286078b121b174f402e1cd615d66eb862a5621465fe5acb9",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/python:3.12-bookworm": {
+      "ref": "library/python@sha256:581429e3df12d76e6af4be5ab7d0e7fc2013eb57dc23d2de691411c8efdbb970",
+      "id": "sha256:e8565fa265f973c06f0515fac7aa9d102edae01b5677d69216900b84029c6ad0",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/python:3.13-bookworm": {
+      "ref": "library/python@sha256:933b46a028fd786c9c3d426ebabc237e29a15912231ea8de576e95f0e4f41a4c",
+      "id": "sha256:e03519bda9c22766863a96b7c7da44d8cabd576c21af3fa6b699eaecaeee3dfb",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/python:3.14-bookworm": {
+      "ref": "library/python@sha256:ecac9e212daacda8a702eae372fceebc0ee36f5805abe087880367e8d061fa5b",
+      "id": "sha256:997f43882c3e2cfca515a916f334e493ee48277d198a42fad3ecd03700112b57",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/pypy:3.10-bookworm": {
+      "ref": "library/pypy@sha256:561e43edba15cf42380165f336ac8bafd8245adbd150d8ffe1439c708d0a7683",
+      "id": "sha256:c5bbf485d957124f7a82c1d55fa069a33fb739ef3ab047deea6b53c72bb10095",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "library/pypy:3.11-bookworm": {
+      "ref": "library/pypy@sha256:7670cfb80d068a3102e8abb84d0c339ac0ab3d75291377c3d8121894eb9929fa",
+      "id": "sha256:1ecfa55b85d473e405511ff9e92cc3ba24dfa7cdb04b89f0a9ec04cdb991714d",
+      "architecture": "amd64",
+      "entrypoint": null,
+      "declaredVolumes": []
+    },
+    "redislabs/client-libs-test:8.10.0": {
+      "ref": "redislabs/client-libs-test@sha256:d349c6875600403edaa02fa0e7f6f79b6fab74c0e490822b0c37d8d85f6f0d89",
+      "id": "sha256:cd5ae2314a132560b5266bcd0f99b495cd4df3f0bd7c0eae9b4dd581f4cf23ec",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": []
+    },
+    "redislabs/client-libs-test:8.8.0": {
+      "ref": "redislabs/client-libs-test@sha256:319b628cb1f3347ac22c883860d7db10bec69948bbd0f9aee4d676899285cde4",
+      "id": "sha256:b3f46f5abcec644f1468d0567297be0fdc046f579e43d922e15e75689ebfce2b",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": []
+    },
+    "redislabs/client-libs-test:8.6.3": {
+      "ref": "redislabs/client-libs-test@sha256:adacb737b2fb2d3af13c174d8dff3aaaa568c3d71d8442c71c2f4e1c658029ff",
+      "id": "sha256:1bf62e1a60d025f60d521a9fb4b084c8e5f060a1b72c3e3112350408225c22fa",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": []
+    },
+    "redislabs/client-libs-test:8.4.3": {
+      "ref": "redislabs/client-libs-test@sha256:f197b4e7cb3fcc579c80137dd93b18667e87d315aa8588071125117a91402a12",
+      "id": "sha256:ee7e73af913b1409136476100bd9b88c567544c076eb4d9379ee9c28fe877ad2",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": [
+        "/data"
+      ]
+    },
+    "redislabs/client-libs-test:8.2.6": {
+      "ref": "redislabs/client-libs-test@sha256:6b46280e521cc542d0da8bf110731127b7892efa716cf91e9a658b4361a2f175",
+      "id": "sha256:f5579ee8b287c0eded4b7e2682beef2d35d2acabc5aa32d85f2f1f261a2d34f9",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": [
+        "/data"
+      ]
+    },
+    "redislabs/client-libs-test:8.0.6": {
+      "ref": "redislabs/client-libs-test@sha256:59d7b984e44cc23f080de72f29f2427ef159656184e6e75360bc82a6f1a3a820",
+      "id": "sha256:4d6824d25164ebec4c4438791dc75f75d26fc7a33d3211aa0a00c5479bba5481",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": [
+        "/data"
+      ]
+    },
+    "redislabs/client-libs-test:7.4.9": {
+      "ref": "redislabs/client-libs-test@sha256:bc45dc80848d1c818e330fa24d3c1958ea3ebf37aeaa931a2ec68c8397c15d4f",
+      "id": "sha256:146f3614c08d4a17be97ff6b9805318673c8e7a5fe368c19610856485ff1231a",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": [
+        "/data"
+      ]
+    },
+    "redislabs/client-libs-test:7.2.14": {
+      "ref": "redislabs/client-libs-test@sha256:58b1a5f3ba536b7cde2acccb6846d01a2d82e5e3ef295e173a1b5ea092dd8016",
+      "id": "sha256:60b7cacde48d28ac80d2248a828bb20afcc6240712b704f00c5c8702b27c2a76",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": [
+        "/data"
+      ]
+    },
+    "redislabs/client-libs-test:rs-7.4.0-v8": {
+      "ref": "redislabs/client-libs-test@sha256:b44db722c9a9f280685e97547ec95e4fdf984505e2e24b9e9de19202a462048e",
+      "id": "sha256:fd71cbaba368af7d54c763187c598202010f785ed5c6a236377ec61089aa63a5",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": []
+    },
+    "redislabs/client-libs-test:rs-7.2.0-v20": {
+      "ref": "redislabs/client-libs-test@sha256:e38ffd865fb1262cf1bacab7e455e7850c19b50d765db63e5016a7f9d40153b6",
+      "id": "sha256:70f072544268c6e199a0f944e0451d25698eb61e782fff3af3d1529eb8ebfbf4",
+      "architecture": "amd64",
+      "entrypoint": [
+        "/opt/redis/scripts/entrypoint.sh"
+      ],
+      "declaredVolumes": []
+    },
+    "redislabs/client-resp-proxy:latest": {
+      "ref": "redislabs/client-resp-proxy@sha256:dd4d42aa066a613c8951c9dc56110d13112068cdf10c137b30e24ba0f1bd52d6",
+      "id": "sha256:9823db309b5d593490accf8038b3cea616c186548ae980aab225736fc6178743",
+      "architecture": "amd64",
+      "entrypoint": [
+        "./resp-proxy"
+      ],
+      "declaredVolumes": []
+    }
+  },
+  "replays": [
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.10",
+        "parser": "plain"
+      },
+      "lockSha256": "15f9191e526b3e8f1e2ac85e98b6d125139869040d56e18cee6df4986c5bb023",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/afd1dfb8-0513-4e16-b322-4a992cf2b995/9085756d-469f-4403-b4f3-414350cc9ce8",
+        "size": 48970939,
+        "sha256": "096da3d5757c9cb10286eda52756893a9ea68b923afd835614073638e1637f56",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.10.21 (main, Aug 25 2026, 03:46:21) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.2.6",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 67,
+      "preparation": "probe4-py310",
+      "topologyPassedAt": "2026-09-12T03:21:05.871Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.11",
+        "parser": "plain"
+      },
+      "lockSha256": "276a3cbb6dc9d9d6e2a3cca7ac28fc8236dd5458d4d07c6d1da1f9265fe416de",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/42f1b35f-7430-483d-acf9-c297e06e74f6/bd687465-43ab-40ae-a7eb-7d36c3b020cc",
+        "size": 49264459,
+        "sha256": "d60a14268d155ab7bc1caa21c783375cc3eb838ead9328f0e00f152e5800c25c",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.11.16 (main, Aug 25 2026, 03:45:30) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.4.6",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 63,
+      "preparation": "probe4-py311",
+      "topologyPassedAt": "2026-09-12T03:57:10.268Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.12",
+        "parser": "plain"
+      },
+      "lockSha256": "310b3223d5906ce79c516e96607af06d6576f2b486e7c49a9b8096ac5e98ef02",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/e523ede0-f349-4a3d-9e5d-1b15bac36657/b62e14f6-c6b0-46f1-a4f1-3581891b63d4",
+        "size": 49824153,
+        "sha256": "6c1eea5f5f9312ef2275d5acaa62ae793b1bbea1e8ad43202a9fdef9359c908f",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.12.14 (main, Aug 25 2026, 03:41:50) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.5.3",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 63,
+      "preparation": "probe4-py312",
+      "topologyPassedAt": "2026-09-12T03:57:12.303Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.13",
+        "parser": "plain"
+      },
+      "lockSha256": "7f42896a98cc225a4ed6cb1b89457c0ba35c92a49634c9201cd1150d948cc78d",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/4e4f4ae0-0bee-4484-9083-d89d70d1c4ae/efc5d11d-90d7-4665-b4a8-86ebb0d8c2df",
+        "size": 49811515,
+        "sha256": "90dc3876f0d88c80b45e92932ee011e452faac79b490511c2827f7d973768a21",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.13.15 (main, Aug 25 2026, 03:41:03) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.5.3",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 63,
+      "preparation": "probe4-py313",
+      "topologyPassedAt": "2026-09-12T03:55:12.460Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.14",
+        "parser": "plain"
+      },
+      "lockSha256": "1a1793126786c9d379ec7d46a851c1113fa1854878cbd7bdf6c357fcd1373dda",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/50ce3935-a2e8-4d2a-8c7e-963790d3170d/6fd82496-531a-4981-b506-3c1370f33bad",
+        "size": 49376189,
+        "sha256": "ead25bf9f825492ecd0e1f249a7528c7e18fd34d3870245dd313e0bf7b096f50",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.14.7 (main, Aug 25 2026, 03:40:47) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.5.3",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": "0.22.1"
+      },
+      "wheelCount": 63,
+      "preparation": "probe4-py314",
+      "topologyPassedAt": "2026-09-12T03:55:38.026Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.10",
+        "parser": "hiredis-old"
+      },
+      "lockSha256": "c74ff8d87202da23c288bb93b866be4b9bdd94d7c6c95bfbbab5decbbaa6075a",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/f3afb5ff-0bee-4372-9587-88d14cfaf80d/ac5d10f2-e1f2-4e64-9b73-e7c768d31384",
+        "size": 49137177,
+        "sha256": "740104c04ba5b58e3ee51a7c9c0b093d183ff666b2d6749d9f3f4027ad1c0814",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.10.21 (main, Aug 25 2026, 03:46:21) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.2.6",
+        "pycparser": "3.0",
+        "hiredis": "2.4.0",
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 68,
+      "preparation": "probe4-py310old",
+      "topologyPassedAt": "2026-09-12T03:53:55.766Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.14",
+        "parser": "hiredis-old"
+      },
+      "lockSha256": "6df44f215201a02e7d707dab99b1a83a85a702a59806fba5f3eddfdbe855c4dc",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/d03660a2-1fc5-40a7-ada1-75a236b29a9d/c234ac31-7436-4718-b388-c1e8115297a4",
+        "size": 49539214,
+        "sha256": "4a9897cbdcd406e26181723e4e9d6e96df6e69df4b22c861d279e6ee63679740",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.14.7 (main, Aug 25 2026, 03:40:47) [GCC 12.2.0]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.5.3",
+        "pycparser": "3.0",
+        "hiredis": "2.4.0",
+        "uvloop": "0.22.1"
+      },
+      "wheelCount": 64,
+      "preparation": "probe4-py314old",
+      "topologyPassedAt": "2026-09-12T03:53:29.006Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.10",
+        "parser": "hiredis-new"
+      },
+      "lockSha256": "39db2f15668cbb3eda3e4162d6765289e9daf70bea7b775a019ccc25b3040be0",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/40f5caad-4ee5-4787-a524-f0e5740fe60a/695a9e29-71dc-46ac-b4e0-d4b4eedfc5b5",
+        "size": 49278977,
+        "sha256": "74229d16b223ec670383dda25c1339ce7f59bd2205e75318bb3309493c75390f",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.10.21 (main, Aug 25 2026, 03:46:21) [GCC 12.2.0]",
+      "actualParser": "_HiredisParser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.2.6",
+        "pycparser": "3.0",
+        "hiredis": "3.4.1",
+        "uvloop": "0.21.0"
+      },
+      "wheelCount": 68,
+      "preparation": "probe4-py310new",
+      "topologyPassedAt": "2026-09-12T03:54:47.495Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "3.14",
+        "parser": "hiredis-new"
+      },
+      "lockSha256": "8f94cb8a3e9aef5b6d557c4210090f2119aaa2cd2498c6f30bbfdb1cb975e4d1",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/1551266e-6f9c-4079-9e0e-d4e7635941fb/ec9c4526-1aa8-44d9-8732-4579477ebf62",
+        "size": 49688112,
+        "sha256": "a3085844cd9b7c8f38a25318693fe70097686a738f5691750b19416a0ee75bb8",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.14.7 (main, Aug 25 2026, 03:40:47) [GCC 12.2.0]",
+      "actualParser": "_HiredisParser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.6.1",
+        "hatchling": "1.27.0",
+        "numpy": "2.5.3",
+        "pycparser": "3.0",
+        "hiredis": "3.4.1",
+        "uvloop": "0.22.1"
+      },
+      "wheelCount": 64,
+      "preparation": "probe4-py314new",
+      "topologyPassedAt": "2026-09-12T03:54:21.300Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "pypy-3.10",
+        "parser": "plain"
+      },
+      "lockSha256": "f09b297283eb4a8012eb5c923d942dac090b9eeb6cdf3732cff3a7118c063e84",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/3b188246-3584-435a-9c75-0af6449b6fa5/f75f8393-8755-4fd2-9767-de6319474d7a",
+        "size": 32979305,
+        "sha256": "ea90b276ec8543ee0f5b42481e6d5553dc305deec64016a0cb019b42ad6f3ace",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.10.16 (64367dfeb263, Feb 24 2025, 17:31:14)\n[PyPy 7.3.19 with GCC 10.2.1 20210130 (Red Hat 10.2.1-11)]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.2.2.post1",
+        "hatchling": "1.27.0",
+        "numpy": "1.26.4",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": null
+      },
+      "wheelCount": 64,
+      "preparation": "probe6-pypy310",
+      "topologyPassedAt": "2026-09-12T03:56:07.361Z"
+    },
+    {
+      "selection": {
+        "redis": "8.8.0",
+        "python": "pypy-3.11",
+        "parser": "plain"
+      },
+      "lockSha256": "093bcc68f265fdd4e954be971f1dd139cebb32747821059bc321459e71cd7366",
+      "artifact": {
+        "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/9668033c-d46a-4138-821f-0dcc0b4678f8/92a60421-29a3-4b48-8f7e-120229de594e",
+        "size": 33253774,
+        "sha256": "77beae251f1ce13fa3ee2ef75094ace9652df594839a084bc05d90a9219f58ae",
+        "uploadHttp": 200,
+        "readbackHttp": 200
+      },
+      "version": "3.11.15 (194f9f44b505, May 25 2026, 19:34:11)\n[PyPy 7.3.23 with GCC 10.2.1 20210130 (Red Hat 10.2.1-11)]",
+      "actualParser": "_RESP3Parser",
+      "packages": {
+        "pip": "25.3",
+        "build": "1.2.2.post1",
+        "hatchling": "1.27.0",
+        "numpy": "1.26.4",
+        "pycparser": "3.0",
+        "hiredis": null,
+        "uvloop": null
+      },
+      "wheelCount": 60,
+      "preparation": "probe6-pypy311",
+      "topologyPassedAt": "2026-09-12T03:56:33.108Z"
+    }
+  ],
+  "proof": {
+    "assetUrl": "https://uploads.linear.app/afd2ba98-d912-4449-ad6f-3a05d9b6bad8/8b7284d7-099a-423f-911f-f1ca921944dc/7ff0ffac-e8d3-4889-847d-efcca049e1ee",
+    "size": 2244000,
+    "sha256": "78000b1ad72378fdcadf14c06d697d43aff0be24ed93edc311292aeeb520d5c7",
+    "uploadHttp": 200,
+    "readbackHttp": 200
+  },
+  "topologies": [
+    {
+      "attempt": "probe6-pypy311",
+      "redisVersion": "8.8.0",
+      "stackVersion": "8.8.0",
+      "modules": {
+        "search": 80800,
+        "bf": 80800,
+        "vectorset": 1,
+        "timeseries": 80800,
+        "ReJSON": 80800
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe6-pypy311/command-36.log"
+    },
+    {
+      "attempt": "probe7-redis7-2-14",
+      "redisVersion": "7.2.14",
+      "stackVersion": "7.2.12",
+      "modules": {
+        "redisgears_2": 20023,
+        "bf": 20624,
+        "RedisCompat": 1,
+        "search": 20828,
+        "timeseries": 11017,
+        "ReJSON": 20615
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe7-redis7-2-14/command-38.log"
+    },
+    {
+      "attempt": "probe7-redis7-4-9",
+      "redisVersion": "7.4.9",
+      "stackVersion": "7.4.7",
+      "modules": {
+        "search": 21020,
+        "RedisCompat": 1,
+        "timeseries": 11206,
+        "redisgears_2": 20020,
+        "ReJSON": 20809,
+        "bf": 20816
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe7-redis7-4-9/command-38.log"
+    },
+    {
+      "attempt": "probe5-redis8-10-0",
+      "redisVersion": "8.10.0",
+      "stackVersion": "8.10.0",
+      "modules": {
+        "vectorset": 1,
+        "timeseries": 81000,
+        "bf": 81000,
+        "search": 81000,
+        "ReJSON": 81000
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe5-redis8-10-0/command-36.log"
+    },
+    {
+      "attempt": "probe5-redis8-6-3",
+      "redisVersion": "8.6.3",
+      "stackVersion": "8.6.3",
+      "modules": {
+        "timeseries": 80602,
+        "search": 80607,
+        "bf": 80602,
+        "vectorset": 1,
+        "ReJSON": 80600
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe5-redis8-6-3/command-36.log"
+    },
+    {
+      "attempt": "probe7-redis8-0-6",
+      "redisVersion": "8.0.6",
+      "stackVersion": "8.0.6",
+      "modules": {
+        "bf": 80007,
+        "vectorset": 1,
+        "timeseries": 80001,
+        "search": 80001,
+        "ReJSON": 80001
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe7-redis8-0-6/command-36.log"
+    },
+    {
+      "attempt": "probe7-redis8-2-6",
+      "redisVersion": "8.2.6",
+      "stackVersion": "8.2.6",
+      "modules": {
+        "timeseries": 80210,
+        "bf": 80212,
+        "search": 80212,
+        "vectorset": 1,
+        "ReJSON": 80209
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe7-redis8-2-6/command-36.log"
+    },
+    {
+      "attempt": "probe7-redis8-4-3",
+      "redisVersion": "8.4.3",
+      "stackVersion": "8.4.3",
+      "modules": {
+        "bf": 80405,
+        "timeseries": 80409,
+        "search": 80409,
+        "vectorset": 1,
+        "ReJSON": 80402
+      },
+      "uid": 993,
+      "gid": 993,
+      "log": "attempts/probe7-redis8-4-3/command-36.log"
+    }
+  ],
+  "attemptIndex": "evidence/attempts.json inside the proof archive",
+  "limitations": [
+    "ENV compatibility probes cover environment provisioning and cleanup, not the downstream 351-cell Redis matrix or full acceptance.",
+    "Initial wheel resolution uses the public index. Replay uses retained SHA-256-checked wheels with no container network.",
+    "Bootstrap provenance readback was unavailable (PermissionError errno 13); Jeremy and DEPLOY own host installation/reload evidence.",
+    "Required current-head GitHub CI and Cadence review are tracked in the PR and Codex workpad."
+  ]
+}
