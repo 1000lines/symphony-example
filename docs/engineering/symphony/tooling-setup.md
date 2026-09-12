@@ -249,9 +249,12 @@ values, never from PR text or the target head. Helpers are checked out separatel
 under `_symphony`; record the actual checkout commit, including when using the
 accepted moving publication branch. Only `CADENCE_LINEAR_API_TOKEN` is declared;
 pass it explicitly. No reviewer App/provider key or `secrets: inherit` belongs
-on this boundary. Native triggers remain usable until the adoption owner retires
-duplicate callers after live proof. Source tests do not prove host reload or a
-live GitHub-to-Linear transition; CT-A owns that integrated proof.
+on this boundary. In this repository, PR #51 moved native triggers to
+`symphony-client-wakeups.yml`, calling the published workflow and helpers at
+`alpha`; the old seed body is now reusable-only. The
+[consumer census](../../symphony-plans/client-template/consumer-census.md)
+records retained compatibility and pending retirement. Source tests do not prove
+host reload or a live GitHub-to-Linear transition.
 
 For clients without application CI, `symphony-client-commands.yml` exposes a
 secret-free `workflow_call`. Supply `tested-ref` as the exact PR head SHA,
@@ -295,13 +298,15 @@ tooling CI requires none of this optional event or credential setup.
 
 ## Review and local environment
 
-The native workflow hooks invoke the Claude runner using the credentials below.
+The generated workflow hooks invoke the shared provider selected by the
+[client review context](../../../.github/symphony/REVIEW.md), which specifies
+named repository/organization secrets and Actions variables.
 The [review contract](../review/cadence-ai-review.md#acceptance-contract) describes
 its PR-review output and workpad evidence.
 Required Google Docs need source access only when actually linked.
 Set the applicable credential names documented in the generated reference in
 GitHub Settings → Secrets and variables → Actions → Secrets. Workflow identity
-and model variables belong in the Variables tab. The review runner requires
+and model variables belong in the Variables tab. The Claude path requires
 `CADENCE_CLAUDE_MODEL` with no default. Its retained preflight in
 `.github/workflows/scripts/verify-cadence-ai-review.cjs` accepts only
 `claude-opus-5` through `APPROVED_CADENCE_CLAUDE_MODELS` and rejects a workflow

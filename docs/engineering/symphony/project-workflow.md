@@ -5,6 +5,12 @@ This document expands the state and handoff contract in
 Hosted installation and local invocation use this same source; operators may
 supply environment-specific overrides as described in [tooling setup](./tooling-setup.md#repository-workflow-and-guardrails).
 
+This repository's generated client listeners now call the published workflow
+repository. The [consumer census](../../symphony-plans/client-template/consumer-census.md)
+records their retained filenames and actual source refs; the
+[finalization matrix](../../symphony-plans/client-template/finalization.md)
+keeps live adoption evidence separate from the state rules below.
+
 ## Required Project Metadata
 
 Every Symphony Linear project needs this metadata before ticket work starts:
