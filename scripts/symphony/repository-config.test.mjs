@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -62,6 +68,53 @@ test("one selected-base config serves independent issue projects without rewriti
     assert.equal(issue.identifier.split("-")[0], value.linear.teamKey);
     assert.equal(JSON.stringify(value), serialized);
     assert.deepEqual(Object.keys(value.linear), ["teamKey"]);
+  }
+});
+
+test("all modes preserve explicit Docker command arrays and shell arguments", () => {
+  for (const mode of [undefined, "native", "docker", "remote"]) {
+    const value = config();
+    if (mode !== undefined) value.ci.mode = mode;
+    value.commands = {
+      setup: [["docker", "build", "-t", "task-image", "."]],
+      test: [
+        [
+          "bash",
+          "-lc",
+          'docker run --rm --user "$(id -u):$(id -g)" task-image\nprintf "%s\\n" "result retained"',
+        ],
+      ],
+    };
+    const serialized = JSON.stringify(value);
+    assert.equal(JSON.stringify(validateConfig(value)), serialized);
+    assert.equal(JSON.stringify(value), serialized);
+  }
+});
+
+test("installed guidance preserves ticket Docker precedence and its evidence source", () => {
+  for (const path of [
+    "codex/AGENTS.md",
+    "workflow/WORKFLOW.md",
+    "skills/symphony-repository/SKILL.md",
+    "skills/symphony-repository/references/config.md",
+  ]) {
+    const guidance = readFileSync(
+      new URL(`./runtime-bundle/${path}`, import.meta.url),
+      "utf8"
+    ).replace(/\s+/g, " ");
+    assert.match(
+      guidance,
+      /explicit ticket Docker requirement takes precedence over native\/remote/,
+      path
+    );
+    assert.match(guidance, /even after native checks pass/, path);
+    assert.match(
+      guidance,
+      /configured mode, effective mode and override source/,
+      path
+    );
+    assert.match(guidance, /issue section or human comment URL/, path);
+    assert.match(guidance, /SYMPHONY_TOOLING_ROOT/, path);
   }
 });
 

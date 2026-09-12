@@ -445,7 +445,15 @@ latestReviews`; it can miss submitted review-summary comments. For the linked
     wake label, move to `Inactive`, and stop.
 - Make surgical changes only. Do not refactor adjacent code unless required.
 - Prefer targeted validation over broad monorepo validation.
-- Use the selected-base config's `ci.mode`, defaulting to `native`. Native mode
+- Start with the selected-base config's `ci.mode`, defaulting to `native`.
+  An explicit ticket Docker requirement takes precedence over native/remote
+  defaults for that workload, even after native checks pass. Record configured
+  mode, effective mode and override source (issue section or human comment URL)
+  in the workpad and evidence. Use explicit executable/argument arrays and the
+  accepted workload recipes under `SYMPHONY_TOOLING_ROOT`; do not implicitly
+  wrap native commands or change the repository's default mode. Without a
+  ticket override, preserve the selected mode's behavior below.
+- Native mode
   validates local → Docker for environment gaps → mandatory current-head CI;
   passing local checks mean `Docker: skipped — passed locally`. Docker mode runs
   the existing command arrays that build the client's Dockerfile and execute its

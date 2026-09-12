@@ -69,6 +69,17 @@ records missing tools/unrun checks and publishes the prepared head to GitHub CI
 without installing toolchains or requiring Docker. Known failed assertions must
 be fixed in every mode. All modes require actual current-head GitHub CI.
 
+An explicit ticket Docker requirement takes precedence over native/remote
+defaults for that workload, even after native checks pass. This is a worker
+instruction using existing executable/argument arrays, not another schema or
+automatic command wrapper. Keep the selected-base config unchanged. Record
+configured mode, effective mode and override source (issue section or human
+comment URL) in the workpad and evidence. For example, DRC-R1's ticket requirement
+means effective `docker` even with configured `native` or `remote`; use its
+accepted workload recipe under `SYMPHONY_TOOLING_ROOT`. Without an override,
+the three modes retain the behavior above. Missing Docker capability blocks
+that required workload; a native pass or remote CI cannot substitute for it.
+
 Keep `linear.teamKey` alone. A repository has no `projectKey` or project filter;
 project identity and metadata come from each issue. Different issue/project
 contexts can use exactly the same repository configuration.

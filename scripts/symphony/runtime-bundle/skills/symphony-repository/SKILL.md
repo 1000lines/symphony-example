@@ -113,7 +113,14 @@ Record its commit alongside the task head and validation evidence.
 ## Work and review
 
 Run the target's executable/argument arrays in its configured working directory.
-`ci.mode` selects native (also the default when omitted), docker or remote.
+The selected-base `ci.mode` selects native (also the default when omitted),
+docker or remote. An explicit ticket Docker requirement takes precedence over
+native/remote defaults for that workload, even after native checks pass. Record
+configured mode, effective mode and override source (issue section or human
+comment URL) in the workpad and evidence. Use the ticket's explicit
+executable/argument arrays and accepted workload recipes under
+`SYMPHONY_TOOLING_ROOT`; do not implicitly wrap native commands or rewrite the
+repository default. Without a ticket override, preserve these mode behaviors:
 Native uses installed tools, with Docker fallback for environment gaps. Docker
 uses the existing commands to build the client's Dockerfile and run its checks;
 record the image digest, mount only the issue workspace, preserve UID/GID and
