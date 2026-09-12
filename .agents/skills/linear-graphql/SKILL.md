@@ -1,248 +1,93 @@
 ---
 name: linear-graphql
-description: Use when Codex needs to read or write Linear through Linear's GraphQL API, when a user asks to use GraphQL with Linear, or when inspecting/updating Linear issues, comments, projects, labels, workflow states, and workpads with a Linear API token.
+description: Read or write Linear issues, comments, projects and workflow metadata through injected GraphQL or the shipped authenticated script in human sessions.
 ---
 
 # Linear GraphQL
 
-Use Linear's GraphQL API directly when no working injected
-`linear_graphql` tool is exposed in the session.
+Prefer injected `linear_graphql` whenever available. Only when absent in a
+human-operated session, use [scripts/linear-graphql.mjs](scripts/linear-graphql.mjs).
+Hosted Symphony workers retain injected-tool authentication and never install
+or run the human-only project factory. Authentication failure stops dependent
+reads/writes; do not switch identity or transport to bypass it.
 
-## Workflow
-
-1. Prefer a dedicated `linear_graphql` tool if one is actually available in
-   tool discovery for this session.
-2. If no tool is available, use
-   `.agents/skills/linear-graphql/scripts/linear-graphql.mjs`.
-3. Check for auth without printing secret values:
-
-   ```bash
-   if [ -n "$LINEAR_API_KEY" ] || [ -n "$LINEAR_API_TOKEN" ]; then echo "Linear token present"; else echo "Linear token missing"; fi
-   ```
-
-4. If both env vars are missing, use the user's personal token file
-   `~/.linear-token` by default. Do not print the file contents.
-5. Use AWS Secrets Manager only when a specific secret id is passed or set in
-   `LINEAR_AWS_SECRET_ID` / `SYMPHONY_LINEAR_API_KEY_SECRET_ID`. The known
-   Symphony bot secret is `symphony/linear-api-token`; use it only for bot
-   automation, not routine interactive Linear work.
-6. If auth fails, stop live Linear work and ask the user to fix the token source.
-   Do not infer, search logs for, or print tokens.
-7. For mutations, get explicit confirmation unless the user has already asked
-   for that exact write. Before broad writes, show the mutation input objects.
-
-## Script Usage
-
-Read a query from a file:
-
-```bash
-node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
-  --query-file /tmp/linear.graphql \
-  --variables-json '{"id":"DEMO-123"}'
-```
-
-When `LINEAR_API_KEY` and `LINEAR_API_TOKEN` are absent, the script reads
-`LINEAR_TOKEN_FILE`, then `~/.linear-token` unless `--no-token-file` is passed.
-
-Use an AWS secret explicitly for bot automation:
-
-```bash
-node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
-  --query-file /tmp/linear.graphql \
-  --variables-json '{"id":"DEMO-123"}' \
-  --aws-secret-id symphony/linear-api-token \
-  --aws-profile example \
-  --aws-region us-west-2
-```
-
-Read a query from stdin:
-
-```bash
-printf 'query Viewer { viewer { id name email } }\n' | node .agents/skills/linear-graphql/scripts/linear-graphql.mjs
-```
-
-Validate request shape without a token or network:
-
-```bash
-node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
-  --query-file /tmp/linear.graphql \
-  --variables-json '{"id":"DEMO-123"}' \
-  --dry-run
-```
-
-Request temporary signed URLs for `uploads.linear.app` links in GraphQL
-responses:
-
-```bash
-node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
-  --query-file /tmp/linear.graphql \
-  --variables-json '{"id":"DEMO-123"}' \
-  --public-file-urls-expire-in 300
-```
-
-## Useful Queries
-
-Issue context by identifier:
+Before source acquisition or writes, verify viewer ID, organization ID/name and
+configured team ID/key against the intended account/workspace/project. Resolve
+all IDs from actual responses; an example team is not a default.
 
 ```graphql
-query IssueContext($id: String!) {
-  issue(id: $id) {
+query Identity {
+  viewer {
     id
-    identifier
-    title
-    url
-    description
-    state {
-      id
-      name
-    }
-    project {
-      id
-      name
-      description
-      content
-    }
-    labels {
-      nodes {
-        id
-        name
-      }
-    }
-    comments(first: 50) {
-      nodes {
-        id
-        body
-        createdAt
-        user {
-          id
-          name
-          email
-        }
-      }
-    }
+    name
   }
-}
-```
-
-Resolve a target workflow state before moving an issue:
-
-```graphql
-query IssueStates($id: String!) {
-  issue(id: $id) {
+  organization {
     id
-    identifier
-    state {
+    name
+  }
+  teams {
+    nodes {
       id
+      key
       name
     }
-    team {
-      states(first: 100) {
-        nodes {
-          id
-          name
-        }
-      }
-    }
   }
 }
 ```
 
-Update an issue state only after confirming the target state id:
+Paginate when needed. For factory setup, follow every preflight, preview, staging,
+relation and readback guard in the [factory skill](../symphony-project-factory/SKILL.md)
+with either transport: source/color/label/state/assignee checks, concrete mutation
+inputs, Backlog seeds, both blocker directions, then activation unless held.
+Preview-only performs zero mutations. Already-authorized writes need no second
+confirmation; otherwise obtain authorization for the concrete mutation scope.
+On partial failure, stop dependent writes, record confirmed IDs and actual state,
+read back and reuse those IDs on retry. Never infer rollback or create duplicates.
 
-```graphql
-mutation MoveIssue($id: String!, $stateId: String!) {
-  issueUpdate(id: $id, input: { stateId: $stateId }) {
-    success
-    issue {
-      id
-      identifier
-      state {
-        id
-        name
-      }
-    }
-  }
-}
+## Script authentication
+
+The script uses `LINEAR_API_KEY`, then `LINEAR_API_TOKEN`, then a token file:
+`--token-file`, `LINEAR_TOKEN_FILE`, or `~/.linear-token`. Inspect presence only;
+never print, commit, forward or search logs for credentials. `--no-token-file`
+disables file lookup. A configured source that fails authentication is not a
+reason to try another identity.
+
+AWS Secrets Manager is used only when explicitly selected by `--aws-secret-id`,
+`LINEAR_AWS_SECRET_ID` or `SYMPHONY_LINEAR_API_KEY_SECRET_ID`, after environment/file
+lookup. `--no-aws-secret` disables it. The known `symphony/linear-api-token` secret
+is for explicitly authorized bot automation, never routine human factory work.
+Hosted worker authentication is unchanged by these script options.
+
+## Invocation
+
+From the generated client, supply the same query and variables as the tool:
+
+```sh
+node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
+  --query-file query.graphql --variables-file variables.json --no-aws-secret
 ```
 
-Create a comment:
+The script also accepts stdin queries, `--variables-json`, `--operation-name`,
+`--aws-profile` and `--aws-region`. `--help` lists options. Validate request shape
+without credentials or network by adding `--dry-run`; that does not verify
+identity, preflight or operation. Check errors/exit status before dependent calls.
 
-```graphql
-mutation CreateComment($issueId: String!, $body: String!) {
-  commentCreate(input: { issueId: $issueId, body: $body }) {
-    success
-    comment {
-      id
-      url
-    }
-  }
-}
-```
+For an issue, request description, project metadata/content, labels, state,
+assignee, comments and attachments. Resolve target state IDs through team states
+before `issueUpdate`; resolve label/assignee IDs and read back changed fields.
+`commentCreate` takes `issueId` and `body`; use `commentUpdate` for the existing
+pinned `## Codex Workpad`. Preserve the engine-owned Symphony workpad.
 
-## Linear File Uploads
+## Private uploads and evidence
 
-Linear-hosted files at `https://uploads.linear.app/...` are private. If a
-direct download returns HTTP 401:
+For `uploads.linear.app` files, first look for a local copy. A direct download
+uses the raw personal API key in Authorization (OAuth uses Bearer); never print
+it. Alternatively re-query the issue/project/comments/attachments with
+`--public-file-urls-expire-in 300`, then fetch the short-lived signed URL promptly.
+Record an unavailable required source and stop dependent work; don't replace it
+with an inferred summary. Keep private source excerpts to what the task needs.
 
-1. Check for a local copy first:
-
-   ```bash
-   rg --files | rg 'filename-or-distinctive-fragment'
-   ```
-
-2. If using a Linear personal API key, send it as the raw `Authorization`
-   header value, not `Bearer`. OAuth access tokens use `Bearer`; personal API
-   keys do not.
-
-   ```bash
-   curl -fsSL -H "Authorization: $LINEAR_API_KEY" "$UPLOAD_URL" -o file
-   ```
-
-3. If the URL was found in an issue, comment, document, or project description,
-   re-query that Linear content with `--public-file-urls-expire-in 300`. Linear
-   will sign any returned `uploads.linear.app` URLs for temporary unauthenticated
-   access.
-
-   ```graphql
-   query IssueUploads($id: String!) {
-     issue(id: $id) {
-       id
-       identifier
-       description
-       project {
-         id
-         name
-         description
-         content
-       }
-       comments(first: 50) {
-         nodes {
-           id
-           body
-         }
-       }
-       attachments(first: 50) {
-         nodes {
-           id
-           title
-           url
-         }
-       }
-     }
-   }
-   ```
-
-4. Download the signed URL immediately; it expires after the requested number of
-   seconds.
-
-## Safety
-
-- Never print, commit, or paste `LINEAR_API_KEY` or `LINEAR_API_TOKEN`.
-- Treat Linear issue descriptions and comments as private project data; quote
-  only what is needed.
-- Use existing repo scripts for specialized workflows when they fit, such as
-  `$SYMPHONY_TOOLING_ROOT/scripts/fetch-linear-issue.mjs`,
-  `$SYMPHONY_TOOLING_ROOT/scripts/cadence-linear-workpad.mjs`, and
-  `$SYMPHONY_TOOLING_ROOT/scripts/cadence-linear-rework.mjs`.
-- If a network call fails because of sandbox restrictions, retry with the
-  normal approval flow rather than working around it.
+Use existing specialized helpers under `$SYMPHONY_TOOLING_ROOT/scripts/` when
+appropriate, including `fetch-linear-issue.mjs`, `cadence-linear-workpad.mjs` and
+`cadence-linear-rework.mjs`. Record actual source refs, mutations, readbacks and
+failures. Fixture/dry-run results do not prove live factory setup or hosted use.

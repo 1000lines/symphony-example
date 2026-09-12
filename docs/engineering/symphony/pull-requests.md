@@ -1,152 +1,115 @@
-# Writing a pull request
+# Pull requests
 
-For GitHub UI, CLI and API publishing, use the target repository's PR template.
-When the target has none, use the shared
-[PR template](../../../.github/pull_request_template.md)
-at `$SYMPHONY_TOOLING_ROOT/.github/pull_request_template.md`.
-It follows the concise Context, TL;DR, Summary,
-Alternatives and Test Plan (headed `Tested` here) structure of the
-[Symphony reference](https://github.com/1000lines/symphony/blob/main/.github/pull_request_template.md).
-Remove instructions and unused optional sections; a published PR should have
-finished prose, concrete evidence and a progress diagram only when it qualifies
-under the threshold below.
+Use the [PR template](../../../.github/pull_request_template.md) in UI, CLI and API
+sessions. Context explains the change, links the specific project or commissioned
+issue goal, and says why it matters. TL;DR states the result in one sentence.
+Start Summary with the product outcome; include alternatives only for a useful
+tradeoff. Record the selected base and relevant tests. Link workpads and history
+instead of repeating logs. Remove instructions and empty sections.
+For standalone work without an accepted plan, omit the progress block and record
+the linked issue/state and check time; never invent a plan to obtain a diagram.
 
-## Explain the value
+## Generate progress on creation and refresh
 
-In Context, use two or three short sentences to say what changes, name/link the
-specific goal in the current project brief, and explain its user or business
-benefit. A project name alone or “improves reliability” is insufficient. For
-standalone work, link the commissioned issue goal instead of inventing a wider
-project. TL;DR states the result in one short sentence. Start Summary with the
-product outcome, followed by a few high-level change bullets. Include Alternatives
-only when a choice or tradeoff helps review. Record the selected base branch.
+Use Node 20+ and authenticated `gh` with read access to the plan's PR repositories.
+`SYMPHONY_TOOLING_ROOT` must name the separate reviewed tooling checkout described
+in [SYMPHONY.md](../../../SYMPHONY.md), with its locked dependencies installed
+(`npm ci`) and `npm run symphony-dag:build` completed there. The fetcher imports
+`tools/symphony-dag/dist/projectManifest.js`'s `parseProjectPlan`; missing tooling
+stops generation. Do not copy its parser/schema or add a client Node package.
 
-For example, a PR adding a description template could say: “This adds a consistent PR
-description that explains the change and shows linked progress. It fulfills
-[100-28's goal of understandable PRs with project value and progress](https://linear.app/1000lines/issue/100-28),
-so Jeremy can judge why a change matters and navigate related work without
-reading the code.”
+Set `plan` to the current accepted Markdown plan, `current` to its graph node ID,
+and `body_file` to the prepared PR body. Read accepted replans and fresh human
+feedback first. The plan remains the only source of graph nodes, IDs and edges.
+When its manifest still uses commissioning placeholders, prepare `issue-map.json`
+from the accepted fan-out readback, for example `{"G":"100-73"}`. This maps graph
+IDs to actual Linear issue identifiers/UUIDs for lookup only; it is not a plan.
+Omit `--issue-map` when the manifest already identifies every issue. An unmapped
+placeholder is explicitly unknown; initial states and label prose are never used.
 
-## Show the accepted plan
+1. Before PR creation, emit the read-only Linear query:
 
-Include a progress diagram only when the accepted plan has **at least three
-meaningful nodes and two genuine edges**. Omit it otherwise, including for
-standalone work, two-node plans, or three nodes with fewer than two edges.
-Use a short progress sentence if useful; remove the Progress section if unused.
-Do not invent nodes or dependencies to meet the threshold. Apply the same rule
-to PR templates and guidance inherited by the Copier template.
+   ```sh
+   node scripts/symphony/fetch-pr-progress.mjs --plan "$plan" \
+     --issue-map issue-map.json --query > progress.graphql
+   ```
 
-For qualifying diagrams, follow the guidance below.
+2. Execute that query with the injected `linear_graphql` tool and save its raw
+   `{data, errors}` response as `linear-response.json`. Prefer the injected tool;
+   hosted workers keep injected auth. In a human-operated session without that
+   tool, use the existing authenticated transport:
 
-Link the current accepted plan revision and record the UTC time at which status
-was checked. Read accepted replans and fresh human decisions too. Copy that
-plan's nodes and edges; preserve IDs and dependency meaning. Do not derive edges
-from branch ancestry, issue order or convenience. Use the existing
-`$SYMPHONY_TOOLING_ROOT/tools/symphony-dag/` parser when checking accepted plan
-topology (`SYMPHONY_TOOLING_ROOT` is the shared tooling checkout). The PR diagram
-is a progress view of that plan, not a new manifest or planning authority.
+   ```sh
+   node .agents/skills/linear-graphql/scripts/linear-graphql.mjs \
+     --query-file progress.graphql > linear-response.json
+   ```
 
-Resolve each node's actual PR association from the issue/plan and GitHub. Check
-the repository, issue, base branch, current head, open/draft/closed/merged state
-and merge timestamp, for example:
+   Follow the [Linear skill](../../../.agents/skills/linear-graphql/SKILL.md) for
+   auth. Do not switch identity after an auth failure or put credentials in progress files.
+   If lookup fails, save its error response (`{"errors":[{"message":"lookup failed"}]}`
+   for a transport failure) so the renderer reports Unknown, never an invented state.
 
-```bash
-gh pr view "$pr_url" --json url,title,body,baseRefName,headRefOid,state,isDraft,mergedAt
-```
+3. Fetch and verify PR links from plan URLs and Linear attachments, then render:
 
-Use the current Linear issue state and acceptance evidence alongside GitHub:
+   ```sh
+   node scripts/symphony/fetch-pr-progress.mjs --plan "$plan" \
+     --issue-map issue-map.json --linear-response linear-response.json \
+     --current "$current" > progress.json
+   node scripts/symphony/render-pr-progress.mjs progress.json "$body_file"
+   gh pr create --draft --base "$base" --title "$title" --body-file "$body_file"
+   ```
 
-| Appearance            | Evidence                                                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Green / Completed     | The node's work is accepted; required code PRs are merged to the selected base. For non-code work, link its explicit acceptance.           |
-| Blue / In progress    | An associated PR is open (including draft/review/rework), or the workpad confirms implementation has started without a PR.                 |
-| Neutral / named state | Planned, blocked, canceled, closed without merge, or unknown. An Active ticket waiting on prerequisites alone does not prove work started. |
+   The renderer replaces only the single `symphony-pr-progress:start/end` marker
+   pair in the body. Keep these markers outside an enclosing HTML comment:
+   Mermaid's arrows would end it. With no body argument, it prints the generated
+   block. Snapshot JSON is disposable evidence, not a second planning format.
 
-A green CI check, approval, `mature` label or closed-but-unmerged PR is not proof
-of completion. If a node spans multiple required PRs, link all of them and mark
-it completed only when the whole node is accepted. If evidence conflicts or is
-unavailable, label the state unknown and record the gap rather than guessing.
+4. Capture the returned real PR URL as `pr_url`. Immediately repeat steps 1–2,
+   then fetch with `--current-pr` so the new PR has a verified link:
 
-Keep the template's fill classes and text labels. Apply the current-node outline
-with a separate `style NODE stroke:#8250df,stroke-width:4px` and include “Current
-PR” in its label, so every status retains its fill and current-node highlight.
-Status classes, including neutral `default`, must not set `stroke` or
-`stroke-width`: class styles can override the separate current-node outline.
-Use a separator such as `#123 — In progress` in labels; Mermaid interprets
-`#123;` as a character escape, hiding the PR number.
-Omit the legend; status labels explain the colors. Label nodes without PRs
-“no PR yet”; use “no PR — not planned” for accepted no-PR work.
+   ```sh
+   node scripts/symphony/fetch-pr-progress.mjs --plan "$plan" \
+     --issue-map issue-map.json --linear-response linear-response.json \
+     --current "$current" --current-pr "$pr_url" > progress.json
+   node scripts/symphony/render-pr-progress.mjs progress.json "$body_file"
+   gh pr edit "$pr_url" --body-file "$body_file"
+   gh pr view "$pr_url" --json body
+   ```
 
-For every node with a PR, use Mermaid's supported URL form:
-`click NODE href "https://github.com/OWNER/REPO/pull/NUMBER" "Open PR" _blank`.
-Substitute a verified URL, never an assumed next number. For multiple PRs on one
-node, use its primary PR as the click target and list all links immediately below
-the diagram. Keep a short Markdown link list there as an accessible fallback.
-Do not use JavaScript callbacks, HTML links in labels or custom renderer settings.
+   For UI/API creation and updates, paste/send these exact generated body bytes.
+   Every rework handoff and handled status/replan event repeats steps 1–2 and 4,
+   even for body-only changes. Refresh Context, TL;DR and Summary when scope changes.
+   Do not reuse an old Linear response. When no worker handles a later event,
+   the PR owner runs the same refresh; the UTC snapshot time exposes its age.
 
-## Publish and refresh
+## What the generated view means
 
-1. Read the target repository's template (or the shared fallback above) and write
-   a filled body to a local file. Omit the diagram scaffold unless it meets the
-   threshold above. For qualifying diagrams, remove the scaffold's separate
-   HTML-comment delimiters **before** adding nodes or edges: Mermaid arrows contain `-->`,
-   which would end an enclosing comment prematurely. Remove instruction comments.
-   For CLI, pass it with `gh pr create --draft --base "$base" --body-file "$body_file"`;
-   for API, send its exact contents as the PR `body`. Do not rely on automatic
-   UI insertion, `--fill` or commit messages to populate the description.
-2. For qualifying diagrams, before creation the current node may honestly say
-   “no PR yet” and have no link. Capture the returned PR URL, add the actual number and Mermaid click
-   link, then update using `gh pr edit "$pr_url" --body-file "$body_file"` or the
-   REST pull-request update endpoint. Read back the stored body.
-3. Before each publish/rework handoff, re-read the accepted plan and node statuses.
-   Reapply the diagram threshold; add or remove the diagram as appropriate.
-   Update Context, TL;DR, Summary, topology, labels and links together when scope
-   changes. Reflect observed draft/ready, review, closed, reopened and merged
-   transitions. A changed plan or status can require a body-only edit.
-4. On a later status/replan event handled by the worker, refresh its linked PR
-   even if there is no code change. Preserve resolved human feedback. Do not
-   create a service or mutate sibling PR bodies just to keep a snapshot fresh.
-   When no worker handles a later event, the PR owner performs this refresh;
-   the timestamp makes that manual maintenance boundary visible.
+Done is green, Active/Evaluating and legacy implementation states blue,
+Inactive/Unhappy and legacy waiting states amber; Backlog, canceled, duplicate
+and unknown states are neutral. Each state is named. A separate purple outline
+and “Current PR” identify the current node in every state. Never hand-edit classes.
+Pending-artifact or checkpoint prose cannot override Done: retain it as a separate
+remaining-scope note in Summary, with its owner/evidence link.
 
-## Verify and record evidence
+The generator preserves the accepted topology and omits diagrams with fewer than
+three meaningful nodes **or** two genuine edges, including standalone tasks.
+Never invent dependencies to reach this threshold. There is no legend.
+Canonical GitHub PR URLs are verified against their issue association and selected
+base; missing/failed associations say “no PR yet” with lookup gaps reported below.
+For multiple PRs, the current or open PR is clickable and all verified links appear
+below as an accessible fallback. PR lifecycle and CI never override ticket color.
+Incomplete attachment pagination is reported for separate association verification.
 
-Follow the [proof standard](proof-of-work.md): local, Docker only if needed,
-then mandatory CI on the published head. Choose commands from the target
-repository's validation guidance and package/build configuration. Run validation
-from the **target checkout**, with paths pointing to the target's files.
-For `1000lines/symphony-example`, use its `package.json` (the
-[linked copy](../../../package.json) belongs to the shared tooling checkout):
-run locked `node_modules/.bin/prettier --check <changed-markdown-paths>` and
-`git diff --check "$base_ref" HEAD` for committed template/docs edits, where
-`base_ref` is the fetched selected base (for example `origin/main`). Before
-committing, `git diff --check "$base_ref"` includes staged and unstaged tracked
-changes too. Use relevant existing workflow tests for
-guidance changes, and npm/Node tests for implementation changes. If the locked
-formatter is available only in the shared tooling checkout, invoke
-`"$SYMPHONY_TOOLING_ROOT/node_modules/.bin/prettier" --check <changed-markdown-paths>`
-while staying in the target checkout. The whitespace check must compare the
-target PR's revision range in that checkout. Other target repositories use
-their own commands. Do not copy the
-reference repository's Elixir command. Keep full commands, outcomes, tested SHA,
-CI run links, limitations and handoff details in the Codex workpad. In `Tested`,
-summarize relevant results once, link current-head CI/artifacts and the workpad,
-and include only commands needed to assess the change. Avoid repeated command
-lists or a routine checklist for every PR. Keep material limitations and the
-next handoff visible. Pending or stale checks are not passes.
+## Verify the handoff
 
-Open the actual PR conversation in GitHub after saving the body. For qualifying
-diagrams, confirm that Mermaid renders, inspect the completed/in-progress/neutral
-colors and current-node outline/text, and click the PR nodes to verify their
-destinations. When changing the template, manually check that one- and two-node
-plans and three nodes with fewer than two edges omit the diagram, while a real
-three-node/two-edge plan qualifies. Do not add validation machinery for this
-guidance. A PR that changes the template may include a clearly
-labeled, dated example based on an actual planned PR, avoiding changes to the
-source PR's body solely for demonstration.
-Record the PR URL, body revision/time, browser, link destinations and result;
-attach screenshots or walkthrough notes. Syntax validation, GitHub's Markdown
-API response and local Mermaid rendering alone do not prove GitHub rendering.
+Read back the saved body and open the PR conversation in GitHub. Check Mermaid
+rendering, colors, current outline and actual link destinations. Record plan ref,
+snapshot time, PR/head, browser and screenshot/walkthrough evidence in the workpad.
+Syntax checks and local renders do not prove GitHub rendering. Run relevant local
+tests, Docker only for environment gaps, and mandatory CI on the published head;
+record commands, results, run/attempt, workflow/App and child jobs. Link concise
+proof in Tested and name any missing evidence and its next owner.
 
-See [GitHub's diagram documentation](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams)
-and [Mermaid's URL-link syntax](https://mermaid.js.org/syntax/flowchart.html#interaction).
+For this template's delivery, 100-74 owns root propagation and installed/browser
+proof. Link that proof back to 100-61's AC6 before claiming the requirement complete.
+See the shared proof and review guides under `SYMPHONY_TOOLING_ROOT/docs/engineering/`.
