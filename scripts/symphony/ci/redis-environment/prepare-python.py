@@ -29,6 +29,9 @@ if not (root / "requirements.lock").exists():
     bootstrap.write_text("pip==25.3\nsetuptools==80.9.0\nwheel==0.45.1\nhatchling==1.27.0\neditables==0.5\n")
     os.environ["PIP_CONSTRAINT"] = str(bootstrap)
     packages = ["pip", "setuptools", "wheel", "hatchling", "editables", ".[jwt]"]
+    if platform.python_implementation() == "PyPy":
+        # The pinned image bundles cffi but omits its declared pycparser dependency.
+        packages.append("pycparser")
     if parser != "plain":
         packages.append("hiredis<3.0.0" if parser == "hiredis-old" else "hiredis>=3.2.0")
     run(python, "-m", "pip", "wheel", "--wheel-dir", str(wheels),
