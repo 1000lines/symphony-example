@@ -43,6 +43,10 @@ JWT extra, selected hiredis and interpreter-specific uvloop constraints.
 Supported interpreters are `3.10` through `3.14`, `pypy-3.10`, and `pypy-3.11`.
 Parser choices are `plain`, `hiredis-old` (`<3.0.0`) and `hiredis-new`
 (`>=3.2.0`); hiredis axes use CPython 3.10/3.14 as upstream specifies.
+The retained old axis installs hiredis 2.4.0 and tests its reader. At this Redis
+source revision the default connection falls back to `_RESP3Parser` with that
+version; hiredis 3.4.1 selects `_HiredisParser`. The catalog records both the
+installed version and actual parser without dropping the old-installed case.
 
 The bootstrap constrains pip 25.3, setuptools 80.9.0, wheel 0.45.1,
 Hatchling 1.27.0 and editables 0.5. Resolution produces exact transitive
@@ -50,6 +54,9 @@ constraints and hash-locked wheel requirements. A fresh nested venv exercises
 the pip upgrade and isolated sdist/wheel build used by the upstream package
 script. Dependency resolution, import, parser or nested-build failures fail
 preparation; they never drop old hiredis or another interpreter from coverage.
+PyPy also resolves `pycparser`: the pinned 3.10 image bundles CFFI but omits
+that declared dependency. The image digest pins bundled CFFI; the wheel lock
+pins the added dependency.
 
 ## Start, check, stop
 
@@ -88,6 +95,10 @@ has 2 GiB and two CPUs; the namespace anchor has 32 MiB and one tenth of a CPU.
 These are per-container ceilings, not reserved aggregate host capacity.
 Queue Redis/Rust workloads unless the operator confirms aggregate headroom.
 One Redis cell runs at a time; only the bounded isolation probe uses a pair.
+Redis 8.4.3 and older pinned server images declare `/data` as an image volume.
+The renderer binds that path to each service's workspace data directory,
+preventing Docker from allocating storage outside the workspace. Preparation
+checks the declared image-volume inventory before starting workloads.
 
 `check` verifies the exact service inventory, UID/GID, network namespace,
 mount containment and absence of published ports. It then checks standalone,
@@ -98,6 +109,15 @@ server versions and fails when any required topology is missing.
 
 ## Replay and downstream contract
 
+The committed
+[environment catalog](../../../scripts/symphony/ci/redis-environment/environment-catalog.json)
+lists the resolved image IDs and each interpreter/parser replay bundle. On the
+host, download the selected authorized Linear attachment, verify its catalog
+SHA-256, and extract it into a new directory inside the issue workspace. Each
+bundle contains `environment-lock.json` and its dependency artifacts. Pass that
+lock to `prepare`; the catalog itself is an index, not a CLI lock. Attachment
+readback requires authorized Linear access, which stays outside containers.
+
 Keep `environment-lock.json`, `constraints.txt`, `requirements.lock`,
 `wheels.json` and `wheels/` together. To replay, use a new identity and output
 directory and pass the previous immutable `environment-lock.json` to `prepare`.
@@ -106,6 +126,15 @@ version from the inventory; its resolved image IDs enter the new lock.
 The replay container has no network, and every wheel must match its SHA-256.
 Keep the old attempt intact. Changing pins requires new evidence rather than
 combining results into a previous passing attempt.
+
+For a verified CPython 3.10/plain bundle extracted into `verified-replay/`:
+
+```bash
+node "$env_cli" prepare --workspace "$PWD" --source "$PWD/redis-py" \
+  --lock "$PWD/verified-replay/environment-lock.json" \
+  --issue 100-88 --run repeat-1 --cell py310 --output "$PWD/redis-repeat-1" \
+  --redis 8.8.0 --python 3.10 --parser plain
+```
 
 `state.json` supplies the namespace anchor ID, Compose project/file hash,
 resource IDs, selected interpreter image and runner contract. Downstream

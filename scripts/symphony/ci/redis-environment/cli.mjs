@@ -318,6 +318,11 @@ export async function lifecycle(operation, options, execute) {
         ]);
         const image = JSON.parse(inspected.stdout)[0];
         assert.equal(image.Architecture, "amd64");
+        assert.deepEqual(
+          Object.keys(image.Config.Volumes || {}),
+          inputs.images[tag].dataVolume ? ["/data"] : [],
+          `Unexpected image volumes: ${tag}`
+        );
         if (lock.images[tag].id)
           assert.equal(lock.images[tag].id, image.Id, "Image ID drift");
         lock.images[tag].id = image.Id;
@@ -367,7 +372,8 @@ export async function lifecycle(operation, options, execute) {
             resolve(
               output,
               "source/dockers",
-              service === "redis" ? "standalone" : service
+              service === "redis" ? "standalone" : service,
+              "data"
             ),
             { recursive: true }
           );

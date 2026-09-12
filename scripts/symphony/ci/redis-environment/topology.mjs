@@ -146,6 +146,17 @@ export function render(source, { lock, selected, anchor, project, uid, gid }) {
         source: resolve(source, "dockers/redis-proxied"),
         target: "/redis/work",
       });
+    if (inputs.images[selected[role]].dataVolume)
+      service.volumes.push({
+        type: "bind",
+        source: resolve(
+          source,
+          "dockers",
+          name === "redis" ? "standalone" : name,
+          "data"
+        ),
+        target: "/data",
+      });
   }
   return compose;
 }

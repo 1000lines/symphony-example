@@ -38,19 +38,24 @@
       "ref": "redislabs/client-libs-test@sha256:adacb737b2fb2d3af13c174d8dff3aaaa568c3d71d8442c71c2f4e1c658029ff"
     },
     "redislabs/client-libs-test:8.4.3": {
-      "ref": "redislabs/client-libs-test@sha256:f197b4e7cb3fcc579c80137dd93b18667e87d315aa8588071125117a91402a12"
+      "ref": "redislabs/client-libs-test@sha256:f197b4e7cb3fcc579c80137dd93b18667e87d315aa8588071125117a91402a12",
+      "dataVolume": true
     },
     "redislabs/client-libs-test:8.2.6": {
-      "ref": "redislabs/client-libs-test@sha256:6b46280e521cc542d0da8bf110731127b7892efa716cf91e9a658b4361a2f175"
+      "ref": "redislabs/client-libs-test@sha256:6b46280e521cc542d0da8bf110731127b7892efa716cf91e9a658b4361a2f175",
+      "dataVolume": true
     },
     "redislabs/client-libs-test:8.0.6": {
-      "ref": "redislabs/client-libs-test@sha256:59d7b984e44cc23f080de72f29f2427ef159656184e6e75360bc82a6f1a3a820"
+      "ref": "redislabs/client-libs-test@sha256:59d7b984e44cc23f080de72f29f2427ef159656184e6e75360bc82a6f1a3a820",
+      "dataVolume": true
     },
     "redislabs/client-libs-test:7.4.9": {
-      "ref": "redislabs/client-libs-test@sha256:bc45dc80848d1c818e330fa24d3c1958ea3ebf37aeaa931a2ec68c8397c15d4f"
+      "ref": "redislabs/client-libs-test@sha256:bc45dc80848d1c818e330fa24d3c1958ea3ebf37aeaa931a2ec68c8397c15d4f",
+      "dataVolume": true
     },
     "redislabs/client-libs-test:7.2.14": {
-      "ref": "redislabs/client-libs-test@sha256:58b1a5f3ba536b7cde2acccb6846d01a2d82e5e3ef295e173a1b5ea092dd8016"
+      "ref": "redislabs/client-libs-test@sha256:58b1a5f3ba536b7cde2acccb6846d01a2d82e5e3ef295e173a1b5ea092dd8016",
+      "dataVolume": true
     },
     "redislabs/client-libs-test:rs-7.4.0-v8": {
       "ref": "redislabs/client-libs-test@sha256:b44db722c9a9f280685e97547ec95e4fdf984505e2e24b9e9de19202a462048e"

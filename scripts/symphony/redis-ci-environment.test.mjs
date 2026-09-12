@@ -74,6 +74,15 @@ test("complete pinned topology retains every profile, healthcheck, TLS setting a
       within(source, mount.source);
       assert.ok(!/socket|\.sock|credential/.test(mount.target));
     }
+    if (!["redis-stack", "resp-proxy"].includes(name)) {
+      const data = service.volumes.find((mount) => mount.target === "/data");
+      assert.ok(
+        data,
+        `${name} must override the older image's anonymous volume`
+      );
+      assert.equal(data.type, "bind");
+      assert.ok(data.source.startsWith(source + "/dockers/"));
+    }
     for (const setting of Array.isArray(original.services[name].environment)
       ? original.services[name].environment
       : []) {
