@@ -1,16 +1,16 @@
 %% symphony-dag/v1
 flowchart LR
-  BOOT["Round 1: DRC-BOOT: Compose + ticket Docker precedence"]
-  ENV["Round 1: DRC-ENV: Redis pinned images + isolated topology"]
-  RUST["Round 1: DRC-RUST: Rust release + 4 test/doc pairs + clippy/fmt"]
-  REDIS["Round 2: DRC-REDIS: Redis 351 cells + 2 package + 7 install runner"]
-  DEPLOY["Round 3: DRC-DEPLOY: Install accepted refs; verify new worker"]
-  R1["Round 4: DRC-R1: Hosted Redis first full run + cleanup"]
-  V1["Round 4: DRC-V1: Hosted Rust first full run + cleanup"]
-  REHEARSE["Round 5: DRC-REHEARSE: Reconcile bootstrap; cold environments"]
-  R2["Round 6: DRC-R2: Hosted Redis full repeat + cleanup"]
-  V2["Round 6: DRC-V2: Hosted Rust full repeat + cleanup"]
-  FINAL["Round 7: DRC-FINAL: Audit both runs + installed proof; human handoff"]
+  BOOT["100-87: Round 1: DRC-BOOT: Compose + ticket Docker precedence"]
+  ENV["100-88: Round 1: DRC-ENV: Redis pinned images + isolated topology"]
+  RUST["100-89: Round 1: DRC-RUST: Rust release + 4 test/doc pairs + clippy/fmt"]
+  REDIS["100-90: Round 2: DRC-REDIS: Redis 351 cells + 2 package + 7 install runner"]
+  DEPLOY["100-91: Round 3: DRC-DEPLOY: Install accepted refs; verify new worker"]
+  R1["100-92: Round 4: DRC-R1: Hosted Redis first full run + cleanup"]
+  V1["100-93: Round 4: DRC-V1: Hosted Rust first full run + cleanup"]
+  REHEARSE["100-94: Round 5: DRC-REHEARSE: Reconcile bootstrap; cold environments"]
+  R2["100-95: Round 6: DRC-R2: Hosted Redis full repeat + cleanup"]
+  V2["100-96: Round 6: DRC-V2: Hosted Rust full repeat + cleanup"]
+  FINAL["100-97: Round 7: DRC-FINAL: Audit both runs + installed proof; human handoff"]
   ENV --> REDIS
   BOOT --> DEPLOY
   REDIS --> DEPLOY
