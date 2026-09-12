@@ -11,6 +11,21 @@ export const SYMPHONY_PROJECT_COLORS = [
   "yellow",
   "purple",
   "teal",
+  "magenta",
+  "indigo",
+  "navy",
+  "lavender",
+  "burgundy",
+  "coral",
+  "peach",
+  "amber",
+  "gold",
+  "lime",
+  "olive",
+  "mint",
+  "forest",
+  "brown",
+  "slate",
 ] as const;
 
 export type SymphonyProjectColor = (typeof SYMPHONY_PROJECT_COLORS)[number];
@@ -29,6 +44,21 @@ export const SYMPHONY_PROJECT_COLOR_HEX: Record<SymphonyProjectColor, string> =
     yellow: "#ffd33d",
     purple: "#8250df",
     teal: "#14b8a6",
+    magenta: "#c026d3",
+    indigo: "#4338ca",
+    navy: "#1e3a8a",
+    lavender: "#a78bfa",
+    burgundy: "#881337",
+    coral: "#fb7185",
+    peach: "#fdba74",
+    amber: "#d97706",
+    gold: "#b59b00",
+    lime: "#84cc16",
+    olive: "#6b7c32",
+    mint: "#6ee7b7",
+    forest: "#166534",
+    brown: "#92400e",
+    slate: "#64748b",
   };
 
 export const DEFAULT_ACTIVE_LINEAR_PROJECT_STATES = [
