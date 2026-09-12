@@ -106,7 +106,75 @@ or change workflow permissions to make this recovery pass. A denied operation
 needs its own operator handoff; successful label recovery does not prove CI,
 Cadence execution, host reload, or event delivery.
 
-## Evidence and regression expectations
+## Live evidence: 100-86
+
+Reproduced on 2026-09-12, 02:54–02:55 UTC, on the App-authored draft
+[symphony-example PR #56](https://github.com/1000lines/symphony-example/pull/56),
+head `ee635b44adde9a397912d8a686def9fb3d70b9c5`, based on
+`main@e4cab13e238fed6095906c9b009e891b1670a9e4`. The PR initially had only
+`documentation`, an existing repository label added for this preservation check.
+Both required definitions existed; neither required PR label was removed to
+produce the failure.
+
+Installed tooling ref: `a3b7428a9e0298592e119a57923854b75a9b61a0`.
+The installed and selected-base helper/broker files had matching SHA-256 hashes:
+
+- `ensure-pr-labels.mjs`:
+  `5ae761a503e6c8050f0c98668d9576302e7d2f0034ac4bb8553adf08984c36af`.
+- `github-app-auth.mjs` (including the hosted `gh` broker):
+  `0a161a52acc105b8f6c2b4c59d989f2f7faf80b92c2f03e249e4938b1acfbc2b`.
+
+The same App (`1000lines-symphony`, ID `4866508`), installation `160626742`,
+and repository ID `1362180215` were used throughout. A local observer delegated
+to the installed broker/helper and real fetch, logging only allowlisted request
+and response fields. Fresh token requests returned HTTP 201 with exactly the
+permissions below; both `/installation/repositories` readbacks returned one
+repository, `1000lines/symphony-example`. No installation grants were changed.
+
+| Token                   | Requested and returned permissions                                                                                         | Label POST result                                    |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Helper                  | `metadata:read`, `issues:write`, `pull_requests:read`                                                                      | HTTP 403, `Resource not accessible by integration`   |
+| Existing task-bound App | `metadata:read`, `actions:read`, `checks:read`, `contents:write`, `issues:write`, `pull_requests:write`, `workflows:write` | HTTP 200; labels `documentation`, `symphony`, `blue` |
+
+The ordinary installed helper CLI exited 1 with
+`Symphony PR label repair: Add missing PR labels: HTTP 403.` A second invocation
+through the observer, after refreshing the same narrowed permissions, confirmed
+that the failed operation was the label POST, following successful PR lookup,
+label read and definition checks. Its request body was
+`{"labels":["symphony","blue"]}`. GitHub request ID:
+`E8A1:237E50:17E2204:1909C69:6AA4BF01`.
+
+The supported `gh api --method POST` recovery sent the same two labels to the
+same `/repos/1000lines/symphony-example/issues/56/labels` endpoint. GitHub returned
+HTTP 200 at 02:55:06 UTC (request ID
+`88D7:12AE18:1892F67:19BA85F:6AA4BF09`, selected API version `2022-11-28`).
+Both POST responses advertised `issues=write; pull_requests=write` in
+`X-Accepted-GitHub-Permissions`. The task token has several additional grants;
+this comparison does not independently isolate each grant's effect or establish
+GitHub's internal permission-selection behavior.
+
+The helper then exited 0 twice with:
+
+```json
+{
+  "issue": "100-86",
+  "repository": "1000lines/symphony-example",
+  "pr": 56,
+  "result": "already-correct",
+  "added": [],
+  "verified": ["symphony", "blue"]
+}
+```
+
+Between those invocations, an independent paginated `gh api` GET returned
+`["documentation","symphony","blue"]`. The failed helper attempt, additive
+recovery and repeated readback preserved `documentation`. These are successful
+recovery/readback results; the helper's missing-label write remains defective
+at the recorded revision. The pinned
+[100-86 workpad](https://linear.app/1000lines/issue/100-86#comment-46cbe672)
+holds the validation and current PR handoff record.
+
+## Relationship to 100-69 and regression expectations
 
 [100-69](https://linear.app/1000lines/issue/100-69) originally owned new-PR/startup
 labeling verification. Its current state is **Canceled** (read 2026-09-12).
