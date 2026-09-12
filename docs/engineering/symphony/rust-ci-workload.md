@@ -182,14 +182,7 @@ verified byte for byte. The contained preparation index retains its actual
 development runner hash; the execution index identifies the tested adapter
 commit separately. These artifacts remain preparation/development proof.
 
-The first development run exposed a non-executable Docker tmpfs: rustdoc built
-examples but could not execute them. Its failure and SIGTERM cleanup are retained.
-The adapter now explicitly permits execution on its bounded tmpfs, as supported
-by [Docker's mount options](https://docs.docker.com/engine/storage/tmpfs/#options-for---tmpfs).
-The corrected attempt uses the same retained image and lock with fresh targets.
-Its release build passed, but it was paused for another issue's Redis probes
-and then canceled for handoff without concurrency confirmation. All seven
-containers were removed; ten commands never started and test-3 was canceled.
-The complete twelve-command integration run is still required before acceptance.
-Jeremy must confirm aggregate headroom or provide a clear execution window;
-resume with a new output/run identity using the retained inputs above.
+Consult the development index for each attempt's outcome, limitations and cleanup
+evidence. A complete twelve-command integration run is required before acceptance.
+Queue execution while Redis is running unless Jeremy confirms aggregate headroom.
+Start each attempt with a new output/run identity and the retained inputs above.
