@@ -6,7 +6,7 @@ SYMPHONY_STEP_NAME="37-caddy"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
 
 caddy_version="2.11.4"
-caddy_archive_sha256="8220d1f013b6f27510247b2360c9e0ca9f018feebd82515f07635318b34ff9777ccc8fd0b6e6f2486ce3a33fe389fbb7db12d05baa474f4587509fb4f5ebf1c9"
+caddy_archive_sha256="527fbf917c39189a1e3b31d34fa955601680b2d5c8055d2a87b8b9588dec7bb9"
 caddy_binary="${SYMPHONY_CADDY_BIN:-/usr/local/bin/caddy}"
 caddy_config_dir="${SYMPHONY_CADDY_CONFIG_DIR:-/etc/caddy}"
 caddy_config="$caddy_config_dir/Caddyfile"

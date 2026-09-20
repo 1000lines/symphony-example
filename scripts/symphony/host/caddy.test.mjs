@@ -6,6 +6,7 @@ import test from "node:test";
 import { spawnSync } from "node:child_process";
 
 const step = new URL("./install.d/37-caddy.sh", import.meta.url).pathname;
+const caddyInstaller = await readFile(step, "utf8");
 
 const runBash = (command, env = {}) =>
   spawnSync("bash", ["-c", command], {
@@ -60,4 +61,8 @@ test("writes a TLS-ALPN-only Caddy endpoint that preserves the ALB method policy
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("pins a SHA-256 checksum for the Caddy archive", () => {
+  assert.match(caddyInstaller, /caddy_archive_sha256="[0-9a-f]{64}"/);
 });
