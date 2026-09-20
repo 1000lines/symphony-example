@@ -24,12 +24,12 @@ install_caddy() {
   archive_dir="$(mktemp -d)"
   archive="$archive_dir/caddy.tar.gz"
   binary="$archive_dir/caddy"
-  trap 'rm -rf "$archive_dir"' RETURN
 
   curl -fsSL -o "$archive" "$archive_url"
   [[ "$(sha256_file "$archive")" == "$caddy_archive_sha256" ]] || die "Caddy archive checksum mismatch"
   tar -xzf "$archive" -C "$archive_dir" caddy
   install -D -m 0755 "$binary" "$caddy_binary"
+  rm -rf -- "$archive_dir"
 }
 
 public_hostname() {

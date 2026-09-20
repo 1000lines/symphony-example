@@ -65,4 +65,5 @@ test("writes a TLS-ALPN-only Caddy endpoint that preserves the ALB method policy
 
 test("pins a SHA-256 checksum for the Caddy archive", () => {
   assert.match(caddyInstaller, /caddy_archive_sha256="[0-9a-f]{64}"/);
+  assert.doesNotMatch(caddyInstaller, /trap.*archive_dir/);
 });
