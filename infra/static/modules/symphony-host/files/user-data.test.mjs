@@ -78,6 +78,39 @@ test("rejects a ref that does not resolve to a 40-hex SHA", async () => {
   }
 });
 
+test("falls back to public GitHub reads when the configured token is rejected", async () => {
+  const root = await mkdtemp(join(tmpdir(), "symphony-user-data-public-read-"));
+  const binDir = join(root, "bin");
+  const curlLog = join(root, "curl.log");
+  const sha = "0123456789abcdef0123456789abcdef01234567";
+
+  try {
+    await mkdir(binDir);
+    await writeExecutable(
+      join(binDir, "curl"),
+      `#!/usr/bin/env bash
+printf '%s\\n' "$*" >>"${curlLog}"
+if [[ "$*" == *Authorization* ]]; then exit 22; fi
+printf '{"sha":"${sha}"}\\n'
+`
+    );
+
+    const result = runBash(
+      `resolve_github_ref example-org/example-repo main rejected-token`,
+      { PATH: `${binDir}:${process.env.PATH}` }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), sha);
+    const calls = await readFile(curlLog, "utf8");
+    assert.match(calls, /Authorization: Bearer rejected-token/);
+    assert.equal(calls.trim().split("\n").length, 2);
+    assert.match(result.stderr, /retrying unauthenticated/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("base tool install does not request the conflicting curl package", async () => {
   const root = await mkdtemp(join(tmpdir(), "symphony-user-data-deps-"));
   const binDir = join(root, "bin");
