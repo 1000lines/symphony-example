@@ -279,6 +279,7 @@ test("--list reports every step in execution order", () => {
   assert.deepEqual(listed, [...listed].sort());
   assert.ok(listed.includes("10-os-packages"));
   assert.ok(listed.includes("35-docker"));
+  assert.ok(listed.includes("37-caddy"));
   assert.ok(listed.includes("45-runtime-bundle"));
   assert.ok(listed.includes("55-node-toolchain"));
   assert.ok(listed.includes("60-dev-tools"));
@@ -287,6 +288,7 @@ test("--list reports every step in execution order", () => {
     listed.indexOf("10-os-packages") < listed.indexOf("30-workspace-volume")
   );
   assert.ok(listed.indexOf("30-workspace-volume") < listed.indexOf("35-docker"));
+  assert.ok(listed.indexOf("35-docker") < listed.indexOf("37-caddy"));
   assert.ok(
     listed.indexOf("50-beam-toolchain") < listed.indexOf("55-node-toolchain")
   );
@@ -1463,6 +1465,7 @@ test("a full fixture run materializes credentials, units, workspace, and provena
       SYMPHONY_RUNTIME_USER: currentUser,
       SYMPHONY_SECRETS_DIR: secretsDir,
       SYMPHONY_SKIP_BEAM_TOOLCHAIN: "1",
+      SYMPHONY_SKIP_CADDY: "1",
       SYMPHONY_SKIP_DEV_TOOLS: "1",
       SYMPHONY_SKIP_NODE_TOOLCHAIN: "1",
       SYMPHONY_SKIP_PACKAGES: "1",

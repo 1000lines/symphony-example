@@ -10,9 +10,9 @@ locals {
 resource "aws_instance" "symphony" {
   ami                         = local.symphony_host_ami_id
   associate_public_ip_address = false
-  instance_type               = "m7i.2xlarge"
+  instance_type               = "t3a.large"
   iam_instance_profile        = aws_iam_instance_profile.symphony.name
-  subnet_id                   = var.private_subnet_ids[0]
+  subnet_id                   = var.public_subnet_ids[0]
   user_data                   = file("${path.module}/files/user-data.sh")
   vpc_security_group_ids      = [aws_security_group.instance.id]
 
@@ -37,10 +37,11 @@ resource "aws_instance" "symphony" {
   user_data_replace_on_change = true
 
   tags = {
-    Name                     = local.name
-    "symphony:bootstrap-ref" = var.bootstrap_ref
-    "symphony:runtime-ref"   = var.runtime_ref
-    "symphony:worker-slots"  = "8"
+    Name                       = local.name
+    "symphony:bootstrap-ref"   = var.bootstrap_ref
+    "symphony:runtime-ref"     = var.runtime_ref
+    "symphony:worker-slots"    = "8"
+    "symphony:public-hostname" = local.fqdn
   }
 
   depends_on = [
@@ -49,8 +50,15 @@ resource "aws_instance" "symphony" {
   ]
 }
 
-resource "aws_lb_target_group_attachment" "symphony" {
-  target_group_arn = aws_lb_target_group.symphony.arn
-  target_id        = aws_instance.symphony.id
-  port             = local.symphony_port
+resource "aws_eip" "symphony" {
+  domain = "vpc"
+
+  tags = {
+    Name = local.name
+  }
+}
+
+resource "aws_eip_association" "symphony" {
+  allocation_id = aws_eip.symphony.id
+  instance_id   = aws_instance.symphony.id
 }

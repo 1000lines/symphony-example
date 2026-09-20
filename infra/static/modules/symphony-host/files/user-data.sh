@@ -89,6 +89,23 @@ urlencode() {
   jq -nr --arg value "$1" '$value | @uri'
 }
 
+github_api_get() {
+  local url="$1"
+  local token="$2"
+
+  if curl -fsSL \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/vnd.github+json" \
+    "$url"; then
+    return
+  fi
+
+  printf 'symphony-user-data: authenticated GitHub API request failed; retrying unauthenticated\n' >&2
+  curl -fsSL \
+    -H "Accept: application/vnd.github+json" \
+    "$url"
+}
+
 resolve_github_ref() {
   local repo="$1"
   local ref="$2"
@@ -99,10 +116,7 @@ resolve_github_ref() {
   [[ -n "$ref" ]] || die "missing GitHub ref"
   encoded_ref="$(urlencode "$ref")"
   sha="$(
-    curl -fsSL \
-      -H "Authorization: Bearer $token" \
-      -H "Accept: application/vnd.github+json" \
-      "$github_api_url/repos/$repo/commits/$encoded_ref" |
+    github_api_get "$github_api_url/repos/$repo/commits/$encoded_ref" "$token" |
       jq -er '.sha'
   )" || die "failed to resolve $repo ref $ref"
 
@@ -116,11 +130,20 @@ download_bootstrap() {
   local output="$bootstrap_dir/bootstrap.sh"
   local tmp="$output.tmp"
 
-  curl -fsSL \
+  if curl -fsSL \
     -H "Authorization: Bearer $token" \
     -H "Accept: application/vnd.github.raw" \
     -o "$tmp" \
-    "$github_api_url/repos/$bootstrap_repo/contents/scripts/symphony/host/bootstrap.sh?ref=$sha"
+    "$github_api_url/repos/$bootstrap_repo/contents/scripts/symphony/host/bootstrap.sh?ref=$sha"; then
+    :
+  else
+    printf 'symphony-user-data: authenticated bootstrap download failed; retrying unauthenticated\n' >&2
+    curl -fsSL \
+      -H "Accept: application/vnd.github.raw" \
+      -o "$tmp" \
+      "$github_api_url/repos/$bootstrap_repo/contents/scripts/symphony/host/bootstrap.sh?ref=$sha" ||
+      die "failed to download bootstrap from $bootstrap_repo@$sha"
+  fi
   install -m 0700 "$tmp" "$output"
   rm -f "$tmp"
 }

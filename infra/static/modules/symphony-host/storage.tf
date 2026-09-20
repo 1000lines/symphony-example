@@ -2,12 +2,12 @@ locals {
   # EC2 requires a block-device mapping name for attachment. The host mount
   # path is discovered by filesystem label or single blank disk, not this name.
   workspace_device_name     = "/dev/sdf"
-  workspace_volume_size_gib = 400
+  workspace_volume_size_gib = 150
   workspace_volume_type     = "gp3"
 }
 
 data "aws_subnet" "symphony" {
-  id = var.private_subnet_ids[0]
+  id = var.public_subnet_ids[0]
 }
 
 resource "aws_ebs_volume" "workspace" {

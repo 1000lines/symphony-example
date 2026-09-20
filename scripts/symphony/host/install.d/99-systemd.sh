@@ -19,9 +19,10 @@ activate_systemd() {
   [[ -s "$provenance_path" ]] || die "refusing to start services without provenance"
 
   systemctl daemon-reload
+  systemctl enable caddy.service
   systemctl enable symphony-reconcile.service
   systemctl enable symphony.service
-  systemctl restart --no-block symphony.service
+  systemctl restart --no-block caddy.service symphony.service
 }
 
 main() {

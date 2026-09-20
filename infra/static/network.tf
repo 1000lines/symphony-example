@@ -15,18 +15,11 @@ resource "aws_internet_gateway" "symphony" {
 }
 
 resource "aws_subnet" "public" {
-  count             = 2
+  count             = 1
   vpc_id            = aws_vpc.symphony.id
   availability_zone = data.aws_availability_zones.available.names[count.index]
   cidr_block        = cidrsubnet(aws_vpc.symphony.cidr_block, 8, count.index)
   tags              = { Name = "symphony-public-${count.index + 1}" }
-}
-
-resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.symphony.id
-  availability_zone = aws_subnet.public[0].availability_zone
-  cidr_block        = cidrsubnet(aws_vpc.symphony.cidr_block, 8, 10)
-  tags              = { Name = "symphony-private" }
 }
 
 resource "aws_route_table" "public" {
@@ -41,35 +34,7 @@ resource "aws_route" "public_outbound" {
 }
 
 resource "aws_route_table_association" "public" {
-  count          = 2
+  count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
-}
-
-resource "aws_eip" "nat" {
-  domain = "vpc"
-  tags   = { Name = "symphony-nat" }
-}
-
-resource "aws_nat_gateway" "symphony" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-  tags          = { Name = "symphony" }
-  depends_on    = [aws_internet_gateway.symphony, aws_route.public_outbound]
-}
-
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.symphony.id
-  tags   = { Name = "symphony-private" }
-}
-
-resource "aws_route" "private_outbound" {
-  route_table_id         = aws_route_table.private.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.symphony.id
-}
-
-resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private.id
-  route_table_id = aws_route_table.private.id
 }
